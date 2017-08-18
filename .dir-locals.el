@@ -2,5 +2,5 @@
          (c-backslash-column . 1)
          (c-backslash-max-column . 80)
          (c-basic-offset . 2)
-         (tab-width . 1)
-         (indent-tabs-mode . nil))))
+         (indent-tabs-mode . nil)))
+ (c++-mode . ((tab-width . 1)))) ; allow placing \ anywhere in multiline macros
