@@ -311,7 +311,7 @@ def test(bld):
         scan    = c_preproc.scan
 
     src = [
-        'test/main.cpp',
+        #'test/main.cpp', workaround static lib linking problems, add it in main
         'test/options.cpp',
     ]
     if not bld.env.WITHOUT_LUA:
