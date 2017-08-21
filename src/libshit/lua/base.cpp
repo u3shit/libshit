@@ -14,7 +14,8 @@ namespace Libshit::Lua
     if (!vm) LIBSHIT_THROW(std::bad_alloc{});
   }
 
-  // todo: do we need it?
+  // plain lua needs it
+  // probably optional in ljx, but it won't hurt...
   static int panic(lua_State* vm)
   {
     size_t len;
@@ -22,6 +23,55 @@ namespace Libshit::Lua
     if (msg) LIBSHIT_THROW(Error{{msg, len}});
     else LIBSHIT_THROW(Error{"Lua PANIC"});
   }
+
+#ifndef LUA_VERSION_LJX
+  static void getfunc(lua_State* vm, bool opt)
+  {
+    if (lua_isfunction(vm, 1))
+      lua_pushvalue(vm, 1);
+    else
+    {
+      lua_Debug ar;
+      int level = opt ? luaL_optinteger(vm, 1, 1) : luaL_checkinteger(vm, 1);
+      luaL_argcheck(vm, level >= 0, 1, "level must be non-negative");
+      if (lua_getstack(vm, level, &ar) == 0)
+        luaL_argerror(vm, 1, "invalid level");
+      lua_getinfo(vm, "f", &ar);
+      if (lua_isnil(vm, -1))
+        luaL_error(vm, "no function environment for tail call at level %d",
+                   level);
+    }
+  }
+
+  static int getfenv(lua_State* vm)
+  {
+    getfunc(vm, true); // +1
+    if (lua_iscfunction(vm, -1))
+    {
+      lua_pushglobaltable(vm);
+      return 1;
+    }
+
+    auto name = lua_getupvalue(vm, -1, 1); // +2
+    return strcmp(name, "_ENV") == 0 ? 1 : 0;
+  }
+
+  static int setfenv(lua_State* vm)
+  {
+    luaL_checktype(vm, 2, LUA_TTABLE);
+    getfunc(vm, false); // +1
+
+    auto name = lua_getupvalue(vm, 1, 1); // +2
+    lua_pop(vm, 1); // +1
+
+    if (strcmp(name, "_ENV") == 0)
+    {
+      lua_pushvalue(vm, 2); // +2
+      lua_setupvalue(vm, -2, 1); // +1
+    }
+    return 1;
+  }
+#endif
 
   const char* StateRef::TypeName(int idx)
   {
@@ -48,6 +98,13 @@ namespace Libshit::Lua
 
         lua_atpanic(vm, panic);
         luaL_openlibs(vm);
+
+#ifndef LUA_VERSION_LJX
+        lua_pushcfunction(vm, getfenv); // +1
+        lua_setglobal(vm, "getfenv"); // 0
+        lua_pushcfunction(vm, setfenv); // +1
+        lua_setglobal(vm, "setfenv"); // 0
+#endif
 
         // init reftable
         lua_newtable(vm);               // +1

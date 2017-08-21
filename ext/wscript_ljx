@@ -4,19 +4,15 @@ def options(ctx):
     grp = ctx.get_option_group('configure options')
     grp.add_option('--host-lua', action='store', default=None,
                    help='System lua 5.1/5.2 + bitop or luajit or ljx')
-    grp.add_option('--lua-dll', action='store_true', default=None,
-                   help='Compile lua as dll (Windows only)')
     ctx.load('gas')
 
 def configure(ctx):
-    ctx.add_os_flags('LUACFLAGS')
+    if not ctx.env.LUAC_MODE: ctx.env.LUAC_MODE = 'ljx'
     variant = ctx.variant
     host_variant = variant + '_host'
 
     if ctx.env['COMPILER_CXX'] != 'msvc':
-        ctx.env.append_value('CFLAGS_LJX', '-fexceptions')
-    else:
-        ctx.env.LUA_DLL = ctx.options.lua_dll
+        ctx.env.append_value('CFLAGS_LUA', '-fexceptions')
 
     if ctx.options.host_lua:
         ctx.find_program(ctx.options.host_lua,
@@ -148,16 +144,12 @@ def configure_ljx(ctx, variant, host_variant, suf):
 
     ctx.setenv(variant)
 
-    ctx.env.append_value('DEFINES_LJX',
+    ctx.env.append_value('DEFINES_LUA',
                          ['LJ_ABIVER=53', 'LUAJIT_ENABLE_LUA53COMPAT'])
     if dest_os != 'win32' and dest_os != 'win64':
         ctx.env.append_value(
-            'DEFINES_LJX',
+            'DEFINES_LUA',
             ['LUA_API=extern __attribute((visibility("default")))'])
-    elif ctx.env.LUA_DLL:
-        ctx.env.append_value('DEFINES_LJX', ['LUA_BUILD_AS_DLL'])
-    if not ctx.options.release:
-        ctx.env.append_value('DEFINES_LJX', 'LUA_USE_APICHECK')
 
 def build(ctx):
     host_env = ctx.all_envs[ctx.variant + '_host']
@@ -277,25 +269,20 @@ def build_ljx(ctx, minilua, host_env, pref, suf):
         export_includes = 'ljx/src',
         defines         = ver,
         uselib          = 'EXT',
-        use             = 'LJX DL M',
+        use             = 'LUA DL M',
         target          = pref+'lua53',
-        name            = pref+'ljx')
-
-    if ctx.env.LUA_DLL:
-        ctx(rule   = 'cp ${SRC} ${TGT}',
-            cls_keyword = lambda x: 'cp',
-            source = pref+'lua53.dll',
-            target = '../../lua53.dll')
+        name            = pref+'lua')
 
     # todo: maybe integrate into stcm-editor
     # only really needed for host
     ctx.program(source  = 'ljx/src/luajit.c',
-                use     = pref+'ljx',
+                use     = pref+'lua',
                 uselib  = 'READLINE',
                 defines = [ ver, 'LUA_CREDITS=""' ],
                 target  = pref+'luajit-ljx')
 
-from waflib.TaskGen import before_method, after_method, feature, extension
+from waflib.TaskGen import before_method, after_method, feature, extension, \
+    taskgen_method
 from waflib import Task
 
 @extension('.o', '.obj')
@@ -367,9 +354,9 @@ class ljx(Task.Task):
     run_str = '${tsk.executable} -bt h ${LUACFLAGS} ${SRC} ${TGT}'
     color = 'BLUE'
 
-@extension('.lua')
-def lua_to_h(self, node):
-    tsk = self.create_task('ljx', node, node.change_ext('.lua.h'))
+@taskgen_method
+def ljx_task(self, node, out):
+    tsk = self.create_task('ljx', node, out)
     pref = self.bld.env.LJX_CROSS and 'host/' or ''
     ljxtask = self.bld.get_tgen_by_name(pref+'luajit-ljx')
     ljx = ljxtask.link_task.outputs[0]

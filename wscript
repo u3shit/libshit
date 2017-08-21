@@ -45,8 +45,6 @@ def options(opt):
                    help='Optimize ext libs even if %s is in debug mode' % app.title())
     grp.add_option('--release', action='store_true', default=False,
                    help='Enable some flags for release builds')
-    grp.add_option('--without-lua', action='store_true', default=False,
-                   help='No lua support')
 
     opt.add_option('--skip-run-tests', action='store_true', default=False,
                    help="Skip actually running tests with `test'")
@@ -204,10 +202,6 @@ int main() { return 0; }
         cfg.check_cxx(lib='shell32')
         cfg.check_cxx(lib='user32')
 
-    if cfg.options.without_lua:
-        cfg.define('LIBSHIT_WITHOUT_LUA', 1)
-        cfg.env.WITHOUT_LUA = True
-
     Logs.pprint('NORMAL', 'Configuring ext '+variant)
     cfg.recurse('ext', name='configure', once=False)
 
@@ -241,8 +235,8 @@ def build(bld):
 
     bld.stlib(source   = src,
               uselib   = app,
-              use      = 'BOOST boost_system boost_filesystem ljx',
-              includes = 'src ext/ljx/src ext/brigand/include',
+              use      = 'BOOST boost_system boost_filesystem lua',
+              includes = 'src ext/brigand/include',
               export_includes = 'src ext/brigand/include',
               target   = 'libshit')
 

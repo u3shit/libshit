@@ -83,13 +83,7 @@ namespace Libshit::Lua
       else
       {
         int isnum;
-        // use tonumber instead of tointeger
-        // in luajit/ljx lua_Integer is ptrdiff_t, which means 32 or 64 bits
-        // depending on architecture... avoid this compatibility madness
-#ifndef LUA_VERSION_LJX
-#error "Update code for normal lua"
-#endif
-        auto ret = lua_tonumberx(vm, idx, &isnum);
+        auto ret = lua_tointegerx(vm, idx, &isnum);
         (void) ret; // seriously wtf gcc
         if (BOOST_LIKELY(isnum)) return static_cast<T>(ret);
         vm.TypeError(arg, TYPE_NAME<T>, idx);

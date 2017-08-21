@@ -1,0 +1,133 @@
+# -*- python -*-
+
+def options(ctx):
+    grp = ctx.get_option_group('configure options')
+    grp.add_option('--with-lua', action='store', default='ljx',
+                   help='Lua to use: none, ljx, lua, system')
+    grp.add_option('--without-lua', action='store_const', dest='with_lua',
+                   const='none', help='No lua support (same as --lua=none)')
+
+    grp.add_option('--lua-pc-name', action='store', default='lua53',
+                   help='Lua pkg-config name (in case of --with-lua=system). '+
+                   'Should be lua 5.3 or compatible')
+    grp.add_option('--lua-dll', action='store_true', default=None,
+                   help='Compile lua as dll (Windows only)')
+
+    grp.add_option('--luac-mode', action='store',
+                   help='Luac mode: copy, ljx, system-luajit, luac, system-luac, luac-wrapper')
+
+    ctx.recurse('.', name='options', wscript='wscript_ljx', once=False)
+    # no options in lua53
+
+def chk_luac(ctx, modes):
+    if not ctx.env.LUAC_MODE in modes:
+        ctx.fatal('Invalid --luac-mode, valid modes: %s' % modes)
+    if ctx.env.LUAC_MODE in ['system-luajit', 'system-luac', 'luac-wrapper']:
+        if ctx.env.LUAC == []:
+            ctx.fatal('Must specify LUAC env var')
+
+def configure(ctx):
+    from waflib import Logs
+    Logs.pprint('NORMAL', 'Configuring lua')
+    ctx.add_os_flags('LUACFLAGS')
+    ctx.add_os_flags('LUAC')
+
+    wlua = ctx.options.with_lua
+    ctx.env.WITH_LUA = wlua
+    ctx.env.LUAC_MODE = ctx.options.luac_mode
+    if wlua == 'none':
+        ctx.define('LIBSHIT_WITHOUT_LUA', 1)
+        ctx.env.WITHOUT_LUA = True
+        chk_luac(ctx, [[]])
+        return
+    elif wlua == 'system':
+        ctx.check_cfg(package=ctx.option.lua_pc_name, uselib_store='LUA')
+        if not ctx.env.LUAC_MODE: ctx.env.LUAC_MODE = 'copy'
+        chk_luac(ctx, ['copy', 'system-luajit', 'system-luac'])
+        return
+
+
+    if ctx.env.DEST_OS == 'win32' or ctx.env.DEST_OS == 'win64':
+        ctx.env.LUA_DLL = ctx.options.lua_dll
+
+    if ctx.env.LUA_DLL:
+        ctx.env.append_value('DEFINES_LUA', 'LUA_BUILD_AS_DLL')
+    if not ctx.options.release:
+        ctx.env.append_value('DEFINES_LUA', 'LUA_USE_APICHECK')
+
+    if wlua == 'ljx':
+        ctx.recurse('.', name='configure', wscript='wscript_ljx', once=False)
+        chk_luac(ctx, ['copy', 'ljx', 'system-luajit'])
+    elif wlua == 'lua':
+        ctx.recurse('.', name='configure', wscript='wscript_lua53', once=False)
+        chk_luac(ctx, ['copy', 'luac', 'system-luac', 'luac-wrapper'])
+    else:
+        ctx.fatal('Invalid --use-lua value: %q' % ctx.options.with_lua)
+
+
+def build(ctx):
+    if ctx.env.WITH_LUA == 'ljx':
+        ctx.recurse('.', name='build', wscript='wscript_ljx', once=False)
+    elif ctx.env.WITH_LUA == 'lua':
+        ctx.recurse('.', name='build', wscript='wscript_lua53', once=False)
+
+    if ctx.env.LUA_DLL:
+        ctx(rule   = 'cp ${SRC} ${TGT}',
+            cls_keyword = lambda x: 'cp',
+            source = 'lua53.dll',
+            target = '../../lua53.dll')
+
+
+from waflib import Task
+@Task.update_outputs
+class bin2c(Task.Task):
+    color = 'BLUE'
+
+    def run(self):
+        inp = self.inputs[0]
+        data = inp.read()
+
+        name = str(inp.change_ext(''))
+        out = """
+static constexpr const size_t luaJIT_BC_%s_SIZE = %d;
+static const char luaJIT_BC_%s[] = {
+""" % (name, len(data), name)
+        i = 0
+        for c in data:
+            if i > 16:
+                out += "\n"
+                i = 0
+            i += 1
+            if ord(c) >= 32 and ord(c) < 127 and c != "'" and c != "\\":
+                out += "'%s'," % c
+            else:
+                out += "'\%o'," % ord(c)
+        out += "\n};\n"
+        self.outputs[0].write(out)
+
+from waflib.TaskGen import extension
+@extension('.lua')
+def lua_to_h(self, node):
+    if self.env.WITHOUT_LUA:
+        self.fatal('Trying to compile .lua in build with no lua')
+
+    out = node.change_ext('.lua.h')
+    if self.env.LUAC_MODE == 'copy':
+        self.create_task('bin2c', node, out)
+    elif self.env.LUAC_MODE == 'system-luajit':
+        tsk = self.create_task('ljx', node, out)
+        tsk.executable = cxt.env.LUAC[0]
+    elif self.env.LUAC_MODE == 'system-luac':
+        self.luac_task(node, out, self.env.LUAC[0])
+    elif self.env.LUAC_MODE == 'ljx':
+        self.ljx_task(node, out)
+    elif self.env.LUAC_MODE == 'luac':
+        luac = self.bld.get_tgen_by_name('luac').link_task.outputs[0]
+        tsk = self.luac_task(node, out, luac.abspath())
+        tsk.dep_nodes += [luac]
+    elif self.env.LUAC_MODE == 'luac-wrapper':
+        luac = self.bld.get_tgen_by_name('luac').link_task.outputs[0]
+        tsk = self.luac_task(node, out, self.env.LUAC + [luac.abspath()])
+        tsk.dep_nodes += [luac]
+    else:
+        self.bld.fatal('Unknown LUAC_MODE')

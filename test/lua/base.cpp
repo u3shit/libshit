@@ -152,30 +152,36 @@ TEST_CASE("fail check", "[lua]")
 {
   State vm;
 
+  // ljx and plain lua produces different error messages...
+#ifdef LUA_VERSION_LJX
+#  define BADARG "bad argument #1 to '?' "
+#else
+#  define BADARG "bad argument #1 "
+#endif
   lua_pushboolean(vm, true);
   CHECK_THROWS_WITH(vm.Catch([&]() { vm.Check<int>(1); }),
                     Catch::Matchers::Contains(
-                      "bad argument #1 to '?' (integer expected, got boolean)"));
+                      BADARG "(integer expected, got boolean)"));
   lua_settop(vm, 1); // apparently luaL_error leave some junk on the stack
 
   CHECK_THROWS_WITH(vm.Catch([&]() { vm.Check<double>(1); }),
                     Catch::Matchers::Contains(
-                      "bad argument #1 to '?' (number expected, got boolean)"));
+                      BADARG "(number expected, got boolean)"));
   lua_settop(vm, 1);
 
   CHECK_THROWS_WITH(vm.Catch([&]() { vm.Check<const char*>(1); }),
                     Catch::Matchers::Contains(
-                      "bad argument #1 to '?' (string expected, got boolean)"));
+                      BADARG "(string expected, got boolean)"));
   lua_settop(vm, 1);
   CHECK_THROWS_WITH(vm.Catch([&]() { vm.Check<std::string>(1); }),
                     Catch::Matchers::Contains(
-                      "bad argument #1 to '?' (string expected, got boolean)"));
+                      BADARG "(string expected, got boolean)"));
   lua_settop(vm, 0);
 
   lua_pushinteger(vm, 77);
   CHECK_THROWS_WITH(vm.Catch([&]() { vm.Check<bool>(1); }),
                     Catch::Matchers::Contains(
-                      "bad argument #1 to '?' (boolean expected, got number)"));
+                      BADARG "(boolean expected, got number)"));
 }
 
 TEST_CASE("opt correct", "[lua]")
@@ -213,7 +219,8 @@ TEST_CASE("opt invalid", "[lua]")
   lua_pushliteral(vm, "foo");
   CHECK_THROWS_WITH(vm.Catch([&]() { vm.Opt<int>(1); }),
                     Catch::Matchers::Contains(
-                      "bad argument #1 to '?' (integer expected, got string)"));
+                      BADARG "(integer expected, got string)"));
+#undef BADARG
 }
 
 namespace
