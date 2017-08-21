@@ -50,6 +50,9 @@ def configure(ctx):
     if ctx.env.DEST_OS == 'win32' or ctx.env.DEST_OS == 'win64':
         ctx.env.LUA_DLL = ctx.options.lua_dll
 
+    if ctx.env['COMPILER_CXX'] != 'msvc':
+        ctx.env.append_value('CFLAGS_LUA', '-fexceptions')
+
     if ctx.env.LUA_DLL:
         ctx.env.append_value('DEFINES_LUA', 'LUA_BUILD_AS_DLL')
     if not ctx.options.release:

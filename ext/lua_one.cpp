@@ -58,12 +58,12 @@
 #include "luaconf.h"
 
 /* do not export internal symbols */
-// #undef LUAI_FUNC
-// #undef LUAI_DDEC
-// #undef LUAI_DDEF
-// #define LUAI_FUNC	static
-// #define LUAI_DDEC	static
-// #define LUAI_DDEF	static
+#undef LUAI_FUNC
+#undef LUAI_DDEC
+#undef LUAI_DDEF
+#define LUAI_FUNC	static
+#define LUAI_DDEC	extern
+#define LUAI_DDEF
 
 // build as extern "C"
 #undef LUA_API
@@ -73,6 +73,9 @@
 #define LUA_API extern "C" __attribute((visibility("default")))
 #endif
 
+// "make" variables "static"
+namespace
+{
 /* core -- used by all */
 #include "lapi.c"
 #include "lcode.c"
@@ -115,6 +118,7 @@
 #include "lutf8lib.c"
 #include "linit.c"
 #endif
+}
 
 /* lua */
 #ifdef MAKE_LUA
