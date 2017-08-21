@@ -1,4 +1,6 @@
-#! /bin/sh
+#! /bin/bash
+
+cd "$(dirname "${BASH_SOURCE[0]}")"
 
 TGT=ext/boost
 DL=https://sourceforge.net/projects/boost/files/boost/1.63.0/boost_1_63_0.tar.bz2

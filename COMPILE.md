@@ -1,0 +1,235 @@
+Compilation
+===========
+
+First: the compilation script is only really tested under Linux, even though it
+should compile on any POSIX system. The official windows versions are
+cross-compiled on Linux. I avoid using that piece of shit as much as possible.
+
+Requirements:
+
+* Recent gcc or clang (gcc-7, clang-4 or later, unless I forget to update this
+  document)
+* Python 3+ (for the compile script)
+* (optional) boost, lua 5.3
+
+A note on boost: if you're using a system/your own compiled boost, make sure
+it's compiled with the c++11/14/17 (they should be compatible) ABI. It should be
+the case if you use gcc-6 or later, but needs manual flag otherwise. See the
+section below.
+
+Compiling
+---------
+
+Make sure submodules are checked out:
+
+    $ git submodule update --init --recursive
+
+If you're not going to use your own boost, make sure to get it too:
+
+    $ libshit/get_boost.sh
+Alternatively just make sure a recent boost tarball is extracted/symlinked to
+`libshit/ext/boost`.
+
+In an ideal world, you can just run:
+
+```
+./waf configure
+./waf
+```
+
+You can specify compile flags on configure:
+
+    CXX=g++-7.1.0 CXXFLAGS="-O3 -DNDEBUG" LINKFLAGS="-whatever" ./waf configure
+
+You can use `CXXFLAGS_<appname>`, `LINKFLAGS_<appname>`, etc. to add flags only
+used during compiling <appname> (e.g. `NEPTOOLS`), and `CXXFLAGS_EXT` etc. to
+add flags only used during compiling bundled libs.
+
+Some useful flags for configure:
+
+* `--optimize`: produce some default optimization, but keep assertions enabled.
+* `--optimize-ext`: optimize ext libs even if Neptools itself is not optimized
+  (will also remove debug info).
+* `--release`: `--optimize` + no asserts
+* `--system-boost`: use external Boost, see next section for warnings
+* `--with-lua`, `--luac-mode`, `--lua-dll`: see section about lua
+
+Boost with C++14/17
+-------------------
+
+**Note**: This is no longer needed, but you can still manually compile and use a
+standalone version of boost. Please note that you need boost compiled with c++14
+support, which depending on your distribution may or may not be the default
+behavior. If you have a C++98 ABI version, it'll probably compile but crash
+randomly when run. Unless you want to avoid all this pain, use the bundled build
+above.
+
+[Download the latest release][boost-dl], and look at
+[getting started][boost-getting-started] guide, specially the 5.2. section. If
+you have boost installed globally, that can cause problems. In this case edit
+`tools/build/src/engine/jambase.c` and remove/comment out the line:
+```
+"BOOST_BUILD_PATH = /usr/share/boost-build ;\n",
+```
+before running `bootstrap.sh`.
+
+Continue until 5.2.4. You'll need to add `cxxflags=-std=c++1z` to the `b2`
+command line. Adding `link=static` is also a good idea to avoid dynamic loader
+path problems. We currently only use the filesystem library, so you can add
+`--with-filesystem` to reduce build time. I used the following command line:
+```
+b2 --with-filesystem toolset=gcc-7.1.0 variant=release link=static threading=single runtime-link=shared cxxflags=-std=c++1z stage
+```
+
+To actually use it, if you unpacked boost into `$boost_dir`:
+```
+./waf configure --system-boost --boost-includes $boost_dir --boost-libs $boost_dir/stage/lib
+```
+
+(Cross) Compiling to Windows
+----------------------------
+
+Currently only clang (probably patched, see next section) is supported, with
+MSVC 2013 lib files. In case of Neptools, it's pretty much a requirement.
+You'll also need [lld] if you want LTO or want to cross compile. I've only
+tested cross compiling, but it should be possible to compile on Windows too.
+
+Install MSVC 2013 on a Windows (virtual) machine. If you want to cross compile,
+you'll need to copy directories named `include` and `lib` to your Linux box from
+`Program Files (x86)/Microsoft Visual Studio 12.0/VC` and `Program Files
+(x86)/Windows Kits/8.1` too (assuming default install location).
+
+Problem #1: Linux filesystems are usually case-sensitive, but MSVC headers
+pretty much expect a case-insensitive file lookup. Solution 1: store the files
+on a case-insensitive fs (fat, ntfs, etc, or just mount your Windows fs).
+Solution 2: use [ciopfs]. Make sure you mount `ciopfs` first, and copy into that
+directory, otherwise you'll manually have to convert all files to downcase.
+
+Problem #2: clang won't know where are your files, so you'll need some compiler
+flags. For compiling you'll need: `-m32 -imsvc $vc/include -imsvc
+$winkit/include/um -imsvc $winkit/include/shared` where `$vc` and `$winkit`
+refers to the folders you previously copied. Using `-imsvc` prevent clang from
+overflowing your terminal about how awful the microsoft headers are (we know
+that) and won't mess up your include order. For linking, you'll need
+`/libpath:$vc/lib /libpath:$winkit/lib/winv6.3/um/x86`.
+
+To compile boost (no longer needed, just use the downloader script, unless you
+love when it hurts), look [here][boost-cross]. You'll need to create a
+`~/user-config.jam`. Mine looks like this (clang is installed into `$clangbin`):
+
+```
+using msvc : clang : "$clangbin/clang-cl" :
+  <compileflags>"-m32 -fms-compatibility-version=18 -imsvc $vc/include -imsvc $winkit/include/um -imsvc $winkit/include/shared -Xclang -emit-llvm-bc"
+  <linkflags>"/libpath:$vc/lib /libpath:$winkit/lib/winv6.3/um/x86"
+  <compiler>"$clangbin/clang-cl"
+  <linker>"$clangbin/lld-link"
+  <setup>
+  ;
+```
+
+`-Xclang -emit-llvm-bc` is used to enable LTO-ing boost. You can remove it if
+you do not want it. Then use `b2 toolset=msvc-clang ...` to compile boost. You
+can also create a 64-bit version, in this case remove `-m32` from cflags and
+adjust the libpaths (but it's not really required if you only build static
+libs).
+
+
+Now you can compile this project. Use something like that:
+```
+CC=$clangbin/clang-cl CXX=$clangbin/clang-cl LINK_CXX=$clangbin/lld-link AR=$clangbin/llvm-lib CXXFLAGS="your cflags"  LINKFLAGS="your linkflags" ./waf configure --clang-hack [--system-boost --boost-includes ...]
+```
+
+Some potential problems with the clang toolchain
+------------------------------------------------
+
+When using LTO, it can still crash lld when creating a dll. See `llvm.patch` for
+a path that fixes it for the time being.
+
+Third problem: llvm/clang doesn't support the `/EHsa` flag, only `/EHs`, but
+that won't catch LuaJIT/ljx exceptions. The `llvm.patch` includes a quick hack
+that'll at least make sure destructors are called when unwinding lua exceptions
+(and exceptions are handled manually by `__try`/`__except`).
+
+Lua
+---
+
+Libshit includes the most horrible lua binding generator that you'll ever see.
+It supports ljx (version patched by me, which is a patched luajit to support lua
+5.2 and 5.3 features), or plain lua 5.3.
+
+Use `--with-lua=` to select a lua version:
+
+* `none`: build without lua. Equivalent to `--without-lua`.
+* `ljx`: build ljx. Default with Neptools.
+* `lua`: build plain lua 5.3.
+* `system`: use a system lua. Specify the name of the correct pkg-config package
+  name with `--lua-pc-name=`. It should point to ljx or lua 5.3 (or something
+  compatible).
+
+To run libshit, you have to embed a few lua scripts into the executable. There
+are multiple methods to do this, use `--luac-mode=` to select it:
+
+* `copy`: copy the lua source without changes. Use if you have no better option.
+* `ljx`: (only with `ljx`) use the built `ljx` to compile lua scripts to
+  byte-code.
+* `system-luajit`: use a system binary with `luajit` like command line to
+  compile lua to byte code. Select the binary by setting the `LUAC` environment
+  variable. Make sure the tool produces byte code that the selected lua
+  understands!
+* `luac`: (only with `lua`) use the built lua's luac to compile scripts.
+* `system-luac`: like `system-luac`, but expects a `luac` like binary.
+* `luac-wrapper`: (only with `lua`) use the built luac, but use a wrapper to run
+  it. See below.
+
+**Note** when using plain lua: unfortunately plain lua's byte code is not
+portable, you can't use a luac built for platform A and load the byte code on
+platform B. Here are your options:
+
+* if you can run the binaries compiled for the target platform (for example
+  cross-compiling on `amd64` linux to 32-bit linux), just use `luac` if
+  compiling lua, or `system-luac` and make sure you specify the correct binary
+  (32-bit `luac` in the example).
+* if you can run the compiled binaries with a wrapper (like `wine`, or the qemu
+  user emulation), use `luac-wrapper` and specify the wrapper if building lua.
+  In case of a system lua, you can use `LUAC=wrapper /path/to/luac` with
+  `system-luac`.
+* For more complicated scenarios: either write a script that takes arguments
+  similar to luac and solves the problem somehow, or just use `--luac-mode=copy`
+  (which should be the default if the build script detects cross-compilation).
+
+Lua binding generator
+---------------------
+
+This is only relevant if you want to develop code. The generated binding files
+are checked into the repository, so you don't have to do anything with it if you
+only want to compile.
+
+Requirements:
+
+* `luajit` (probably works with ljx too :p)
+* patched clang: apply `clang.patch` to clang 4.0
+
+Compile helper library:
+
+    $ make -C libshit/ext/ljclang
+
+Generate bindings:
+
+    $ ./gen_binding.sh
+
+If you have the patched clang in a non-standard location:
+
+    $ PATH=llvm/install/prefix/bin make -C libshit/ext/ljclang # or just specify the correct CFLAGS
+    $ PREFIX=llvm/install/prefix ./gen_binding.sh
+
+In the source, mark method which you do not want to export with `LIBSHIT_NOLUA`.
+There's also `LIBSHIT_LUAGEN` which allows fine tuning of binding generation.
+Edit `gen_binding.sh` if you need to generate binding for a new file.
+
+TODO: write much more documentation
+
+[boost-dl]: http://www.boost.org/users/download/
+[boost-getting-started]: http://www.boost.org/doc/libs/1_60_0/more/getting_started/unix-variants.html
+[boost-cross]: http://www.boost.org/build/doc/html/bbv2/tasks/crosscompile.html
+[lld]: http://lld.llvm.org/
+[ciopfs]: http://www.brain-dump.org/projects/ciopfs/
