@@ -324,7 +324,7 @@ def test(bld):
     if not bld.options.skip_run_tests:
         bld.add_post_fun(lambda ctx:
             ctx.exec_command([
-                bld.bldnode.find_or_declare('run-tests').abspath(),
+                bld.get_tgen_by_name('run-tests').link_task.outputs[0].abspath(),
                 '--use-colour', 'yes'], cwd=bld.variant_dir) == 0 or ctx.fatal('Test failure')
         )
 
