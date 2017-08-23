@@ -1,8 +1,10 @@
 # -*- python -*-
 
+from waflib import Context
 def options(ctx):
     grp = ctx.get_option_group('configure options')
-    grp.add_option('--with-lua', action='store', default='ljx',
+    grp.add_option('--with-lua', action='store',
+                   default=getattr(Context.g_module, 'DEFAULT_LUA', 'none'),
                    help='Lua to use: none, ljx, lua, system')
     grp.add_option('--without-lua', action='store_const', dest='with_lua',
                    const='none', help='No lua support (same as --lua=none)')

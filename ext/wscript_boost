@@ -6,9 +6,10 @@ def options(ctx):
     grp.add_option('--system-boost', action='store_true', default=False,
                    help='Use system boost')
 
+from waflib import Context
 def configure(ctx):
     if ctx.options.system_boost:
-        ctx.check_boost(lib='filesystem system')
+        ctx.check_boost(lib=getattr(Context.g_module, 'BOOST_LIBS', []))
     else:
         ctx.start_msg('Checking for boost')
         if not ctx.path.find_node('boost/boost/filesystem.hpp'):
@@ -38,22 +39,32 @@ def configure(ctx):
 def build(ctx):
     if not ctx.env.BUILD_BOOST: return
 
-    ctx.stlib(source  = 'boost/libs/system/src/error_code.cpp',
-              defines = 'BOOST_SYSTEM_STATIC_LINK=1',
-              target  = 'boost_system',
-              uselib  = 'BOOST EXT') # get proper includes
+    boost_libs = set(getattr(Context.g_module, 'BOOST_LIBS', []))
+    if 'system' in boost_libs:
+        boost_libs.remove('system')
 
-    fs_src = [
-        'boost/libs/filesystem/src/codecvt_error_category.cpp',
-        'boost/libs/filesystem/src/operations.cpp',
-        'boost/libs/filesystem/src/path.cpp',
-        'boost/libs/filesystem/src/path_traits.cpp',
-        'boost/libs/filesystem/src/portability.cpp',
-        'boost/libs/filesystem/src/unique_path.cpp',
-        'boost/libs/filesystem/src/utf8_codecvt_facet.cpp',
-        'boost/libs/filesystem/src/windows_file_codecvt.cpp',
-    ]
-    ctx.stlib(source  = fs_src,
-              defines = 'BOOST_FILESYSTEM_STATIC_LINK=1',
-              target  = 'boost_filesystem',
-              uselib  = 'BOOST EXT') # get proper includes
+        ctx.stlib(source  = 'boost/libs/system/src/error_code.cpp',
+                  defines = 'BOOST_SYSTEM_STATIC_LINK=1',
+                  target  = 'boost_system',
+                  uselib  = 'BOOST EXT') # get proper includes
+
+    if 'filesystem' in boost_libs:
+        boost_libs.remove('filesystem')
+
+        fs_src = [
+            'boost/libs/filesystem/src/codecvt_error_category.cpp',
+            'boost/libs/filesystem/src/operations.cpp',
+            'boost/libs/filesystem/src/path.cpp',
+            'boost/libs/filesystem/src/path_traits.cpp',
+            'boost/libs/filesystem/src/portability.cpp',
+            'boost/libs/filesystem/src/unique_path.cpp',
+            'boost/libs/filesystem/src/utf8_codecvt_facet.cpp',
+            'boost/libs/filesystem/src/windows_file_codecvt.cpp',
+        ]
+        ctx.stlib(source  = fs_src,
+                  defines = 'BOOST_FILESYSTEM_STATIC_LINK=1',
+                  target  = 'boost_filesystem',
+                  uselib  = 'BOOST EXT') # get proper includes
+
+    if boost_libs: # empty set is false
+        ctx.fatal("Unhandled boost libs: %s" % boost_libs)
