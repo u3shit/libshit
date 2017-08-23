@@ -34,6 +34,7 @@ except IOError:
 
 app = Context.g_module.APPNAME.upper()
 
+all_system = []
 def options(opt):
     opt.load('compiler_c compiler_cxx')
     grp = opt.get_option_group('configure options')
@@ -45,6 +46,12 @@ def options(opt):
                    help='Optimize ext libs even if %s is in debug mode' % app.title())
     grp.add_option('--release', action='store_true', default=False,
                    help='Enable some flags for release builds')
+    grp.add_option('--all-system', dest='all_system',
+                   action='store_const', const='system',
+                   help="Disable bundled libs where it's generally ok")
+    grp.add_option('--all-bundled', dest='all_system',
+                   action='store_const', const='bundle',
+                   help="Use bundled libs where it's generally ok")
 
     opt.add_option('--skip-run-tests', action='store_true', default=False,
                    help="Skip actually running tests with `test'")
@@ -54,6 +61,12 @@ def configure(cfg):
     from waflib import Logs
     if cfg.options.release:
         cfg.options.optimize = True
+
+    if cfg.options.all_system:
+        global all_system
+        for s in all_system:
+            if getattr(cfg.options, 'system_'+s, None) == None:
+                setattr(cfg.options, 'system_'+s, cfg.options.all_system)
 
     variant = cfg.variant
     environ = cfg.environ
@@ -382,3 +395,45 @@ from waflib.Task import Task
 def getname(self):
     return self.__class__.__name__ + ':'
 Task.keyword = getname
+
+# system building helpers
+from waflib.Options import OptionsContext
+def system_opt(ctx, name, include_all=True):
+    grp = ctx.get_option_group('configure options')
+    sname = 'system_' + name
+    grp.add_option('--system-'+name, dest=sname,
+                   action='store_const', const='system',
+                   help='Use system '+name)
+    grp.add_option('--bundled-'+name, dest=sname,
+                   action='store_const', const='bundle',
+                   help='Use bundled '+name)
+    if include_all:
+        global all_system
+        all_system += [name]
+OptionsContext.system_opt = system_opt
+
+from waflib.Errors import ConfigurationError
+@conf
+def system_chk(ctx, name, default, system_chk, bundle_chk):
+    opt = getattr(ctx.options, 'system_'+name) or default
+    envname = 'BUILD_' + name.upper()
+
+    if opt == 'auto':
+        try:
+            system_chk(ctx)
+            ctx.env[envname] = False
+            ctx.msg('Using '+name, 'system')
+            return
+        except ConfigurationError:
+            opt = 'bundle'
+
+    if opt == 'system':
+        system_chk(ctx)
+        ctx.msg('Using '+name, 'system')
+        ctx.env[envname] = False
+    elif opt == 'bundle':
+        bundle_chk(ctx)
+        ctx.msg('Using '+name, 'bundled')
+        ctx.env[envname] = True
+    else:
+        ctx.fatal('Invalid opt')
