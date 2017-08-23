@@ -41,17 +41,24 @@ namespace Libshit::Logger
   ::Libshit::Logger::CheckLog(name, level) && \
   ::Libshit::Logger::Log(name, level, LIBSHIT_LOG_ARGS)
 
-#define LIBSHIT_ERR(name)  LIBSHIT_LOG(name, ::Libshit::Logger::ERROR)
-#define LIBSHIT_WARN(name) LIBSHIT_LOG(name, ::Libshit::Logger::WARNING)
-#define LIBSHIT_INFO(name) LIBSHIT_LOG(name, ::Libshit::Logger::INFO)
+#define LIBSHIT_CHECK_LOG ::Libshit::Logger::CheckLog
+
+#define LIBSHIT_ERR(name)        LIBSHIT_LOG(name, ::Libshit::Logger::ERROR)
+#define LIBSHIT_CHECK_ERR(name)  LIBSHIT_CHECK_LOG(name, ::Libshit::Logger::ERROR)
+#define LIBSHIT_WARN(name)       LIBSHIT_LOG(name, ::Libshit::Logger::WARNING)
+#define LIBSHIT_CHECK_WARN(name) LIBSHIT_CHECK_LOG(name, ::Libshit::Logger::WARNING)
+#define LIBSHIT_INF(name)        LIBSHIT_LOG(name, ::Libshit::Logger::INFO)
+#define LIBSHIT_CHECK_INF(name)  LIBSHIT_CHECK_LOG(name, ::Libshit::Logger::INFO)
 
 #ifndef NDEBUG
 #  define LIBSHIT_DBG(name, level)                                              \
   ([]{static_assert(0 <= (level) && (level) < 5, "invalid debug level");},1) && \
   LIBSHIT_LOG(name, level)
+#  define LIBSHIT_CHECK_DBG(name, level) LIBSHIT_CHECK_LOG(name, level)
 #else
 #  define LIBSHIT_DBG(name, level) \
   while (false) *static_cast<std::ostream*>(nullptr)
+#  define LIBSHIT_CHECK_DBG(name, level) false
 #endif
 
 }
