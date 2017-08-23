@@ -7,6 +7,7 @@
 #pragma once
 
 #include "logger.hpp"
+#include <iostream>
 
 #define LOG(level) LIBSHIT_LOG(LIBSHIT_LOG_NAME, level)
 #define CHECK_LOG(level) LIBSHIT_CHECK_LOG(LIBSHIT_LOG_NAME, level)
