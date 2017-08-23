@@ -248,9 +248,9 @@ def build(bld):
 
     bld.stlib(source   = src,
               uselib   = app,
-              use      = 'BOOST boost_system boost_filesystem lua',
-              includes = 'src ext/brigand/include',
-              export_includes = 'src ext/brigand/include',
+              use      = 'BOOST BRIGAND lua',
+              includes = 'src',
+              export_includes = 'src',
               target   = 'libshit')
 
 
@@ -329,9 +329,9 @@ def test(bld):
             'test/lua/user_type.cpp',
         ]
     bld.objects(source   = src,
-                includes = 'src ext/catch/include',
+                includes = 'src',
                 uselib   = app,
-                use      = 'libshit',
+                use      = 'CATCH libshit',
                 target   = 'libshit-tests')
 
     if not bld.options.skip_run_tests:
@@ -413,10 +413,22 @@ def system_opt(ctx, name, include_all=True):
 OptionsContext.system_opt = system_opt
 
 from waflib.Errors import ConfigurationError
+from waflib import Utils
 @conf
+# bundle_chk: if string, header only lib's include path
 def system_chk(ctx, name, default, system_chk, bundle_chk):
     opt = getattr(ctx.options, 'system_'+name) or default
-    envname = 'BUILD_' + name.upper()
+    envname = 'BUILD_' + Utils.quote_define_name(name)
+
+    if bundle_chk == None:
+        def fun(ctx):
+            pass
+        bundle_chk = fun
+    if isinstance(bundle_chk, str):
+        incl_dir = ctx.path.find_dir(bundle_chk).abspath()
+        def fun(ctx):
+            ctx.env['INCLUDES_'+name.upper()] = incl_dir
+        bundle_chk = fun
 
     if opt == 'auto':
         try:
