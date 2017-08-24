@@ -181,6 +181,9 @@ namespace Libshit::Logger
           case ERROR:   color = FOREGROUND_RED;                    break;
           case WARNING: color = FOREGROUND_RED | FOREGROUND_GREEN; break;
           case INFO:    color = FOREGROUND_GREEN;                  break;
+          default:
+            color = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
+            break;
           }
           SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | color);
 #else
