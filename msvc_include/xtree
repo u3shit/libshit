@@ -2,6 +2,9 @@
 
 #pragma once
 
+#include <xmemory>
+#include <stdexcept>
+
 // patch (multi_)?(map|set) to support is_transparent in find method
 // other methods not patched...
 
