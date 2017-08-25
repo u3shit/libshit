@@ -10,15 +10,14 @@ except:
     with open('VERSION', 'r') as f:
         VERSION = f.readline().strip('\n')
 
+from waflib.TaskGen import after_method, feature, extension
 def fixup_msvc():
-    from waflib.TaskGen import after_method, feature
     @after_method('apply_link')
     @feature('c', 'cxx')
     def apply_flags_msvc(self):
         pass
 
     # ignore .rc files when not on windows/no resource compiler
-    from waflib.TaskGen import extension
     @extension('.rc')
     def rc_override(self, node):
         if self.env.WINRC:
@@ -154,6 +153,17 @@ def configure(cfg):
         '-Wno-varargs',
     ])
 
+    if cfg.check_cxx(cxxflags=['-isystem', '.'],
+                     features='cxx', mandatory=False,
+                     msg='Checking for compiler flag -isystem'):
+        cfg.env.CPPSYSPATH_ST = ['-isystem']
+    elif cfg.check_cxx(cxxflags=['-imsvc', '.'],
+                       features='cxx', mandatory=False,
+                       msg='Checking for compiler flag -imsvc'):
+        cfg.env.CPPSYSPATH_ST = ['-imsvc']
+    else:
+        cfg.env.CPPSYSPATH_ST = cfg.env.CPPPATH_ST
+
     if cfg.env['COMPILER_CXX'] == 'msvc':
         cfg.define('_CRT_SECURE_NO_WARNINGS', 1)
         cfg.env.append_value('CXXFLAGS', [
@@ -267,7 +277,6 @@ def test(bld):
     import sys
     from waflib import Logs
     from waflib.Task import Task
-    from waflib.TaskGen import extension, feature
     from waflib.Tools import c_preproc
     @extension('.cpp')
     def fail_cxx_ext(self, node):
@@ -427,7 +436,7 @@ def system_chk(ctx, name, default, system_chk, bundle_chk):
     if isinstance(bundle_chk, str):
         incl_dir = ctx.path.find_dir(bundle_chk).abspath()
         def fun(ctx):
-            ctx.env['INCLUDES_'+name.upper()] = incl_dir
+            ctx.env['SYSTEM_INCLUDES_'+name.upper()] = incl_dir
         bundle_chk = fun
 
     if opt == 'auto':
@@ -449,3 +458,27 @@ def system_chk(ctx, name, default, system_chk, bundle_chk):
         ctx.env[envname] = True
     else:
         ctx.fatal('Invalid opt')
+
+
+@feature('c', 'cxx', 'includes')
+@after_method('propagate_uselib_vars', 'process_source', 'apply_incpaths')
+def apply_sysincpaths(self):
+    lst = self.to_incnodes(self.to_list(getattr(self, 'system_includes', [])) +
+                           self.env['SYSTEM_INCLUDES'])
+    self.includes_nodes += lst
+    self.env['SYSINCPATHS'] = [x.abspath() for x in lst]
+
+from waflib.Tools import c, cxx
+from waflib.Task import compile_fun
+from waflib import Utils
+from waflib.Tools.ccroot import USELIB_VARS
+for cls in [c.c, cxx.cxx]:
+    run_str = cls.orig_run_str.replace('INCPATHS', 'INCPATHS} ${CPPSYSPATH_ST:SYSINCPATHS')
+    (f, dvars) = compile_fun(run_str, cls.shell)
+    cls.hcode = Utils.h_cmd(run_str)
+    cls.run = f
+    cls.vars = list(set(cls.vars + dvars))
+    cls.vars.sort()
+USELIB_VARS['c'].add('SYSTEM_INCLUDES')
+USELIB_VARS['cxx'].add('SYSTEM_INCLUDES')
+USELIB_VARS['includes'].add('SYSTEM_INCLUDES')
