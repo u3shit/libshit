@@ -37,11 +37,11 @@ namespace Libshit::Lua
   { static constexpr const char* TYPE_NAME = T::TYPE_NAME; };
 
   template <typename T>
-  struct TypeName<T, std::enable_if_t<std::is_integral<T>::value>>
+  struct TypeName<T, std::enable_if_t<std::is_integral_v<T>>>
   { static constexpr const char* TYPE_NAME = "integer"; };
 
   template <typename T>
-  struct TypeName<T, std::enable_if_t<std::is_floating_point<T>::value>>
+  struct TypeName<T, std::enable_if_t<std::is_floating_point_v<T>>>
   { static constexpr const char* TYPE_NAME = "number"; };
 
   template<> struct TypeName<bool>
@@ -71,8 +71,7 @@ namespace Libshit::Lua
 
   template <typename T>
   struct TypeTraits<T, std::enable_if_t<
-    std::is_integral<T>::value || std::is_enum<T>::value ||
-    IsBoostEndian<T>::value>>
+    std::is_integral_v<T> || std::is_enum_v<T> || IsBoostEndian<T>::value>>
   {
     template <bool Unsafe>
     static T Get(StateRef vm, bool arg, int idx)
@@ -101,7 +100,7 @@ namespace Libshit::Lua
   };
 
   template <typename T>
-  struct TypeTraits<T, std::enable_if_t<std::is_floating_point<T>::value>>
+  struct TypeTraits<T, std::enable_if_t<std::is_floating_point_v<T>>>
   {
     template <bool Unsafe>
     static T Get(StateRef vm, bool arg, int idx)
@@ -169,9 +168,9 @@ namespace Libshit::Lua
 
   template <typename T>
   struct TypeTraits<T, std::enable_if_t<
-    std::is_same<T, std::string>::value ||
-    std::is_same<T, NonowningString>::value ||
-    std::is_same<T, StringView>::value>>
+    std::is_same_v<T, std::string> ||
+    std::is_same_v<T, NonowningString> ||
+    std::is_same_v<T, StringView>>>
   {
     template <bool Unsafe>
     static T Get(StateRef vm, bool arg, int idx)

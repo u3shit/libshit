@@ -93,7 +93,7 @@ namespace Libshit::Lua
 
     template <typename T>
     struct SmartPush<
-      T, std::enable_if_t<std::is_base_of<DynamicObject, T>::value>>
+      T, std::enable_if_t<std::is_base_of_v<DynamicObject, T>>>
     {
       static void Push(StateRef& vm, RefCounted& ctrl, T& obj)
       { GetDynamicObject(obj).PushLua(vm, ctrl); }
@@ -137,7 +137,7 @@ namespace Libshit::Lua
 
   template <typename T, template<typename> class Storage>
   struct TypeTraits<NotNull<SharedPtrBase<T, Storage>>,
-                    std::enable_if_t<IsSmartObject<T>::value>> : TypeTraits<T>
+                    std::enable_if_t<IS_SMART_OBJECT<T>>> : TypeTraits<T>
   {
     using Ptr = NotNull<SharedPtrBase<T, Storage>>;
 
@@ -154,12 +154,12 @@ namespace Libshit::Lua
 
   template <typename T, template<typename> class Storage>
   struct TypeTraits<SharedPtrBase<T, Storage>,
-                    std::enable_if_t<IsSmartObject<T>::value>>
+                    std::enable_if_t<IS_SMART_OBJECT<T>>>
     : NullableTypeTraits<SharedPtrBase<T, Storage>> {};
 
   template <typename T, template<typename> class Storage>
   struct TypeTraits<WeakPtrBase<T, Storage>,
-                    std::enable_if_t<IsSmartObject<T>::value>>
+                    std::enable_if_t<IS_SMART_OBJECT<T>>>
   {
     using Type = WeakPtrBase<T, Storage>;
     using RawType = T;

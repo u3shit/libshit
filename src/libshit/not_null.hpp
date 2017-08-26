@@ -46,7 +46,7 @@ namespace Libshit
 
     decltype(auto) get() const { return t.get(); }
     template <typename U,
-              typename = std::enable_if_t<std::is_convertible<T, U>::value>>
+              typename = std::enable_if_t<std::is_convertible_v<T, U>>>
     operator U() const { LIBSHIT_ASSERT(t); return static_cast<U>(t); }
   private:
     T t;

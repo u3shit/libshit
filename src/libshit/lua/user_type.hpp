@@ -32,7 +32,7 @@ namespace Libshit::Lua
     };
 
     template <typename T>
-    struct LuaGetRefHlp<T, std::enable_if_t<std::is_reference<T>::value>>
+    struct LuaGetRefHlp<T, std::enable_if_t<std::is_reference_v<T>>>
     { using Type = T; };
 
     template <typename T>

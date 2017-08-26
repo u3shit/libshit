@@ -32,7 +32,7 @@ namespace Libshit::Lua
   constexpr bool IS_VALUE_OBJECT = IsValueObject<T>::value;
 
   template <typename T>
-  struct TypeTraits<T, std::enable_if_t<IsValueObject<T>::value>>
+  struct TypeTraits<T, std::enable_if_t<IS_VALUE_OBJECT<T>>>
   {
     using RawType = T;
 
@@ -56,7 +56,7 @@ namespace Libshit::Lua
   };
 
   template <typename T>
-  struct UserTypeTraits<T, std::enable_if_t<IsValueObject<T>::value>>
+  struct UserTypeTraits<T, std::enable_if_t<IS_VALUE_OBJECT<T>>>
   {
     static constexpr bool INSTANTIABLE = true;
     static constexpr bool NEEDS_GC = !std::is_trivially_destructible_v<T>;

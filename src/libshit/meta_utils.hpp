@@ -11,7 +11,7 @@ namespace Libshit
 {
 
   template <typename T>
-  constexpr std::size_t EmptySizeof = std::is_empty<T>::value ? 0 : sizeof(T);
+  constexpr std::size_t EmptySizeof = std::is_empty_v<T> ? 0 : sizeof(T);
 
   // string->template char...
   template <typename X, template <char...> typename Wrap, typename Seq>

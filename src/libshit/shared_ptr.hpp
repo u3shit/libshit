@@ -122,11 +122,11 @@ namespace Libshit
   class SharedPtrBase
   {
     template <typename U = T>
-    static constexpr bool IS_NORMAL_S = std::is_same<
-      Storage<T>, SharedPtrStorageNormal<U>>::value;
+    static constexpr bool IS_NORMAL_S = std::is_same_v<
+      Storage<T>, SharedPtrStorageNormal<U>>;
     template <typename U = T>
-    static constexpr bool IS_REFCOUNTED_S = std::is_same<
-      Storage<T>, SharedPtrStorageRefCounted<U>>::value;
+    static constexpr bool IS_REFCOUNTED_S = std::is_same_v<
+      Storage<T>, SharedPtrStorageRefCounted<U>>;
     static_assert(IS_NORMAL_S<> || IS_REFCOUNTED_S<>);
 
   public:
@@ -271,11 +271,11 @@ namespace Libshit
   class WeakPtrBase
   {
     template <typename U = T>
-    static constexpr bool IS_NORMAL_S = std::is_same<
-      Storage<T>, SharedPtrStorageNormal<U>>::value;
+    static constexpr bool IS_NORMAL_S = std::is_same_v<
+      Storage<T>, SharedPtrStorageNormal<U>>;
     template <typename U = T>
-    static constexpr bool IS_REFCOUNTED_S = std::is_same<
-      Storage<T>, SharedPtrStorageRefCounted<U>>::value;
+    static constexpr bool IS_REFCOUNTED_S = std::is_same_v<
+      Storage<T>, SharedPtrStorageRefCounted<U>>;
     static_assert(IS_NORMAL_S<> || IS_REFCOUNTED_S<>);
 
   public:
