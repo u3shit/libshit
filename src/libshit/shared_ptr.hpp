@@ -2,9 +2,11 @@
 #define UUID_1472EFCC_6110_4A95_BDB7_2EE28E2207E4
 #pragma once
 
+#include "except.hpp"
 #include "not_null.hpp"
 
 #include <atomic>
+#include <memory>
 
 namespace Libshit
 {
@@ -66,12 +68,25 @@ namespace Libshit
   template <typename T>
   constexpr bool IS_REFCOUNTED = std::is_base_of<RefCounted, T>::value;
 
+  namespace Detail
+  {
+    template <typename T>
+    struct RefCountedPtrContainer : RefCounted
+    {
+      T* ptr;
+
+      RefCountedPtrContainer(T* ptr) noexcept : ptr{ptr} {}
+      void Dispose() noexcept override { static_assert(sizeof(T)); delete ptr; }
+    };
+  }
+
   // RefCounted objects only need one pointer, others need two
   template <typename T>
   struct SharedPtrStorageNormal
   {
-    SharedPtrStorageNormal() = default;
-    SharedPtrStorageNormal(RefCounted* ctrl, T* ptr) : ctrl{ctrl}, ptr{ptr} {}
+    SharedPtrStorageNormal() noexcept = default;
+    SharedPtrStorageNormal(RefCounted* ctrl, T* ptr) noexcept
+      : ctrl{ctrl}, ptr{ptr} {}
 
     RefCounted* GetCtrl() const noexcept { return ctrl; }
     T* GetPtr() const noexcept { return ptr; }
@@ -93,9 +108,9 @@ namespace Libshit
 
     // can't put the IS_REFCOUNTED static assert into the class body, as that
     // would break when using this on incomplete types
-    SharedPtrStorageRefCounted()
+    SharedPtrStorageRefCounted() noexcept
     { static_assert(IS_REFCOUNTED<T>); }
-    SharedPtrStorageRefCounted(RefCounted* ctrl, T* ptr)
+    SharedPtrStorageRefCounted(RefCounted* ctrl, T* ptr) noexcept
       : ptr{const_cast<U*>(ptr)}
     {
       (void) ctrl;
@@ -134,10 +149,10 @@ namespace Libshit
     SharedPtrBase(std::nullptr_t) noexcept {}
 
     // alias ctor
-    template <typename U,
+    template <typename U, template<typename> typename UStorage,
               typename V = T,
               typename = std::enable_if_t<IS_NORMAL_S<V>>>
-    SharedPtrBase(SharedPtrBase<U, Storage> o, T* ptr) noexcept
+    SharedPtrBase(SharedPtrBase<U, UStorage> o, T* ptr) noexcept
       : s{o.GetCtrl(), ptr}
     { o.s.Reset(); }
 
@@ -179,6 +194,13 @@ namespace Libshit
     SharedPtrBase(U* ptr, bool add_ref = true) noexcept
       : SharedPtrBase{const_cast<std::remove_const_t<U>*>(ptr), ptr, add_ref} {}
 
+    // manage existing non refcounted ptrs
+    template <typename U,
+              typename = std::enable_if_t<IS_NORMAL_S<T> && IS_NORMAL_S<U>>>
+    SharedPtrBase(U* ptr)
+      try : SharedPtrBase{new Detail::RefCountedPtrContainer<U>{ptr}, ptr, true}
+    {} catch (...) { delete ptr; }
+
     // misc standard members
     SharedPtrBase& operator=(SharedPtrBase p) noexcept
     {
@@ -202,11 +224,10 @@ namespace Libshit
     explicit operator bool() const noexcept { return s.GetPtr(); }
 
     // casts
-#define LIBSHIT_GEN(camel, snake)                        \
-    template <typename U>                                \
-    friend SharedPtrBase<U, Storage> camel##PointerCast( \
-      const SharedPtrBase& p) noexcept                   \
-    { return {p.GetCtrl(), snake##_cast<U*>(p.get()), true}; }
+#define LIBSHIT_GEN(camel, snake)                                 \
+    template <typename U>                                         \
+    SharedPtrBase<U, Storage> camel##PointerCast() const noexcept \
+    { return {GetCtrl(), snake##_cast<U*>(get()), true}; }
     LIBSHIT_GEN(Static, static)
     LIBSHIT_GEN(Dynamic, dynamic)
     LIBSHIT_GEN(Const, const)
@@ -264,6 +285,13 @@ namespace Libshit
     IS_REFCOUNTED<T>,
     SharedPtrBase<T, SharedPtrStorageRefCounted>,
     SharedPtrBase<T, SharedPtrStorageNormal>>;
+
+  template <typename T>
+  using NotNullSharedPtr = NotNull<SharedPtr<T>>;
+  template <typename T>
+  using NotNullRefCountedPtr = NotNull<RefCountedPtr<T>>;
+  template <typename T>
+  using NotNullSmartPtr = NotNull<SmartPtr<T>>;
 
 
   // weak ptr
@@ -349,6 +377,15 @@ namespace Libshit
       else return {};
     }
 
+    // not in weak_ptr -- like the shared ctor, but you don't have to specify
+    // the kilometer long typename
+    SharedPtrBase<T, Storage> lock_throw() const
+    {
+      auto ctrl = s.GetCtrl();
+      if (ctrl && ctrl->LockWeak()) return {ctrl, s.GetPtr(), false};
+      else LIBSHIT_THROW(std::bad_weak_ptr{});
+    }
+
     // not in weak_ptr
     SharedPtrBase<T, Storage> unsafe_lock() const noexcept
     {
@@ -403,11 +440,7 @@ namespace Libshit
   template <typename U>
   inline SharedPtrBase<T, Storage>::SharedPtrBase(
     const WeakPtrBase<U, Storage>& o)
-    : s{o.GetCtrl(), o.unsafe_get()}
-  {
-    if (!s.GetCtrl() || !s.GetCtrl()->LockWeak())
-      LIBSHIT_THROW(std::bad_weak_ptr{});
-  }
+    : SharedPtrBase{o.lock_throw()} {}
 
   // make_shared like helper
   template <typename T, typename Ret, typename = void>
