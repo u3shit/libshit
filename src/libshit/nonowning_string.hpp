@@ -208,6 +208,13 @@ namespace Libshit
   using StringView = BasicNonowningString<char, false>;
   using WStringView = BasicNonowningString<wchar_t, false>;
 
+  template <typename T, bool b>
+  std::basic_ostream<T>& operator<<(
+    std::basic_ostream<T>& os, BasicNonowningString<T, b> s)
+  {
+    os.write(s.data(), s.size());
+    return os;
+  }
 }
 
 #endif
