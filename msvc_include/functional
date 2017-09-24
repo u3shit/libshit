@@ -1,0 +1,118 @@
+// -*- c++ -*-
+#pragma once
+
+#include <type_traits>
+#include_next <functional>
+
+namespace std
+{
+  // based on http://en.cppreference.com/w/cpp/utility/functional/invoke
+  namespace detail
+  {
+    template <typename T>
+    struct is_reference_wrapper : false_type {};
+
+    template <typename U>
+    struct is_reference_wrapper<reference_wrapper<U>> : true_type {};
+
+    template <typename T>
+    constexpr bool is_reference_wrapper_v = is_reference_wrapper<T>::value;
+
+#define _DEF_INVOKE(check, ret)                                         \
+    template <typename T, typename Type, typename T1, typename... Args> \
+    auto INVOKE(Type T::* f, T1&& t1, Args&&... args)                   \
+      noexcept(noexcept(ret))                                           \
+      -> enable_if_t<                                                   \
+        is_member_function_pointer_v<decltype(f)> && check,             \
+        decltype(ret)>                                                  \
+    { return ret; }
+
+    _DEF_INVOKE(
+      (is_base_of_v<T, decay_t<T1>>),
+      (std::forward<T1>(t1).*f)(std::forward<Args>(args)...))
+    _DEF_INVOKE(
+      (!is_base_of_v<T, decay_t<T1>> &&
+       is_reference_wrapper_v<decay_t<T1>>),
+      (t1.get().*f)(std::forward<Args>(args)...))
+    _DEF_INVOKE(
+      (!is_base_of_v<T, decay_t<T1>> &&
+       !is_reference_wrapper_v<decay_t<T1>>),
+      ((*std::forward<T1>(t1)).*f)(std::forward<Args>(args)...))
+#undef _DEF_INVOKE
+
+#define _DEF_INVOKE(check, ret)                                \
+    template <typename T, typename Type, typename T1>          \
+    auto INVOKE(Type T::* f, T1&& t1)                          \
+      noexcept(noexcept(ret))                                  \
+      -> enable_if_t<                                          \
+        is_member_object_pointer_v<decltype(f)> && check,      \
+        decltype(ret)>                                         \
+    { return ret; }
+
+    _DEF_INVOKE(
+      (is_base_of_v<T, decay_t<T1>>),
+      std::forward<T1>(t1).*f)
+    _DEF_INVOKE(
+      (!is_base_of_v<T, decay_t<T1>> &&
+       is_reference_wrapper_v<decay_t<T1>>),
+      t1.get().*f)
+    _DEF_INVOKE(
+      (!is_base_of_v<T, decay_t<T1>> &&
+       !is_reference_wrapper_v<decay_t<T1>>),
+      (*std::forward<T1>(t1)).*f)
+#undef _DEF_INVOKE
+
+    template <class F, class... Args>
+    auto INVOKE(F&& f, Args&&... args)
+      noexcept(noexcept(std::forward<F>(f)(std::forward<Args>(args)...)))
+      -> enable_if_t<
+        !is_member_function_pointer_v<F>,
+        decltype(std::forward<F>(f)(std::forward<Args>(args)...))>
+    {
+      return std::forward<F>(f)(std::forward<Args>(args)...);
+    }
+
+    template <typename AlwaysVoid, typename F, typename... Args>
+    struct invoke_result
+    {
+      decltype(void(INVOKE(declval<F>(), declval<Args>()...)))* x;
+    };
+    template <typename F, typename... Args>
+    struct invoke_result<
+      decltype(void(INVOKE(declval<F>(), declval<Args>()...))),
+      F, Args...>
+    {
+      using type = decltype(INVOKE(declval<F>(), declval<Args>()...));
+    };
+
+    template <bool AlwaysTrue, typename F, typename... Args>
+    struct is_nothrow_invocable : false_type {};
+
+    template <typename F, typename... Args>
+    struct is_nothrow_invocable<
+      noexcept(INVOKE(declval<F>(), declval<Args>()...)),
+      F, Args...> : true_type {};
+  }
+
+
+  template <typename F, typename... ArgTypes>
+  struct invoke_result : detail::invoke_result<void, F, ArgTypes...> {};
+
+  template <typename F, typename... ArgTypes>
+  using invoke_result_t = typename invoke_result<F, ArgTypes...>::type;
+
+  template <typename F, typename... ArgTypes>
+  struct is_nothrow_invocable
+    : detail::is_nothrow_invocable<true, F, ArgTypes...> {};
+
+  template <typename F, typename... ArgTypes>
+  inline constexpr bool is_nothrow_invocable_v =
+    is_nothrow_invocable<F, ArgTypes...>::value;
+
+  template <typename F, typename... Args>
+  invoke_result_t<F, Args...> invoke(F&& f, Args&&... args)
+    noexcept(is_nothrow_invocable_v<F, Args...>)
+  {
+    return detail::INVOKE(std::forward<F>(f), std::forward<Args>(args)...);
+  }
+}

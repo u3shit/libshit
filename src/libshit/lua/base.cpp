@@ -11,7 +11,7 @@ namespace Libshit::Lua
 
   State::State(int) : StateRef{luaL_newstate()}
   {
-    if (!vm) LIBSHIT_THROW(std::bad_alloc{});
+    if (!vm) LIBSHIT_THROW(std::bad_alloc, std::make_tuple());
   }
 
   // plain lua needs it
@@ -20,8 +20,8 @@ namespace Libshit::Lua
   {
     size_t len;
     auto msg = lua_tolstring(vm, -1, &len);
-    if (msg) LIBSHIT_THROW(Error{{msg, len}});
-    else LIBSHIT_THROW(Error{"Lua PANIC"});
+    if (msg) LIBSHIT_THROW(Error, std::string{msg, len});
+    else LIBSHIT_THROW(Error, "Lua PANIC");
   }
 
 #ifndef LUA_VERSION_LJX
@@ -246,7 +246,7 @@ namespace Libshit::Lua
   void StateRef::DoString(const char* str)
   {
     if (luaL_dostring(vm, str))
-      LIBSHIT_THROW(std::runtime_error{lua_tostring(vm, -1)});
+      LIBSHIT_THROW(std::runtime_error, lua_tostring(vm, -1));
   }
 
   thread_local const char* StateRef::error_msg;

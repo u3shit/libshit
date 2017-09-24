@@ -5,7 +5,6 @@
 #include "except.hpp"
 #include <functional>
 #include <vector>
-#include <boost/exception/info.hpp>
 
 namespace Libshit
 {
@@ -109,8 +108,5 @@ namespace Libshit
     std::ostream* os;
     const char* argv0 = nullptr;
   };
-
-  using ProcessedOption = boost::error_info<
-    struct ProcessedOptionTag, std::string>;
 }
 #endif

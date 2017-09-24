@@ -1,8 +1,10 @@
-#include "assert.hpp"
 #include "except.hpp"
+
+#include "assert.hpp"
+
 #include <boost/core/demangle.hpp>
-#include <boost/exception/diagnostic_information.hpp>
 #include <iostream>
+#include <map>
 
 #define LIBSHIT_LOG_NAME "except"
 #include "logger_helper.hpp"
@@ -13,14 +15,81 @@ extern "C" void _assert(const char* msg, const char* file, unsigned line);
 
 namespace Libshit
 {
+  struct ExceptionInfo
+  {
+    std::atomic<unsigned> refcount = 0;
+    const char* file = nullptr;
+    unsigned line = 0;
+    const char* func = nullptr;
+    std::map<std::string, std::string> map;
 
-  void RethrowBoostException()
+    ExceptionInfo() = default;
+    ExceptionInfo(const ExceptionInfo& o)
+      : file{o.file}, line{o.line}, func{o.func}, map{o.map} {}
+  };
+
+  void intrusive_ptr_add_ref(ExceptionInfo* ptr)
+  { ++ptr->refcount; }
+  void intrusive_ptr_release(ExceptionInfo* ptr)
+  {
+    if (--ptr->refcount == 0)
+      delete ptr;
+  }
+
+  void Exception::EnsureInfo()
+  {
+    if (!info)
+    {
+      info.reset(new ExceptionInfo);
+      return;
+    }
+    if (info->refcount != 1)
+      info.reset(new ExceptionInfo{*info});
+  }
+
+  void Exception::AddInfo(std::string key, std::string value)
+  {
+    EnsureInfo();
+    info->map.insert_or_assign(std::move(key), std::move(value));
+  }
+
+  void Exception::AddLocation(
+    const char* file, unsigned int line, const char* func)
+  {
+    EnsureInfo();
+    info->file = file;
+    info->line = line;
+    info->func = func;
+  }
+
+  void Exception::PrintDesc(std::ostream& os) const
+  {
+    if (!info) return;
+    if (info->file) os << "Exception at " << info->file << ':' << info->line;
+    if (info->func) os << " in " << info->func;
+    if (info->file || info->func) os << "\n";
+
+    for (auto& e : info->map)
+      os << e.first << ": " << e.second << '\n';
+  }
+
+  std::string Exception::operator[](const std::string& key) const
+  {
+    if (!info) return {};
+    auto& map = info->map;
+    auto it = map.find(key);
+    if (it == map.end()) return {};
+    return it->second;
+  }
+
+  void RethrowException()
   {
     try { throw; }
-#define RETHROW(ex)                                                 \
-    catch (const ex& e)                                             \
-    {                                                               \
-      throw boost::enable_error_info(e) << RethrownType{typeid(e)}; \
+#define RETHROW(ex)                                            \
+    catch (const ex& e)                                        \
+    {                                                          \
+      throw AddInfos(EnableErrorInfo<ex>{e}, "Rethrown type", \
+                     boost::core::demangle(typeid(e).name())); \
     }
     RETHROW(std::range_error)
     RETHROW(std::overflow_error)
@@ -28,18 +97,30 @@ namespace Libshit
     //RETHROW(std::regex_error)
     RETHROW(std::system_error)
     RETHROW(std::runtime_error)
+
+    RETHROW(std::domain_error)
+    RETHROW(std::invalid_argument)
+    RETHROW(std::length_error)
+    RETHROW(std::out_of_range)
+    RETHROW(std::logic_error)
+  }
+
+  std::string ExceptionToString(const Exception& e)
+  {
+    std::stringstream ss;
+    auto se = dynamic_cast<const std::exception*>(&e);
+    if (se) ss << se->what() << "\n";
+    ss << "Type: " << boost::core::demangle(typeid(e).name()) << "\n";
+    e.PrintDesc(ss);
+    return ss.str();
   }
 
   std::string ExceptionToString()
   {
     try { throw; }
-    catch (const boost::exception& e)
+    catch (const Exception& e)
     {
-      auto se = dynamic_cast<const std::exception*>(&e);
-      std::stringstream ss;
-      ss << (se ? se->what() : "???")<< "\n\nDetails: "
-         << boost::diagnostic_information(e);
-      return ss.str();
+      return ExceptionToString(e);
     }
     catch (const std::exception& e)
     {
@@ -82,13 +163,5 @@ namespace Libshit
     log << std::flush;
     abort();
 #endif
-  }
-}
-
-namespace std
-{
-  string to_string(const type_index& type)
-  {
-    return boost::core::demangle(type.name());
   }
 }

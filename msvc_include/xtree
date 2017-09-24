@@ -73,6 +73,40 @@ private:                                                                 \
     return head;                                                         \
   }                                                                      \
 public:                                                                  \
+  template <typename M>                                                  \
+  pair<iterator, bool> insert_or_assign(const key_type& k, M&& obj)      \
+  {                                                                      \
+    auto it = lower_bound(k);                                            \
+    if (it == end() ||                                                   \
+        _DEBUG_LT_PRED(this->_Getcomp(), k, this->_Key(it._Mynode())))   \
+    {                                                                    \
+      /* not found, insert */                                            \
+      auto cit = emplace_hint(it, k, std::forward<M>(obj));              \
+      return pair<iterator, bool>(cit, true);                            \
+    }                                                                    \
+    else                                                                 \
+    {                                                                    \
+      it->second = std::forward<M>(obj);                                 \
+      return pair<iterator, bool>(it, false);                            \
+    }                                                                    \
+  }                                                                      \
+  template <typename M>                                                  \
+  pair<iterator, bool> insert_or_assign(key_type&& k, M&& obj)           \
+  {                                                                      \
+    auto it = lower_bound(k);                                            \
+    if (it == end() ||                                                   \
+        _DEBUG_LT_PRED(this->_Getcomp(), k, this->_Key(it._Mynode())))   \
+    {                                                                    \
+      /* not found, insert */                                            \
+      auto cit = insert(it, value_type(std::move(k), std::forward<M>(obj))); \
+      return pair<iterator, bool>(cit, true);                            \
+    }                                                                    \
+    else                                                                 \
+    {                                                                    \
+      it->second = std::forward<M>(obj);                                 \
+      return pair<iterator, bool>(it, false);                            \
+    }                                                                    \
+  }                                                                      \
   const_reverse_iterator crend() /* const _NOEXCEPT ... */
 
 #include_next<xtree>

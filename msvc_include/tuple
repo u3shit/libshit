@@ -35,4 +35,19 @@ namespace std
   template <std::size_t I, typename T>
   using tuple_element_t = typename tuple_element<I, T>::type;
 
+
+  namespace detail
+  {
+    template <typename T, typename Tuple, size_t... I>
+    constexpr T make_from_tuple_impl(Tuple&& t, index_sequence<I...>)
+    { return T(get<I>(std::forward<Tuple>(t))...); }
+  }
+
+  template <typename T, typename Tuple>
+  constexpr T make_from_tuple(Tuple&& t)
+  {
+    return detail::make_from_tuple_impl<T>(
+      forward<Tuple>(t),
+      make_index_sequence<tuple_size_v<decay_t<Tuple>>>{});
+  }
 }

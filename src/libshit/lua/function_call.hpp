@@ -10,8 +10,30 @@
 
 #include <brigand/sequences/list.hpp>
 
+#if defined(_LIBCPP_VERSION) && _LIBCPP_VERSION <= 5000
+namespace std
+{
+  // welcome to 2017... oh wait
+  template <typename F, typename... Args>
+  inline constexpr bool is_nothrow_invocable_v =
+    noexcept(invoke(declval<F>(), declval<Args>()...));
+
+  template <typename F, typename... Args>
+  using invoke_result_t =
+    decltype(invoke(declval<F>(), declval<Args>()...));
+}
+#endif
+
 namespace Libshit::Lua
 {
+  // sanity check
+  static_assert(std::is_nothrow_invocable_v<void (*)(int) noexcept, int>);
+  static_assert(!std::is_nothrow_invocable_v<void (*)(int), int>);
+  static_assert(!std::is_nothrow_invocable_v<void (*)(std::string), const std::string&>);
+
+  static_assert(std::is_nothrow_invocable_v<int (Skip::*)(double) noexcept, Skip&, double>);
+  static_assert(std::is_nothrow_invocable_v<int (Skip::*)(double) noexcept, Skip*, double>);
+  static_assert(!std::is_nothrow_invocable_v<int (Skip::*)(double), Skip&, double>);
 
   template <typename... Args> struct TupleLike<std::tuple<Args...>>
   {
@@ -202,17 +224,16 @@ namespace Libshit::Lua
       : TuplePush<std::decay_t<T>,
                   std::make_index_sequence<TupleLike<std::decay_t<T>>::SIZE>> {};
 
-    // workaround gcc can't mangle noexcept template arguments...
-    template <typename... Args>
-    struct NothrowInvokable : std::integral_constant<
-      bool, noexcept(Invoke(std::declval<Args>()...))> {};
-
-    template <typename... Args>
+    // `pack expansion used as argument for non-pack parameter of alias template`
+    // why can't you create a programming language that is usable for something,
+    // you idiot fucking retards
+    template <typename Fuck, typename... Args>
     BOOST_FORCEINLINE
-    auto CatchInvoke(StateRef, Args&&... args) -> typename std::enable_if<
-      NothrowInvokable<Args&&...>::value,
-      decltype(Invoke(std::forward<Args>(args)...))>::type
-    { return Invoke(std::forward<Args>(args)...); }
+    auto CatchInvoke(StateRef, Fuck&& shit, Args&&... args) ->
+      typename std::enable_if_t<
+        std::is_nothrow_invocable_v<Fuck&&, Args&&...>,
+        std::invoke_result_t<Fuck&&, Args&&...>>
+    { return std::invoke(std::forward<Fuck>(shit), std::forward<Args>(args)...); }
 
     inline void ToLuaException(StateRef vm)
     {
@@ -221,12 +242,13 @@ namespace Libshit::Lua
       lua_error(vm);
     }
 
-    template <typename... Args>
-    auto CatchInvoke(StateRef vm, Args&&... args) -> typename std::enable_if<
-      !NothrowInvokable<Args&&...>::value,
-      decltype(Invoke(std::forward<Args>(args)...))>::type
+    template <typename Fuck, typename... Args>
+    auto CatchInvoke(StateRef vm, Fuck&& shit, Args&&... args) ->
+      typename std::enable_if_t<
+        !std::is_nothrow_invocable_v<Fuck&&, Args&&...>,
+        std::invoke_result_t<Fuck&&, Args&&...>>
     {
-      try { return Invoke(std::forward<Args>(args)...); }
+      try { return std::invoke(std::forward<Fuck>(shit), std::forward<Args>(args)...); }
       catch (const std::exception& e)
       {
         ToLuaException(vm);

@@ -42,7 +42,7 @@ namespace Libshit::Check
     static constexpr bool IS_NOP = false;
     // theoretically Fun can throw, but it probably shouldn't do it. also
     // marking this false could cause havoc as functions using
-    // noexcept(Checker::IS_NOEXCEPT)  would have different noexceptness on
+    // noexcept(Checker::IS_NOEXCEPT) would have different noexceptness on
     // debug and release
     static constexpr bool IS_NOEXCEPT = true;
   };
@@ -61,14 +61,8 @@ namespace Libshit::Check
                unsigned line, const char* fun)
     {
       if (!f())
-        throw ::boost::enable_error_info(ExceptT{msg}) <<
-#ifndef NDEBUG
-              ::boost::throw_file(file) <<
-              ::boost::throw_line(line) <<
-              ::boost::throw_function(fun) <<
-#endif
-              FailedExpression{expr};
-      ((void) file); ((void) line); ((void) fun);
+        throw GetException<ExceptT>(
+          file, line, fun, msg, "Failed expression", expr);
     }
 
     static constexpr bool IS_NOP = false;

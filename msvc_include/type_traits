@@ -1,10 +1,32 @@
 // -*- c++ -*-
 #pragma once
 
+// only one overload of forward is noexcept
+// what the fuck are you doing retards
+// you should go back to your designated shitting streets in india and never
+// touch a computer again
+#pragma push_macro("forward")
+#define forward(x) forward(x) noexcept _Pragma("pop_macro(\"forward\")")
+
 #include_next <type_traits>
 
 namespace std
 {
+
+#define _IS_MEMFUNPTR(CALL_OPT, X1, CV_OPT)                              \
+  template<class Ret, class Arg0, class... Types>                        \
+  struct _Is_memfunptr<Ret (CALL_OPT Arg0::*)(Types...) CV_OPT noexcept> \
+    : true_type {};
+_MEMBER_CALL_CV(_IS_MEMFUNPTR, )
+#undef _IS_MEMFUNPTR
+
+#define _IS_MEMFUNPTR_ELLIPSIS(CV_OPT)                               \
+  template<class Ret, class Arg0, class... Types>                    \
+  struct _Is_memfunptr<Ret (Arg0::*)(Types..., ...) CV_OPT noexcept> \
+    : true_type {};
+_CLASS_DEFINE_CV(_IS_MEMFUNPTR_ELLIPSIS)
+#undef _IS_MEMFUNPTR_ELLIPSIS
+
 
   template <bool X>
   using bool_constant = integral_constant<bool, X>;

@@ -4,7 +4,6 @@
 #include <map>
 #include <cstring>
 #include <climits>
-#include <boost/exception/get_error_info.hpp>
 
 namespace Libshit
 {
@@ -91,7 +90,7 @@ namespace Libshit
         opt->func(std::move(args));
       }
       return 0;
-    }, [&](auto& e) { e << ProcessedOption{{'-', *ptr}}; });
+    }, [&](auto& e) { AddInfos(e, "Processed option", std::string{'-', *ptr}); });
   }
 
   static size_t ParseLong(
@@ -169,13 +168,13 @@ namespace Libshit
         if (o->short_name)
         {
           if (short_opts[static_cast<unsigned char>(o->short_name)])
-            LIBSHIT_THROW(std::logic_error{"Duplicate short option"});
+            LIBSHIT_THROW(std::logic_error, "Duplicate short option");
           short_opts[static_cast<unsigned char>(o->short_name)] = o;
         }
 
         auto x = long_opts.insert(std::make_pair(o->name, o));
         if (!x.second)
-          LIBSHIT_THROW(std::logic_error{"Duplicate long option"});
+          LIBSHIT_THROW(std::logic_error, "Duplicate long option");
       }
 
     for (int i = 1; i < argc; ++i)
@@ -195,8 +194,9 @@ namespace Libshit
         if (argv[i][1] != '-') // short
           i += ParseShort(short_opts, argc, i, argv);
         else if (argv[i][1] == '-' && argv[i][2] != '\0') // long
-          i += AddInfo(std::bind(ParseLong, long_opts, argc, i, argv),
-                       [=](auto& e) { e << ProcessedOption{argv[i]}; });
+          i += AddInfo(
+            std::bind(ParseLong, long_opts, argc, i, argv),
+            [=](auto& e) { AddInfos(e, "Processed option", argv[i]); });
         else // --: end of args
         {
           if (no_arg_fun)
@@ -219,8 +219,7 @@ namespace Libshit
     try { Run_(argc, argv); }
     catch (const InvalidParam& p)
     {
-      *os << *boost::get_error_info<ProcessedOption>(p) << ": "
-          << p.what() << std::endl;
+      *os << p["Processed option"] << ": " << p.what() << std::endl;
       throw Exit{false};
     }
   }

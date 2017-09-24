@@ -26,7 +26,7 @@ namespace Libshit::Lua
     static RetNum Wrap(StateRef vm, Args&&... args)
     {
       LIBSHIT_LUA_GETTOP(vm, top);
-      const auto& ret = Invoke(Fun, std::forward<Args>(args)...);
+      const auto& ret = std::invoke(Fun, std::forward<Args>(args)...);
       auto size = ret.size();
 
       lua_createtable(vm, size ? size-1 : 0, 0); //+1

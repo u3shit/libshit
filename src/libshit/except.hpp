@@ -2,79 +2,163 @@
 #define UUID_4999021A_F41A_400B_A951_CDE022AF7331
 #pragma once
 
-#include <stdexcept>
-#include <typeindex>
-#include <boost/exception/info.hpp>
-
-#ifdef NDEBUG
-#  define LIBSHIT_THROW(...) (throw ::boost::enable_error_info(__VA_ARGS__))
-#else
+#include <boost/intrusive_ptr.hpp>
+#include <atomic>
+#include <sstream>
+#include <type_traits>
+#ifndef NDEBUG
 #  include "file.hpp"
-#  define LIBSHIT_THROW(...)                        \
-  (throw ::boost::enable_error_info(__VA_ARGS__) << \
-    ::boost::throw_file(LIBSHIT_FILE) <<            \
-    ::boost::throw_line(__LINE__) <<                \
-    ::boost::throw_function(LIBSHIT_FUNCTION))
 #endif
 
 namespace Libshit
 {
+  struct ExceptionInfo;
+  void intrusive_ptr_add_ref(ExceptionInfo* ptr);
+  void intrusive_ptr_release(ExceptionInfo* ptr);
 
-  BOOST_NORETURN void RethrowBoostException();
-  std::string ExceptionToString();
+  template <typename T>
+  decltype(std::declval<std::ostream>() << std::declval<T>(), std::string{})
+  inline ToString(const T& t)
+  {
+    std::stringstream ss;
+    ss << t;
+    return ss.str();
+  }
 
-#if defined(__GNUC__) && !defined(__clang__)
-  // gcc mangling is buggy as hell, if two overloads only differ by noexcept,
-  // gcc will mangle them to the same name, causing assembler (!) errors due to
-  // duplicate identifiers (I don't want to imagine what happens if the two
-  // overloads end up in different compilation units...)
-#  define LIBSHIT_INVOKE_ALWAYS_INLINE __attribute__((always_inline))
+  inline std::string ToString(std::string s) noexcept { return s; }
+  inline std::string ToString(const char* s) { return s; }
+
+#define LIBSHIT_GEN(type) \
+  inline std::string ToString(type t) { return std::to_string(t); }
+  LIBSHIT_GEN(char)  LIBSHIT_GEN(unsigned char) LIBSHIT_GEN(signed char)
+  LIBSHIT_GEN(short) LIBSHIT_GEN(unsigned short)
+  LIBSHIT_GEN(int)   LIBSHIT_GEN(unsigned int)
+  LIBSHIT_GEN(long)  LIBSHIT_GEN(unsigned long)
+  LIBSHIT_GEN(long long) LIBSHIT_GEN(unsigned long long)
+  LIBSHIT_GEN(float) LIBSHIT_GEN(double) LIBSHIT_GEN(long double)
+#undef LIBSHIT_GEN
+
+  class Exception
+  {
+  public:
+    virtual ~Exception() noexcept = default;
+
+    void AddInfo(std::string key, std::string value);
+    void AddLocation(const char* file, unsigned line, const char* func);
+
+    void PrintDesc(std::ostream& os) const;
+
+    template <typename T>
+    void AddInfo(std::string key, const T& value)
+    { AddInfo(std::move(key), ToString(value)); }
+
+    std::string operator[](const std::string& s) const;
+
+  private:
+    void EnsureInfo();
+    boost::intrusive_ptr<ExceptionInfo> info;
+  };
+
+  template <typename T>
+  struct MakeExceptionClass : virtual T, virtual Exception
+  {
+    using T::T;
+    MakeExceptionClass(const T& t) noexcept(std::is_nothrow_copy_constructible_v<T>)
+      : T(t) {}
+    MakeExceptionClass(T&& t) noexcept(std::is_nothrow_move_constructible_v<T>)
+      : T(std::move(t)) {}
+  };
+
+  template <typename T, typename = void> struct EnableErrorInfoT
+  { using Type = MakeExceptionClass<T>; };
+  template <typename T>
+  struct EnableErrorInfoT<T, std::enable_if_t<std::is_base_of_v<Exception, T>>>
+  { using Type = T; };
+
+  template <typename T>
+  using EnableErrorInfo = typename EnableErrorInfoT<T>::Type;
+
+
+  template <typename T> inline T&& AddInfos(T&& t) noexcept
+  { return std::forward<T>(t); }
+
+  template <typename T, typename Key, typename Value, typename... Rest>
+  inline T&& AddInfos(T&& except, Key&& key, Value&& value, Rest&&... rest)
+  {
+    except.AddInfo(std::forward<Key>(key), std::forward<Value>(value));
+    return AddInfos(std::forward<T>(except), std::forward<Rest>(rest)...);
+  }
+
+  template <typename T, typename What, typename... Args>
+  inline EnableErrorInfo<T> GetException(
+    const char* file, unsigned line, const char* func, What&& what,
+    Args&&... args)
+  {
+    EnableErrorInfo<T> ret{std::forward<What>(what)};
+    ret.AddLocation(file, line, func);
+    AddInfos(ret, std::forward<Args>(args)...);
+    return ret;
+  }
+
+  template <typename T, typename... What, typename... Args>
+  inline EnableErrorInfo<T> GetException(
+    const char* file, unsigned line, const char* func,
+    std::tuple<What&&...> what, Args&&... args)
+  {
+    auto ret = std::make_from_tuple<EnableErrorInfo<T>>(what);
+    ret.AddLocation(file, line, func);
+    AddInfos(ret, std::forward<Args>(args)...);
+    return ret;
+  }
+
+#ifdef NDEBUG
+#  define LIBSHIT_THROW(type, ...) \
+  (throw ::Libshit::GetException<type>(nullptr, 0, nullptr, __VA_ARGS__))
 #else
-#  define LIBSHIT_INVOKE_ALWAYS_INLINE
+#  define LIBSHIT_THROW(type, ...) \
+  (throw ::Libshit::GetException<type>(  \
+    LIBSHIT_FILE, __LINE__, LIBSHIT_FUNCTION, __VA_ARGS__))
 #endif
 
-  template <typename Base, typename T, typename Derived, typename ... Args>
-  LIBSHIT_INVOKE_ALWAYS_INLINE
-  inline decltype(auto) Invoke(T Base::*fun, Derived* thiz, Args&&... args)
-    noexcept(noexcept((*thiz.*fun)(std::forward<Args>(args) ...)))
-  { return (*thiz.*fun)(std::forward<Args>(args) ...); }
+  BOOST_NORETURN void RethrowException();
+  std::string ExceptionToString();
+  std::string ExceptionToString(const Exception& e);
 
-  template <typename Base, typename T, typename Derived, typename ... Args>
-  LIBSHIT_INVOKE_ALWAYS_INLINE
-  inline decltype(auto) Invoke(T Base::*fun, Derived& thiz, Args&&... args)
-    noexcept(noexcept((thiz.*fun)(std::forward<Args>(args) ...)))
-  { return (thiz.*fun)(std::forward<Args>(args) ...); }
+#define LIBSHIT_GEN_EXCEPTION_TYPE(name, base)     \
+  struct name : base, virtual ::Libshit::Exception \
+  {                                                \
+    using BaseType = base;                         \
+    using BaseType::BaseType;                      \
+  }
 
-  template <typename Fun, typename ... Args>
-  LIBSHIT_INVOKE_ALWAYS_INLINE
-  inline decltype(auto) Invoke(Fun&& f, Args&&... args)
-  noexcept(noexcept(std::forward<Fun>(f)(std::forward<Args>(args) ...)))
-  { return std::forward<Fun>(f)(std::forward<Args>(args) ...); }
-
-#undef LIBSHIT_INOKE_ALWAYS_INLINE
-
-  // AddInfo([&](){ ...; }, [&](auto& e) { e << foo; });
+  // AddInfo([&](){ ...; }, [&](auto& e) { AddInfo(e, foo...); });
   template <typename Fun, typename Info, typename ... Args>
   inline auto AddInfo(Fun fun, Info info_adder, Args&& ... args)
   {
     try
     {
-      try { return Invoke(fun, std::forward<Args>(args) ...); }
-      catch (const boost::exception& e) { throw; }
-      catch (...) { RethrowBoostException(); }
+      try { return std::invoke(fun, std::forward<Args>(args) ...); }
+      catch (const Exception& e) { throw; }
+      catch (...) { RethrowException(); }
     }
-    catch (const boost::exception& e)
+    catch (Exception& e)
     {
       info_adder(e);
       throw;
     }
   }
 
-#define LIBSHIT_GEN_EXCEPTION_TYPE(name, base) \
-  struct name : base, virtual boost::exception \
-  {                                            \
-    using BaseType = base;                     \
-    using BaseType::BaseType;                  \
+#define LIBSHIT_ADD_INFOS(expr, ...)               \
+  try                                              \
+  {                                                \
+    try { expr; }                                  \
+    catch (const ::Libshit::Exception&) { throw; } \
+    catch (...) { ::Libshit::RethrowException(); } \
+  }                                                \
+  catch (::Libshit::Exception& add_infos_e)        \
+  {                                                \
+    ::Libshit::AddInfos(add_infos_e, __VA_ARGS__); \
+    throw;                                         \
   }
 
   LIBSHIT_GEN_EXCEPTION_TYPE(DecodeError, std::runtime_error);
@@ -82,18 +166,9 @@ namespace Libshit
   LIBSHIT_GEN_EXCEPTION_TYPE(SystemError, std::system_error);
 
 #define LIBSHIT_VALIDATE_FIELD(msg, x)                                    \
-  while (!(x)) LIBSHIT_THROW(::Libshit::DecodeError{msg ": invalid data"} \
-                             << ::Libshit::FailedExpression{#x})
+  while (!(x)) LIBSHIT_THROW(Libshit::DecodeError, msg ": invalid data",  \
+                             "Failed Expression", #x)
 
-  using FailedExpression = boost::error_info<
-    struct FailedExpressionTag, const char*>;
-  using RethrownType = boost::error_info<
-    struct RethrownTypeTag, std::type_index>;
-}
-
-namespace std
-{
-  string to_string(const type_index& type);
 }
 
 #endif

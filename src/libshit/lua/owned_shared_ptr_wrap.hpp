@@ -24,7 +24,7 @@ namespace Libshit::Lua
     {
       return NewRet{
         &thiz,
-        &Invoke(Fun, std::forward<Class>(thiz), std::forward<Args>(args)...),
+        &std::invoke(Fun, std::forward<Class>(thiz), std::forward<Args>(args)...),
         true};
     }
   };

@@ -5,6 +5,7 @@
 #include "assert.hpp"
 #include "except.hpp"
 
+#include <algorithm> // std::min
 #include <cstring>
 #include <boost/operators.hpp>
 
@@ -86,7 +87,7 @@ namespace Libshit
     constexpr const_reference at(size_type i) const
     {
       if (CString ? (i > len) : (i >= len))
-        LIBSHIT_THROW(std::out_of_range{"NonowningString"});
+        LIBSHIT_THROW(std::out_of_range, "NonowningString");
       return str[i];
     }
 
@@ -215,6 +216,10 @@ namespace Libshit
     os.write(s.data(), s.size());
     return os;
   }
+
+  template <typename T, bool B>
+  std::basic_string<T> ToString(BasicNonowningString<T, B> str)
+  { return std::basic_string<T>{str.data(), str.size()}; }
 }
 
 #endif
