@@ -72,9 +72,21 @@ local function escape_alias_value(str)
   return "%1" .. escape_gsub_repl(str) .. "%2"
 end
 
+local builtins = {
+  signed = true, unsigned = true, char = true, short = true, int = true,
+  long = true, float = true, double = true, bool = true
+}
 function ret.add_alias(aliases, type, alias)
-  --print("addalias", type:name(), alias)
-  aliases[type:name()] = escape_alias_value(alias)
+  local n = type:name():gsub(
+    "([^a-zA-Z:_])([a-zA-Z_][a-zA-Z0-9_]*)([^a-zA-Z0-9_])",
+    function(pre, typ, suf)
+      if builtins[typ] then return pre..typ..suf
+      else return pre.."::"..typ..suf end
+    end)
+  --print("addalias", type:name(), n, alias)
+  local val = escape_alias_value(alias)
+  aliases[n] = val
+  aliases["::"..n] = val
 end
 
 -- extremely hacky way to get fully qualified-ish names
@@ -122,6 +134,7 @@ collect_ns_cur = function(tbl, cur, prio)
 
   path.start = i+1
   path.prio = prio
+  --print("collect ns", table.concat(repl, "::", i+1, 1), table.concat(path, "::", path.start, 1))
   tbl["::"..table.concat(repl, "::", i+1, 1)] = path
 end
 
@@ -135,12 +148,15 @@ local function gen_gsub(tbl)
     local repl = escape_alias_value(k)
     --print(k, table.concat(v, "::", v.start, 1))
 
-    for i=v.start,1 do
+    -- generate fqns too (::Libshit::Foo::Bar)
+    v[v.start-1] = ""
+    for i=v.start-1,1 do
       local pat = escape_alias_key(table.concat(v, "::", i, 1))
       if pats[pat] and pats[pat] ~= repl and prios[pat] == v.prio then
         ret.print_error("Ambiguous name?\nPattern: "..pat.."\nOld repl: "..
                         pats[pat].."\nNew repl: "..repl)
       elseif not prios[pat] or prios[pat] < v.prio then
+        --print("pat:", pat, repl)
         pats[pat] = repl
         prios[pat] = v.prio
       end
@@ -168,8 +184,10 @@ local function find_typedefs(tbl, cur)
 end
 
 local function apply_rules(str, pats, verbose)
+  if verbose then print(debug.traceback()) end
   local ret = "#"..str.."#"
   local chg = true
+  if verbose then print("##start", ret) end
   while chg do
     chg = false
     for k,v in pairs(pats) do
@@ -182,6 +200,7 @@ local function apply_rules(str, pats, verbose)
       end
     end
   end
+  if verbose then print("##end", ret) end
   return ret:sub(2, -2)
 end
 
@@ -207,10 +226,8 @@ local function type_name(x, aliases, cur)
   end
   for k,v in pairs(tmppats) do pats[k] = v end
 
-  --print("\n\nstart", t:name())
   local ret = apply_rules(t:name(), pats, false)
 
-  --print("return", ret)
   return ret:gsub("std::__cxx11::", "std::"):gsub("std::__1::", "std::")
 end
 ret.type_name = type_name

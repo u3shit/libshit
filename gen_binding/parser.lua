@@ -386,6 +386,19 @@ local function parse_class(type, class)
 end
 
 -- top level parse
+local pre_parse_v = cl.regCursorVisitor(function (c, par)
+  if not inst.parse_filter(c, par) then return vr.Continue end
+  local kind = c:kind()
+  if kind == "Namespace" then return vr.Recurse
+  elseif kind == "TypeAliasDecl" then
+    for _,a in ipairs(utils.get_annotations(c, {})) do
+      local t = c:typedefType()
+      utils.add_alias(inst.aliases, t:canonical(), c:name())
+    end
+  end
+  return vr.Continue
+end)
+
 local parse_v = cl.regCursorVisitor(function (c, par)
   if not inst.parse_filter(c, par) then return vr.Continue end
   local kind = c:kind()
@@ -408,7 +421,7 @@ local parse_v = cl.regCursorVisitor(function (c, par)
     for _,a in ipairs(utils.get_annotations(c, {})) do
       local t = c:typedefType()
       --print(c:type():declaration():kind())
-      utils.add_alias(inst.aliases, t:canonical(), c:name())
+      --utils.add_alias(inst.aliases, t:canonical(), c:name())
 
       local x = is_lua_class(t)
       if x then
@@ -501,6 +514,7 @@ local function parse(c, filter)
   inst = { lua_classes = {}, ret_lua_classes = {}, parse_filter = filter,
            is_lua = {}, templates = {}, aliases = {}}
 
+  c:children(pre_parse_v)
   c:children(parse_v)
 
   if next(inst.templates) then parse_templates(c) end

@@ -1,8 +1,8 @@
 diff --git a/include/clang-c/Index.h b/include/clang-c/Index.h
-index 3b5ea9fa53..9454d8f3ba 100644
+index 3b5ea9fa53..74b2bc675f 100644
 --- a/include/clang-c/Index.h
 +++ b/include/clang-c/Index.h
-@@ -3573,6 +3573,16 @@ CINDEX_LINKAGE int clang_getCursorExceptionSpecificationType(CXCursor C);
+@@ -3573,6 +3573,22 @@ CINDEX_LINKAGE int clang_getCursorExceptionSpecificationType(CXCursor C);
   */
  CINDEX_LINKAGE unsigned clang_isPODType(CXType T);
  
@@ -16,10 +16,16 @@ index 3b5ea9fa53..9454d8f3ba 100644
 + */
 +CINDEX_LINKAGE unsigned clang_isAbstractType(CXType T);
 +
++/**
++ * \brief Return 1 if the CXType is a noexcept C++ function or method pointer,
++ * and 0 otherwise.
++ */
++CINDEX_LINKAGE unsigned clang_isNoexcept(CXType C);
++
  /**
   * \brief Return the element type of an array, complex, or vector type.
   *
-@@ -4369,6 +4379,12 @@ CXFile clang_Module_getTopLevelHeader(CXTranslationUnit,
+@@ -4369,6 +4385,12 @@ CXFile clang_Module_getTopLevelHeader(CXTranslationUnit,
   * @{
   */
  
@@ -32,9 +38,9 @@ index 3b5ea9fa53..9454d8f3ba 100644
  /**
   * \brief Determine if a C++ constructor is a converting constructor.
   */
-@@ -4418,6 +4434,12 @@ CINDEX_LINKAGE unsigned clang_CXXMethod_isStatic(CXCursor C);
+@@ -4423,6 +4445,12 @@ CINDEX_LINKAGE unsigned clang_CXXMethod_isVirtual(CXCursor C);
   */
- CINDEX_LINKAGE unsigned clang_CXXMethod_isVirtual(CXCursor C);
+ CINDEX_LINKAGE unsigned clang_EnumDecl_isScoped(CXCursor C);
  
 +/**
 + * \brief Determine if a C++ member function or member function template method
@@ -43,8 +49,20 @@ index 3b5ea9fa53..9454d8f3ba 100644
 +CINDEX_LINKAGE unsigned clang_CXXMethod_isOverride(CXCursor C);
 +
  /**
-  * \brief Determine if an enum declaration refers to a scoped enum.
-  */
+  * \brief Determine if a C++ member function or member function template is
+  * declared 'const'.
+diff --git a/include/clang/Basic/Attr.td b/include/clang/Basic/Attr.td
+index f13e13b010..ca89abd96a 100644
+--- a/include/clang/Basic/Attr.td
++++ b/include/clang/Basic/Attr.td
+@@ -601,6 +601,7 @@ def Annotate : InheritableParamAttr {
+   // '#pragma clang attribute' even though it has no subject list.
+   let ForcePragmaAttributeSupport = 1;
+   let Documentation = [Undocumented];
++  let DuplicatesAllowedWhileMerging = 1;
+ }
+ 
+ def ARMInterrupt : InheritableAttr, TargetSpecificAttr<TargetARM> {
 diff --git a/lib/Sema/SemaDecl.cpp b/lib/Sema/SemaDecl.cpp
 index 692a77e2b6..26d74d5875 100644
 --- a/lib/Sema/SemaDecl.cpp
@@ -61,37 +79,44 @@ index 692a77e2b6..26d74d5875 100644
  
      if (D.getDeclSpec().isConceptSpecified()) {
 diff --git a/tools/libclang/CIndex.cpp b/tools/libclang/CIndex.cpp
-index d527535a17..e6f25b6c9f 100644
+index d527535a17..2ca1381260 100644
 --- a/tools/libclang/CIndex.cpp
 +++ b/tools/libclang/CIndex.cpp
-@@ -705,11 +705,11 @@ bool CursorVisitor::VisitClassTemplateSpecializationDecl(
+@@ -705,12 +705,12 @@ bool CursorVisitor::VisitClassTemplateSpecializationDecl(
    case TSK_Undeclared:
    case TSK_ImplicitInstantiation:
      // Nothing to visit
 -    return false;
+-      
 +    // return false;
-       
++
    case TSK_ExplicitInstantiationDeclaration:
    case TSK_ExplicitInstantiationDefinition:
 -    break;
+-      
 +    // break;
-       
++
    case TSK_ExplicitSpecialization:
      ShouldVisitBody = true;
-@@ -907,7 +907,7 @@ bool CursorVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
+     break;
+@@ -906,8 +906,8 @@ bool CursorVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
+   // before visiting these template parameters.
    if (VisitTemplateParameters(D->getTemplateParameters()))
      return true;
-   
+-  
 -  return VisitFunctionDecl(D->getTemplatedDecl());
++
 +  return VisitAttributes(D->getTemplatedDecl()) || VisitFunctionDecl(D->getTemplatedDecl());
  }
  
  bool CursorVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
-@@ -916,7 +916,17 @@ bool CursorVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
+@@ -915,8 +915,18 @@ bool CursorVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
+   // before visiting these template parameters.
    if (VisitTemplateParameters(D->getTemplateParameters()))
      return true;
-   
+-  
 -  return VisitCXXRecordDecl(D->getTemplatedDecl());
++
 +  if (VisitAttributes(D->getTemplatedDecl()))
 +    return true;
 +
@@ -122,8 +147,8 @@ index d527535a17..e6f25b6c9f 100644
  unsigned clang_CXXConstructor_isDefaultConstructor(CXCursor C) {
    if (!clang_isDeclaration(C.kind))
      return 0;
-@@ -7824,6 +7843,16 @@ unsigned clang_CXXMethod_isVirtual(CXCursor C) {
-   return (Method && Method->isVirtual()) ? 1 : 0;
+@@ -7833,6 +7852,16 @@ unsigned clang_EnumDecl_isScoped(CXCursor C) {
+   return (Enum && Enum->isScoped()) ? 1 : 0;
  }
  
 +unsigned clang_CXXMethod_isOverride(CXCursor C) {
@@ -132,18 +157,18 @@ index d527535a17..e6f25b6c9f 100644
 +
 +  const Decl *D = cxcursor::getCursorDecl(C);
 +  const CXXMethodDecl *Method =
-+    D ? dyn_cast_or_null<CXXMethodDecl>(D->getAsFunction()) : nullptr;
++      D ? dyn_cast_or_null<CXXMethodDecl>(D->getAsFunction()) : nullptr;
 +  return (Method && Method->size_overridden_methods()) ? 1 : 0;
 +}
 +
- unsigned clang_EnumDecl_isScoped(CXCursor C) {
-   if (!clang_isDeclaration(C.kind))
-     return 0;
+ //===----------------------------------------------------------------------===//
+ // Attribute introspection.
+ //===----------------------------------------------------------------------===//
 diff --git a/tools/libclang/CXType.cpp b/tools/libclang/CXType.cpp
-index d2cb509059..8786d66897 100644
+index d2cb509059..a19ef87e0f 100644
 --- a/tools/libclang/CXType.cpp
 +++ b/tools/libclang/CXType.cpp
-@@ -712,6 +712,30 @@ unsigned clang_isPODType(CXType X) {
+@@ -712,6 +712,42 @@ unsigned clang_isPODType(CXType X) {
    return T.isPODType(cxtu::getASTUnit(TU)->getASTContext()) ? 1 : 0;
  }
  
@@ -171,11 +196,23 @@ index d2cb509059..8786d66897 100644
 +  return RecordDecl->isAbstract() ? 1 : 0;
 +}
 +
++unsigned clang_isNoexcept(CXType X) {
++  QualType T = GetQualType(X);
++  if (T.isNull())
++    return 0;
++
++  const FunctionProtoType *Proto = T->getAs<FunctionProtoType>();
++  if (!Proto)
++    return 0;
++
++  return Proto->hasNoexceptExceptionSpec() ? 1 : 0;
++}
++
  CXType clang_getElementType(CXType CT) {
    QualType ET = QualType();
    QualType T = GetQualType(CT);
 diff --git a/tools/libclang/libclang.exports b/tools/libclang/libclang.exports
-index e0d178a529..de0d4aa839 100644
+index e0d178a529..f9779fd0cc 100644
 --- a/tools/libclang/libclang.exports
 +++ b/tools/libclang/libclang.exports
 @@ -2,6 +2,7 @@ clang_CXCursorSet_contains
@@ -194,12 +231,13 @@ index e0d178a529..de0d4aa839 100644
  clang_EnumDecl_isScoped
  clang_Cursor_getArgument
  clang_Cursor_getNumTemplateArguments
-@@ -291,6 +293,8 @@ clang_isFileMultipleIncludeGuarded
+@@ -291,6 +293,9 @@ clang_isFileMultipleIncludeGuarded
  clang_isFunctionTypeVariadic
  clang_isInvalid
  clang_isPODType
 +clang_isFinalType
 +clang_isAbstractType
++clang_isNoexcept
  clang_isPreprocessing
  clang_isReference
  clang_isRestrictQualifiedType
