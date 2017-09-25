@@ -130,15 +130,16 @@ namespace Libshit::Lua
   }
 
 #ifdef _MSC_VER
-  int StateRef::SEHFilter(lua_State* vm, unsigned code)
+  int StateRef::SEHFilter(lua_State* vm, unsigned code,
+                          const char** error_msg, size_t* error_len)
   {
     if ((code & 0xffffff00) != 0xe24c4a00)
       return EXCEPTION_CONTINUE_SEARCH;
     if (lua_gettop(vm) == 0 || !lua_isstring(vm, -1))
       return EXCEPTION_CONTINUE_SEARCH;
 
-    error_msg = lua_tolstring(vm, -1, &error_len);
-    LIBSHIT_ASSERT(error_msg);
+    *error_msg = lua_tolstring(vm, -1, error_len);
+    LIBSHIT_ASSERT(*error_msg);
     return EXCEPTION_EXECUTE_HANDLER;
   }
 #else
@@ -249,7 +250,8 @@ namespace Libshit::Lua
       LIBSHIT_THROW(std::runtime_error, lua_tostring(vm, -1));
   }
 
+#ifndef _MSC_VER
   thread_local const char* StateRef::error_msg;
   thread_local size_t StateRef::error_len;
-
+#endif
 }

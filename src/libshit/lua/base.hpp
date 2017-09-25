@@ -46,8 +46,10 @@ namespace Libshit::Lua
     {
 #ifdef _MSC_VER
       auto vm_ = vm;
+      const char* error_msg;
+      size_t error_len;
       __try { return f(std::forward<Args>(args)...); }
-      __except (SEHFilter(vm_, GetExceptionCode()))
+      __except (SEHFilter(vm_, GetExceptionCode(), &error_msg, &error_len))
       { throw Error({error_msg, error_len}); }
 #else
       try { return f(std::forward<Args>(args)...); }
@@ -137,12 +139,13 @@ namespace Libshit::Lua
     std::pair<size_t, int> Ipairs01Prep(int idx);
 
 #ifdef _MSC_VER
-    static int SEHFilter(lua_State* vm, unsigned code);
+    static int SEHFilter(lua_State* vm, unsigned code,
+                         const char** error_msg, size_t* error_len);
 #else
     void HandleDotdotdotCatch();
-#endif
     static thread_local const char* error_msg;
     static thread_local size_t error_len;
+#endif
   };
 
 #define LIBSHIT_LUA_RUNBC(vm, name, retnum)                  \
