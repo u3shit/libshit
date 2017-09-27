@@ -1,0 +1,32 @@
+diff --git a/COFF/Driver.cpp b/COFF/Driver.cpp
+index 854c3e69098..68648dee3db 100644
+--- a/COFF/Driver.cpp
++++ b/COFF/Driver.cpp
+@@ -1065,7 +1065,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
+ 
+   Symtab.addSynthetic(mangle("__ImageBase"), nullptr);
+   if (Config->Machine == I386) {
+-    Symtab.addAbsolute("___safe_se_handler_table", 0);
++    Symtab.addSynthetic("___safe_se_handler_table", 0);
+     Symtab.addAbsolute("___safe_se_handler_count", 0);
+   }
+ 
+diff --git a/COFF/Writer.cpp b/COFF/Writer.cpp
+index a6a5e278498..ef2dac89fe2 100644
+--- a/COFF/Writer.cpp
++++ b/COFF/Writer.cpp
+@@ -329,8 +329,12 @@ void Writer::createMiscChunks() {
+       // Make sure the handler is still live. Assume all handlers are regular
+       // symbols.
+       auto *D = dyn_cast<DefinedRegular>(B);
+-      if (D && D->getChunk()->isLive())
+-        Handlers.insert(D);
++      if (D) {
++        if (D->getChunk()->isLive())
++          Handlers.insert(D);
++      } else {
++        Handlers.insert(cast<Defined>(B));
++      }
+     }
+   }
+ 

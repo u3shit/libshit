@@ -100,10 +100,25 @@ you'll need to copy directories named `include` and `lib` to your Linux box from
 (x86)/Windows Kits/8.1` too (assuming default install location).
 
 Problem #1: Linux filesystems are usually case-sensitive, but MSVC headers
-pretty much expect a case-insensitive file lookup. Solution 1: store the files
-on a case-insensitive fs (fat, ntfs, etc, or just mount your Windows fs).
+pretty much expect a case-insensitive file lookup.
+Solution 1: store the files on a case-insensitive fs (fat, ntfs, etc, or just
+mount your Windows fs).
 Solution 2: use [ciopfs]. Make sure you mount `ciopfs` first, and copy into that
 directory, otherwise you'll manually have to convert all files to downcase.
+Solution 3: use something like [icasefile] to make clang-cl and lld-link
+case-insensitive.
+Solution 4: convert all files and directories to downcase and fix the headers.
+Something like this will do:
+
+    find path/to/msvc/files -name '*[A-Z]*' -print0 | sort -rz | xargs -0n1 sh -c 'mv "$0" "$(echo -n "$0" | awk -F/ "{ORS=\"/\"; for (i=1;i<NF;i++) print \$i; ORS=\"\"; print tolower(\$NF)}")"'
+    find path/to/msvc/includes -type f -exec sh -c 'echo "$(awk "/^[[:space:]]*#[[:space:]]*include/ {print tolower(\$0); next} {print \$0}" "$0")" > "$0"' {} \;
+
+You'll also have to fix boost in this case... open
+`libs/filesystem/src/unique_path.cpp` inside boost (inside `ext/boost` if you
+use the bundled one) and replace `Advapi32.lib` with `advapi32.lib` in
+`#      pragma comment(lib, "Advapi32.lib")`. I personally use solution 2 and 4,
+the other two solutions may or may not work.
+
 
 Problem #2: clang won't know where are your files, so you'll need some compiler
 flags. For compiling you'll need: `-m32 -imsvc $vc/include -imsvc
@@ -145,10 +160,14 @@ Some potential problems with the clang toolchain
 When using LTO, it can still crash lld when creating a dll. See `llvm.patch` for
 a path that fixes it for the time being.
 
+Using LLD-5.0.0 to link, the generated executable will crash when the first
+exception is thrown. Use `lld-5.0.patch` to fix this.
+
 Third problem: llvm/clang doesn't support the `/EHsa` flag, only `/EHs`, but
-that won't catch LuaJIT/ljx exceptions. The `llvm.patch` includes a quick hack
-that'll at least make sure destructors are called when unwinding lua exceptions
-(and exceptions are handled manually by `__try`/`__except`).
+that won't catch LuaJIT/ljx exceptions. The `clang.patch` (for clang 4.0) or
+`clang-5.0.patch`) (for 5.0, duh) includes a quick hack that'll at least make
+sure destructors are called when unwinding lua exceptions (and exceptions are
+handled manually by `__try`/`__except`).
 
 Lua
 ---
@@ -207,7 +226,8 @@ only want to compile.
 Requirements:
 
 * `luajit` (probably works with ljx too :p)
-* patched clang: apply `clang.patch` to clang 4.0
+* patched clang: apply `clang.patch` to clang 4.0 or `clang-5.0.patch` to clang
+  5.0.
 
 Compile helper library:
 
@@ -233,3 +253,4 @@ TODO: write much more documentation
 [boost-cross]: http://www.boost.org/build/doc/html/bbv2/tasks/crosscompile.html
 [lld]: http://lld.llvm.org/
 [ciopfs]: http://www.brain-dump.org/projects/ciopfs/
+[icasefile]: http://wnd.katei.fi/icasefile/
