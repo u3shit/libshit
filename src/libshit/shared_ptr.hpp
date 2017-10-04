@@ -198,7 +198,7 @@ namespace Libshit
     template <typename U,
               typename = std::enable_if_t<IS_NORMAL_S<T> && IS_NORMAL_S<U>>>
     SharedPtrBase(U* ptr)
-      try : SharedPtrBase{new Detail::RefCountedPtrContainer<U>{ptr}, ptr, true}
+      try : SharedPtrBase{new Detail::RefCountedPtrContainer<U>{ptr}, ptr, false}
     {} catch (...) { delete ptr; }
 
     // misc standard members
