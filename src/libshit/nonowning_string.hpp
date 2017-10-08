@@ -7,6 +7,7 @@
 
 #include <algorithm> // std::min
 #include <cstring>
+#include <iosfwd>
 #include <boost/operators.hpp>
 
 namespace Libshit

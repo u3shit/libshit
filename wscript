@@ -243,6 +243,7 @@ def build(bld):
         RC_VERSION = rc_ver)
 
     src = [
+        'src/libshit/char_utils.cpp',
         'src/libshit/options.cpp',
         'src/libshit/except.cpp',
         'src/libshit/logger.cpp',
@@ -328,6 +329,7 @@ def test(bld):
 
     src = [
         #'test/main.cpp', workaround static lib linking problems, add it in main
+        'test/char_utils.cpp',
         'test/options.cpp',
     ]
     if not bld.env.WITHOUT_LUA:
