@@ -1,6 +1,8 @@
 #include <libshit/char_utils.hpp>
 #include <catch.hpp>
 
+#include <climits>
+
 using namespace Libshit;
 
 TEST_CASE("[char utils] DumpByte")
@@ -31,7 +33,7 @@ TEST_CASE("[char utils] DumpByte")
 
   CHK(0, "\\x00");
   CHK(0x13, "\\x13");
-  CHK(0xff, "\\xff");
+  CHK('\xff', "\\xff");
   CHK(127, "\\x7f");
   CHK(126, "~");
 #undef CHK

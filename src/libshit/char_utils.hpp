@@ -71,8 +71,14 @@ namespace Libshit
     inline constexpr bool IsCntrl(char c) noexcept
     { return (c >= 0 && c <= 31) || c == 127; }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
+    // I won't depend on implementation defined behavior just because gcc is
+    // retarded. of course, c <= 127 is true if char is a signed 8-bit integer.
+    // but what if it's not?
     inline constexpr bool IsAscii(char c) noexcept
     { return c >= 0 && c <= 127; }
+#pragma GCC diagnostic pop
 
 
     inline constexpr char ToLower(char c) noexcept
