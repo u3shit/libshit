@@ -10,7 +10,7 @@ except:
     with open('VERSION', 'r') as f:
         VERSION = f.readline().strip('\n')
 
-from waflib.TaskGen import after_method, feature, extension
+from waflib.TaskGen import before_method, after_method, feature, extension
 def fixup_msvc():
     @after_method('apply_link')
     @feature('c', 'cxx')
@@ -484,3 +484,28 @@ for cls in [c.c, cxx.cxx]:
 USELIB_VARS['c'].add('SYSTEM_INCLUDES')
 USELIB_VARS['cxx'].add('SYSTEM_INCLUDES')
 USELIB_VARS['includes'].add('SYSTEM_INCLUDES')
+
+# reusable rule-like tasks
+@conf
+def rule_like(ctx, name):
+    def x(self):
+        self.meths.remove('process_source')
+        tsk = self.create_task(name)
+        self.task = tsk
+        tsk.inputs = self.to_nodes(self.source)
+
+        # from TaskGen.process_rule
+        if isinstance(self.target, str):
+            self.target = self.target.split()
+        if not isinstance(self.target, list):
+            self.target = [self.target]
+        for x in self.target:
+            if isinstance(x, str):
+                tsk.outputs.append(self.path.find_or_declare(x))
+            else:
+                x.parent.mkdir() # if a node was given, create the required folders
+                tsk.outputs.append(x)
+
+    x.__name__ = 'rule_like_%s' % name
+    feature(name)(x)
+    before_method('process_source')(x)

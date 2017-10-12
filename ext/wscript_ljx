@@ -149,6 +149,33 @@ def configure_ljx(ctx, variant, host_variant, suf):
             ['LUA_API=extern __attribute((visibility("default")))'])
 
 def build(ctx):
+    # tasks
+    @Task.update_outputs
+    class dynasm(Task.Task):
+        run_str = '${LUA} ${SRC[0].abspath()} ${DASM_DEFINE_ST:DASM_DEFINES} -o ${TGT} ${SRC[1].abspath()}'
+        color = 'BLUE'
+
+        def __str__(self):
+            return self.inputs[1].relpath()
+    ctx.rule_like('dynasm')
+
+    @Task.update_outputs
+    class buildvm(Task.Task):
+        run_str = '${tsk.executable} -m ${gen.mode} -o ${TGT} ${SRC}'
+        color = 'BLUE'
+
+        def __str__(self):
+            return self.outputs[0].relpath()
+    ctx.rule_like('buildvm')
+    @feature('buildvm')
+    @after_method('rule_like_buildvm')
+    def set_executable(self):
+        nd = self.path.find_resource(self.buildvm)
+
+        self.task.executable = nd.abspath()
+        self.task.dep_nodes.append(nd)
+
+    # build
     host_env = ctx.all_envs[ctx.variant + '_host']
 
     invalid_files = [
@@ -294,55 +321,6 @@ def add_those_o_files(self, node):
 def add_o(self):
     if getattr(self, 'o_files', None):
         self.link_task.inputs += self.o_files
-
-# tasks
-def rule_like(name):
-    def x(self):
-        self.meths.remove('process_source')
-        tsk = self.create_task(name)
-        self.task = tsk
-        tsk.inputs = self.to_nodes(self.source)
-
-        # from TaskGen.process_rule
-        if isinstance(self.target, str):
-            self.target = self.target.split()
-        if not isinstance(self.target, list):
-            self.target = [self.target]
-        for x in self.target:
-            if isinstance(x, str):
-                tsk.outputs.append(self.path.find_or_declare(x))
-            else:
-                x.parent.mkdir() # if a node was given, create the required folders
-                tsk.outputs.append(x)
-
-    x.__name__ = 'rule_like_%s' % name
-    feature(name)(x)
-    before_method('process_source')(x)
-
-@Task.update_outputs
-class dynasm(Task.Task):
-    run_str = '${LUA} ${SRC[0].abspath()} ${DASM_DEFINE_ST:DASM_DEFINES} -o ${TGT} ${SRC[1].abspath()}'
-    color = 'BLUE'
-
-    def __str__(self):
-        return self.inputs[1].relpath()
-rule_like('dynasm')
-
-@Task.update_outputs
-class buildvm(Task.Task):
-    run_str = '${tsk.executable} -m ${gen.mode} -o ${TGT} ${SRC}'
-    color = 'BLUE'
-
-    def __str__(self):
-        return self.outputs[0].relpath()
-rule_like('buildvm')
-@feature('buildvm')
-@after_method('rule_like_buildvm')
-def set_executable(self):
-    nd = self.path.find_resource(self.buildvm)
-
-    self.task.executable = nd.abspath()
-    self.task.dep_nodes.append(nd)
 
 
 # task .lua->.h
