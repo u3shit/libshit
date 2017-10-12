@@ -149,6 +149,8 @@ namespace Libshit
     static_assert(IS_NORMAL_S<> || IS_REFCOUNTED_S<>);
 
   public:
+    using element_type = T;
+
     SharedPtrBase() = default;
     SharedPtrBase(std::nullptr_t) noexcept {}
 
@@ -311,6 +313,8 @@ namespace Libshit
     static_assert(IS_NORMAL_S<> || IS_REFCOUNTED_S<>);
 
   public:
+    using element_type = T;
+
     WeakPtrBase() = default;
     WeakPtrBase(std::nullptr_t) noexcept {}
 
