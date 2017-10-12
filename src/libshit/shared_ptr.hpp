@@ -42,7 +42,11 @@ namespace Libshit
       }
     }
 
-    void AddWeakRef() { weak_count.fetch_add(1, std::memory_order_relaxed); }
+    void AddWeakRef()
+    {
+      LIBSHIT_ASSERT(weak_use_count() >= 1);
+      weak_count.fetch_add(1, std::memory_order_relaxed);
+    }
     void RemoveWeakRef()
     {
       if (weak_count.fetch_sub(1, std::memory_order_acq_rel) == 1)
