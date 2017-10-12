@@ -21,7 +21,7 @@ namespace Libshit
     const char* file = nullptr;
     unsigned line = 0;
     const char* func = nullptr;
-    std::map<std::string, std::string> map;
+    std::multimap<std::string, std::string> map;
 
     ExceptionInfo() = default;
     ExceptionInfo(const ExceptionInfo& o)
@@ -50,7 +50,7 @@ namespace Libshit
   void Exception::AddInfo(std::string key, std::string value)
   {
     EnsureInfo();
-    info->map.insert_or_assign(std::move(key), std::move(value));
+    info->map.emplace(std::move(key), std::move(value));
   }
 
   void Exception::AddLocation(
