@@ -160,7 +160,8 @@ def build(ctx):
         self.task.dep_nodes.append(nd)
 
     # build
-    host_env = ctx.all_envs[ctx.variant + '_host']
+    host_variant = ctx.variant + (ctx.env.CROSS and '_host' or '')
+    host_env = ctx.all_envs[host_variant]
 
     invalid_files = [
         'ljx/src/host/buildvm_arch.h',
