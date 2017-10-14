@@ -1,8 +1,11 @@
 # -*- mode: python -*-
 
+from waflib import Context
+libshit_cross = getattr(Context.g_module, 'LIBSHIT_CROSS', False)
+
 def options(ctx):
     ctx.load('boost')
-    ctx.system_opt('boost')
+    ctx.system_opt('boost', cross=libshit_cross)
 
 from waflib import Context
 def configure(ctx):
@@ -13,7 +16,7 @@ def configure(ctx):
             ctx.fatal('No boost source at libshit/ext/boost')
 
         ctx.env.SYSTEM_INCLUDES_BOOST = ctx.path.find_node('boost').abspath()
-    ctx.system_chk('boost', 'auto', system_boost, bundle_boost)
+    ctx.system_chk('boost', 'auto', system_boost, bundle_boost, cross=libshit_cross)
 
 def build(ctx):
     if not ctx.env.BUILD_BOOST: return

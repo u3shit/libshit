@@ -47,23 +47,7 @@ def configure_ljx(ctx, variant, host_variant, suf):
     ctx.check_cc(lib='m', mandatory=False)
 
     # preprocess lj_arch.h
-    ctx.start_msg('Checking for ljx config')
-    cmd = [] # python, why u no have Array#flatten?
-    cmd += ctx.env.CC
-    cmd += ctx.env.CPPFLAGS
-    cmd += ctx.env.CFLAGS
-    cmd += ['-E', ctx.path.find_node('ljx/src/lj_arch.h').abspath() ]
-    if ctx.env['COMPILER_CXX'] == 'msvc': cmd += ['-Xclang', '-dM']
-    else: cmd += ['-dM']
-    try:
-        out = ctx.cmd_and_log(cmd)
-    except Exception:
-        ctx.end_msg(False)
-        raise
-
-    import re
-    reg = re.compile('^#define ([^ ]+) (.*)$')
-    macros = dict(map(lambda l: reg.match(l).groups(), out.splitlines()))
+    macros = ctx.get_defs('ljx config', ctx.path.find_node('ljx/src/lj_arch.h'))
 
     # dasm defines/arch
     dasm_defs = [

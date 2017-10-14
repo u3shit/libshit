@@ -1,7 +1,10 @@
 # -*- mode: python -*-
 
+from waflib import Context
+libshit_cross = getattr(Context.g_module, 'LIBSHIT_CROSS', False)
+
 def options(ctx):
-    ctx.system_opt('brigand')
+    ctx.system_opt('brigand', cross=libshit_cross)
     ctx.system_opt('catch')
 
     ctx.recurse('.', name='options', wscript='wscript_boost', once=False)
@@ -16,7 +19,7 @@ def configure(ctx):
                       global_define=True, uselib_store='BRIGAND')
         ctx.undefine('HAVE_LIBBRIGAND') # ...
     ctx.system_chk('catch', 'auto', system_catch, 'catch/include')
-    ctx.system_chk('brigand', 'auto', system_brigand, 'brigand/include')
+    ctx.system_chk('brigand', 'auto', system_brigand, 'brigand/include', libshit_cross)
 
     ctx.recurse('.', name='configure', wscript='wscript_boost', once=False)
     ctx.recurse('.', name='configure', wscript='wscript_lua', once=False)

@@ -34,6 +34,11 @@ def configure(ctx):
     ctx.add_os_flags('LUACFLAGS')
     ctx.add_os_flags('LUAC')
 
+    def no_lua(ctx, _):
+        ctx.define('LIBSHIT_WITHOUT_LUA', 1)
+        ctx.env.WITHOUT_LUA = True
+    ctx.only_host_env(no_lua)
+
     wlua = ctx.options.with_lua
     ctx.env.WITH_LUA = wlua
     ctx.env.LUAC_MODE = ctx.options.luac_mode

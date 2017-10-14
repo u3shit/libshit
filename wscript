@@ -32,6 +32,7 @@ except IOError:
     pass
 
 app = Context.g_module.APPNAME.upper()
+libshit_cross = getattr(Context.g_module, 'LIBSHIT_CROSS', False)
 
 all_system = []
 def options(opt):
@@ -39,16 +40,19 @@ def options(opt):
     grp = opt.get_option_group('configure options')
     grp.add_option('--clang-hack', action='store_true', default=False,
                    help='Read COMPILE.md...')
+    grp.add_option('--clang-hack-host', action='store_true', default=False,
+                   help='Read COMPILE.md...')
     grp.add_option('--optimize', action='store_true', default=False,
                    help='Enable some default optimizations')
     grp.add_option('--optimize-ext', action='store_true', default=False,
                    help='Optimize ext libs even if %s is in debug mode' % app.title())
     grp.add_option('--release', action='store_true', default=False,
                    help='Enable some flags for release builds')
-    grp.add_option('--all-system', dest='all_system',
+    bnd = opt.add_option_group('Bundling options')
+    bnd.add_option('--all-system', dest='all_system',
                    action='store_const', const='system',
                    help="Disable bundled libs where it's generally ok")
-    grp.add_option('--all-bundled', dest='all_system',
+    bnd.add_option('--all-bundled', dest='all_system',
                    action='store_const', const='bundle',
                    help="Use bundled libs where it's generally ok")
 
@@ -82,10 +86,15 @@ def configure(cfg):
             cfg.environ[k[5:]] = cfg.environ[k]
             del cfg.environ[k]
 
-    cfg.load('compiler_c')
+    if cross:
+        configure_variant(cfg, cfg.options.clang_hack_host)
 
-    if cfg.options.optimize or cfg.options.optimize_ext:
-        cfg.filter_flags_c(['CFLAGS'], ['-O1', '-march=native'])
+        if cfg.options.optimize or cfg.options.optimize_ext:
+            if cfg.env['COMPILER_CXX'] == 'msvc':
+                cfg.filter_flags(['CFLAGS', 'CXXFLAGS'], ['-O1'])
+            else:
+                cfg.filter_flags(
+                    ['CFLAGS', 'CXXFLAGS'], ['-O1', '-march=native'])
 
     # ----------------------------------------------------------------------
     # setup target
@@ -94,25 +103,52 @@ def configure(cfg):
     cfg.env.CROSS = cross
     cfg.environ = environ
 
+    cfg.load('clang_compilation_database')
+    configure_variant(cfg, cfg.options.clang_hack)
+
+    if cfg.env['COMPILER_CXX'] == 'msvc':
+        if cfg.options.optimize:
+            for f in ['CFLAGS', 'CXXFLAGS']:
+                cfg.env.prepend_value(f, ['-O2', '-flto'])
+            cfg.env.prepend_value('LINKFLAGS', ['/OPT:REF', '/OPT:ICF'])
+        elif cfg.options.optimize_ext:
+            cfg.env.prepend_value('CXXFLAGS_EXT', '-O2')
+    else:
+        if cfg.options.optimize:
+            cfg.filter_flags(['CFLAGS', 'CXXFLAGS', 'LINKFLAGS'], [
+                '-Ofast', '-flto', '-fno-fat-lto-objects',
+                 '-fomit-frame-pointer'])
+
+            cfg.env.append_value('LINKFLAGS', '-Wl,-O1')
+        elif cfg.options.optimize_ext:
+            cfg.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], ['-g0', '-Ofast'])
+
+    if cfg.options.release:
+        cfg.define('NDEBUG', 1)
+
+    Logs.pprint('NORMAL', 'Configuring ext '+variant)
+    cfg.recurse('ext', name='configure', once=False)
+
+def configure_variant(ctx, clang_hack):
     # override flags specific to app/bundled libraries
     for v in [app, 'EXT']:
-        cfg.add_os_flags('CPPFLAGS_'+v, dup=False)
-        cfg.add_os_flags('CFLAGS_'+v, dup=False)
-        cfg.add_os_flags('CXXFLAGS_'+v, dup=False)
-        cfg.add_os_flags('LINKFLAGS_'+v, dup=False)
-        cfg.add_os_flags('LDFLAGS_'+v, dup=False)
+        ctx.add_os_flags('CPPFLAGS_'+v, dup=False)
+        ctx.add_os_flags('CFLAGS_'+v, dup=False)
+        ctx.add_os_flags('CXXFLAGS_'+v, dup=False)
+        ctx.add_os_flags('LINKFLAGS_'+v, dup=False)
+        ctx.add_os_flags('LDFLAGS_'+v, dup=False)
 
-    if cfg.options.clang_hack:
-        cfg.find_program('clang-cl', var='CC')
-        cfg.find_program('clang-cl', var='CXX')
-        cfg.find_program('lld-link', var='LINK_CXX')
-        cfg.find_program('llvm-lib', var='AR')
-        cfg.find_program(cfg.path.abspath()+'/rc.sh', var='WINRC')
+    if clang_hack:
+        ctx.find_program('clang-cl', var='CC')
+        ctx.find_program('clang-cl', var='CXX')
+        ctx.find_program('lld-link', var='LINK_CXX')
+        ctx.find_program('llvm-lib', var='AR')
+        ctx.find_program(ctx.path.abspath()+'/rc.sh', var='WINRC')
 
-        cfg.add_os_flags('WINRCFLAGS', dup=False)
-        rcflags_save = cfg.env.WINRCFLAGS
+        ctx.add_os_flags('WINRCFLAGS', dup=False)
+        rcflags_save = ctx.env.WINRCFLAGS
 
-        cfg.load('msvc', funs='no_autodetect')
+        ctx.load('msvc', funs='no_autodetect')
         fixup_msvc()
         from waflib.Tools.compiler_cxx import cxx_compiler
         from waflib.Tools.compiler_c import c_compiler
@@ -124,15 +160,15 @@ def configure(cfg):
         cxx_compiler[plat] = ['msvc']
         c_compiler[plat] = ['msvc']
 
-        cfg.env.WINRCFLAGS = rcflags_save
+        ctx.env.WINRCFLAGS = rcflags_save
 
-    cfg.load('compiler_c compiler_cxx clang_compilation_database')
+    ctx.load('compiler_c compiler_cxx')
 
-    if cfg.options.clang_hack:
+    if clang_hack:
         cxx_compiler[plat] = cxx_save
         c_compiler[plat] = c_save
 
-    cfg.filter_flags(['CFLAGS', 'CXXFLAGS'], [
+    ctx.filter_flags(['CFLAGS', 'CXXFLAGS'], [
         # error on unknown arguments, including unknown options that turns
         # unknown argument warnings into error. どうして？
         '-Werror=unknown-warning-option',
@@ -141,92 +177,68 @@ def configure(cfg):
 
         '-fdiagnostics-color', '-fdiagnostics-show-option',
     ])
-    cfg.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], [
+    ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], [
         '-Wall', '-Wextra', '-pedantic',
         '-Wno-parentheses', '-Wno-assume', '-Wno-attributes',
         '-Wold-style-cast', '-Woverloaded-virtual', '-Wimplicit-fallthrough',
         '-Wno-undefined-var-template', # TYPE_NAME usage
     ])
-    cfg.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], [
+    ctx.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], [
         '-Wno-parentheses-equality', # boost fs, windows build
         '-Wno-microsoft-enum-value', '-Wno-shift-count-overflow', # ljx
         '-Wno-varargs',
     ])
 
-    if cfg.check_cxx(cxxflags=['-isystem', '.'],
+    if ctx.check_cxx(cxxflags=['-isystem', '.'],
                      features='cxx', mandatory=False,
                      msg='Checking for compiler flag -isystem'):
-        cfg.env.CPPSYSPATH_ST = ['-isystem']
-    elif cfg.check_cxx(cxxflags=['-imsvc', '.'],
+        ctx.env.CPPSYSPATH_ST = ['-isystem']
+    elif ctx.check_cxx(cxxflags=['-imsvc', '.'],
                        features='cxx', mandatory=False,
                        msg='Checking for compiler flag -imsvc'):
-        cfg.env.CPPSYSPATH_ST = ['-imsvc']
+        ctx.env.CPPSYSPATH_ST = ['-imsvc']
     else:
-        cfg.env.CPPSYSPATH_ST = cfg.env.CPPPATH_ST
+        ctx.env.CPPSYSPATH_ST = ctx.env.CPPPATH_ST
 
-    if cfg.env['COMPILER_CXX'] == 'msvc':
-        cfg.define('_CRT_SECURE_NO_WARNINGS', 1)
-        cfg.env.append_value('CXXFLAGS', [
+    if ctx.env['COMPILER_CXX'] == 'msvc':
+        ctx.define('_CRT_SECURE_NO_WARNINGS', 1)
+        ctx.env.append_value('CXXFLAGS', [
             '-Xclang', '-std=c++1z',
             '-Xclang', '-fdiagnostics-format', '-Xclang', 'clang',
             '-EHsa', '-MD'])
-        cfg.env.append_value('CFLAGS_EXT', ['-EHsa', '-MD'])
-        inc = '-I' + cfg.path.find_node('msvc_include').abspath()
-        cfg.env.prepend_value('CFLAGS', inc)
-        cfg.env.prepend_value('CXXFLAGS', inc)
+        ctx.env.append_value('CFLAGS_EXT', ['-EHsa', '-MD'])
 
-        if cfg.options.optimize:
-            #cfg.env.prepend_value('CFLAGS', ['/O1', '/GS-'])
-            for f in ['CFLAGS_EXT', 'CXXFLAGS_EXT', 'CXXFLAGS_'+app]:
-                cfg.env.prepend_value(f, [
-                    '-O2', '-Xclang', '-emit-llvm-bc'])
-            cfg.env.prepend_value('LINKFLAGS', ['/OPT:REF', '/OPT:ICF'])
-        elif cfg.options.optimize_ext:
-            cfg.env.prepend_value('CXXFLAGS_EXT', '-O2')
+        m = ctx.get_defs('msvc lib version', '#include <yvals.h>', cxx=True)
+        cpp_ver = m['_CPPLIB_VER']
+        if cpp_ver == '610':
+            ctx.end_msg('610, activating include patching', color='YELLOW')
+            inc = '-I' + ctx.path.find_node('msvc_include').abspath()
+            ctx.env.prepend_value('CFLAGS', inc)
+            ctx.env.prepend_value('CXXFLAGS', inc)
+        else:
+            ctx.end_msg(cpp_ver)
     else:
-        cfg.check_cxx(cxxflags='-std=c++1z')
-        cfg.env.append_value('CXXFLAGS', ['-std=c++1z'])
+        ctx.check_cxx(cxxflags='-std=c++1z')
+        ctx.env.append_value('CXXFLAGS', ['-std=c++1z'])
 
-        cfg.filter_flags(['CFLAGS', 'CXXFLAGS'], ['-fvisibility=hidden'])
-        cfg.env.append_value('LINKFLAGS', '-rdynamic')
-        if cfg.options.optimize:
-            cfg.filter_flags(['CFLAGS', 'CXXFLAGS', 'LINKFLAGS'], [
-                '-Ofast', '-flto', '-fno-fat-lto-objects',
-                 '-fomit-frame-pointer'])
+        ctx.filter_flags(['CFLAGS', 'CXXFLAGS'], ['-fvisibility=hidden'])
+        ctx.env.append_value('LINKFLAGS', '-rdynamic')
 
-            cfg.env.append_value('LINKFLAGS', '-Wl,-O1')
-        elif cfg.options.optimize_ext:
-            cfg.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], ['-g0', '-Ofast'])
+    m = ctx.get_defs('destination OS', '')
+    if '_WIN64' in m:
+        ctx.env.DEST_OS = 'win64'
+    elif '_WIN32' in m:
+        ctx.env.DEST_OS = 'win32'
+    ctx.end_msg(ctx.env.DEST_OS)
 
-    def chkdef(cfg, defn):
-        return cfg.check_cxx(fragment='''
-#ifndef %s
-#error err
-#endif
-int main() { return 0; }
-''' % defn,
-                             msg='Checking for '+defn,
-                             features='cxx',
-                             mandatory=False)
+    if ctx.env.DEST_OS == 'win32' or ctx.env.DEST_OS == 'win64':
+        ctx.define('WINDOWS', 1)
+        ctx.define('UNICODE', 1)
+        ctx.define('_UNICODE', 1)
 
-    if chkdef(cfg, '_WIN64'):
-        cfg.env.DEST_OS = 'win64'
-    elif chkdef(cfg, '_WIN32'):
-        cfg.env.DEST_OS = 'win32'
-
-    if cfg.options.release:
-        cfg.define('NDEBUG', 1)
-    if cfg.env.DEST_OS == 'win32' or cfg.env.DEST_OS == 'win64':
-        cfg.define('WINDOWS', 1)
-        cfg.define('UNICODE', 1)
-        cfg.define('_UNICODE', 1)
-
-        cfg.check_cxx(lib='kernel32')
-        cfg.check_cxx(lib='shell32')
-        cfg.check_cxx(lib='user32')
-
-    Logs.pprint('NORMAL', 'Configuring ext '+variant)
-    cfg.recurse('ext', name='configure', once=False)
+        ctx.check_cxx(lib='kernel32')
+        ctx.check_cxx(lib='shell32')
+        ctx.check_cxx(lib='user32')
 
 def build(bld):
     fixup_msvc()
@@ -242,13 +254,17 @@ def build(bld):
         VERSION    = VERSION,
         RC_VERSION = rc_ver)
 
+    build_libshit(bld, '')
+    if libshit_cross: bld.only_host_env(build_libshit)
+
+def build_libshit(ctx, pref):
     src = [
         'src/libshit/char_utils.cpp',
         'src/libshit/options.cpp',
         'src/libshit/except.cpp',
         'src/libshit/logger.cpp',
     ]
-    if not bld.env.WITHOUT_LUA:
+    if not ctx.env.WITHOUT_LUA:
         src += [
             'src/libshit/logger.lua',
             'src/libshit/lua/base.cpp',
@@ -257,12 +273,12 @@ def build(bld):
             'src/libshit/lua/user_type.cpp',
         ]
 
-    bld.stlib(source   = src,
+    ctx.stlib(source   = src,
               uselib   = app,
               use      = 'BOOST BRIGAND lua',
               includes = 'src',
               export_includes = 'src',
-              target   = 'libshit')
+              target   = pref+'libshit')
 
 
 from waflib.Build import BuildContext
@@ -400,6 +416,40 @@ def filter_flags_c(cfg, vars, flags):
 
     return ret
 
+def change_var(ctx, to):
+    if getattr(ctx, 'setenv', False):
+        ctx.setenv(to)
+    else:
+        ctx.variant = to
+        ctx.all_envs[to].derive()
+
+@conf
+def only_host_env(ctx, f):
+    if not ctx.env.CROSS: return
+    variant = ctx.variant
+    change_var(ctx, variant + '_host')
+    f(ctx, 'host/')
+    change_var(ctx, variant)
+
+@conf
+def in_host_env(ctx, f):
+    if ctx.env.CROSS:
+        variant = ctx.variant
+        change_var(ctx, variant + '_host')
+        f(ctx, 'host/')
+        change_var(ctx, variant)
+    else:
+        f(ctx, '')
+
+@conf
+def both_host_env(ctx, f):
+    f(ctx, '')
+    if ctx.env.CROSS:
+        variant = ctx.variant
+        change_var(ctx, variant + '_host')
+        f(ctx, 'host/')
+        change_var(ctx, variant)
+
 # waf 1.7 style logging: c/cxx instead of vague shit like 'processing',
 # 'compiling', etc.
 from waflib.Task import Task
@@ -409,26 +459,28 @@ Task.keyword = getname
 
 # system building helpers
 from waflib.Options import OptionsContext
-def system_opt(ctx, name, include_all=True):
-    grp = ctx.get_option_group('configure options')
-    sname = 'system_' + name
-    grp.add_option('--system-'+name, dest=sname,
-                   action='store_const', const='system',
-                   help='Use system '+name)
-    grp.add_option('--bundled-'+name, dest=sname,
-                   action='store_const', const='bundle',
-                   help='Use bundled '+name)
-    if include_all:
-        global all_system
-        all_system += [name]
+def system_opt(ctx, name, include_all=True, cross=False):
+    grp = ctx.get_option_group('Bundling options')
+    def x(name):
+        sname = 'system_' + name
+        grp.add_option('--system-'+name, dest=sname,
+                       action='store_const', const='system',
+                       help='Use system '+name)
+        grp.add_option('--bundled-'+name, dest=sname,
+                       action='store_const', const='bundle',
+                       help='Use bundled '+name)
+        if include_all:
+            global all_system
+            all_system += [name]
+    x(name)
+    if cross: x(name + '-host')
 OptionsContext.system_opt = system_opt
 
 from waflib.Errors import ConfigurationError
 from waflib import Utils
 @conf
 # bundle_chk: if string, header only lib's include path
-def system_chk(ctx, name, default, system_chk, bundle_chk):
-    opt = getattr(ctx.options, 'system_'+name) or default
+def system_chk(ctx, name, default, system_chk, bundle_chk, cross=False):
     envname = 'BUILD_' + Utils.quote_define_name(name)
 
     if bundle_chk == None:
@@ -441,25 +493,30 @@ def system_chk(ctx, name, default, system_chk, bundle_chk):
             ctx.env['SYSTEM_INCLUDES_'+name.upper()] = incl_dir
         bundle_chk = fun
 
-    if opt == 'auto':
-        try:
-            system_chk(ctx)
-            ctx.env[envname] = False
-            ctx.msg('Using '+name, 'system')
-            return
-        except ConfigurationError:
-            opt = 'bundle'
+    def x(name):
+        opt = getattr(ctx.options, 'system_'+name) or default
+        if opt == 'auto':
+            try:
+                system_chk(ctx)
+                ctx.env[envname] = False
+                ctx.msg('Using '+name, 'system')
+                return
+            except ConfigurationError:
+                opt = 'bundle'
 
-    if opt == 'system':
-        system_chk(ctx)
-        ctx.msg('Using '+name, 'system')
-        ctx.env[envname] = False
-    elif opt == 'bundle':
-        bundle_chk(ctx)
-        ctx.msg('Using '+name, 'bundled')
-        ctx.env[envname] = True
-    else:
-        ctx.fatal('Invalid opt')
+        if opt == 'system':
+            system_chk(ctx)
+            ctx.msg('Using '+name, 'system')
+            ctx.env[envname] = False
+        elif opt == 'bundle':
+            bundle_chk(ctx)
+            ctx.msg('Using '+name, 'bundled')
+            ctx.env[envname] = True
+        else:
+            ctx.fatal('Invalid opt')
+
+    x(name)
+    if cross: ctx.only_host_env(lambda bull,shit: x(name+'-host'))
 
 
 @feature('c', 'cxx', 'includes')
@@ -509,3 +566,29 @@ def rule_like(ctx, name):
     x.__name__ = 'rule_like_%s' % name
     feature(name)(x)
     before_method('process_source')(x)
+
+# get preprocessor defs
+import re
+defs_re = re.compile('^#define ([^ ]+) (.*)$')
+@conf
+def get_defs(ctx, msg, file, cxx=False):
+    ctx.start_msg('Checking for '+msg)
+    cmd = [] # python, why u no have Array#flatten?
+    cmd += cxx and ctx.env.CXX or ctx.env.CC
+    cmd += ctx.env.CPPFLAGS
+    cmd += cxx and ctx.env.CXXFLAGS or ctx.env.CFLAGS
+    if isinstance(file, str):
+        node = ctx.srcnode.make_node(cxx and 'test.cpp' or 'test.c')
+        node.write(file)
+        file = node
+
+    cmd += ['-E', file.abspath() ]
+    if ctx.env['COMPILER_CXX'] == 'msvc': cmd += ['-Xclang', '-dM']
+    else: cmd += ['-dM']
+    try:
+        out = ctx.cmd_and_log(cmd)
+    except Exception:
+        ctx.end_msg(False)
+        raise
+
+    return dict(map(lambda l: defs_re.match(l).groups(), out.splitlines()))
