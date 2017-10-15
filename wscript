@@ -578,7 +578,7 @@ def get_defs(ctx, msg, file, cxx=False):
     cmd += ctx.env.CPPFLAGS
     cmd += cxx and ctx.env.CXXFLAGS or ctx.env.CFLAGS
     if isinstance(file, str):
-        node = ctx.srcnode.make_node(cxx and 'test.cpp' or 'test.c')
+        node = ctx.bldnode.make_node(cxx and 'test.cpp' or 'test.c')
         node.write(file)
         file = node
 
