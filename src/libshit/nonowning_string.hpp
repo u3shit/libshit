@@ -78,10 +78,14 @@ namespace Libshit
     constexpr const_iterator  end() const noexcept { return str+len; }
     constexpr const_iterator cend() const noexcept { return str+len; }
 
-    constexpr const_reverse_iterator  rbegin() const noexcept { return end(); }
-    constexpr const_reverse_iterator crbegin() const noexcept { return end(); }
-    constexpr const_reverse_iterator  rend() const noexcept { return begin(); }
-    constexpr const_reverse_iterator crend() const noexcept { return begin(); }
+    constexpr const_reverse_iterator  rbegin() const noexcept
+    { return const_reverse_iterator{end()}; }
+    constexpr const_reverse_iterator crbegin() const noexcept
+    { return const_reverse_iterator{end()}; }
+    constexpr const_reverse_iterator  rend() const noexcept
+    { return const_reverse_iterator{begin()}; }
+    constexpr const_reverse_iterator crend() const noexcept
+    { return const_reverse_iterator{begin()}; }
 
     constexpr const_reference operator[](size_type i) const noexcept
     { return str[i]; }
