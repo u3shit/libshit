@@ -4,6 +4,8 @@
 
 #include <functional>
 
+#include "assert.hpp"
+
 namespace Libshit
 {
   // like std::function, but only movable
@@ -23,25 +25,38 @@ namespace Libshit
 
     explicit operator bool() const noexcept { return fun; }
     Ret operator()(Args... args)
-    { return fun->Call(std::forward<Args>(args)...); }
+    {
+      LIBSHIT_ASSERT_MSG(fun, "Called empty Function");
+      return fun->Call(fun.get(), std::forward<Args>(args)...);
+    }
 
   private:
     struct FunBase
     {
-      virtual ~FunBase() = default;
-      virtual Ret Call(Args... args) = 0;
+      Ret (*Call)(FunBase* thiz, Args... args);
+      void (*Delete)(FunBase* thiz);
     };
 
     template <typename T>
     struct FunImpl : FunBase
     {
-      FunImpl(T t) : t{std::move(t)} {}
-      Ret Call(Args... args) override
-      { return std::invoke(t, std::forward<Args>(args)...); }
+      FunImpl(T t)
+        : FunBase{
+            [](FunBase* thiz, Args... args)
+            {
+              return std::invoke(static_cast<FunImpl*>(thiz)->t,
+                                 std::forward<Args>(args)...);
+            },
+            [](FunBase* thiz) { delete static_cast<FunImpl*>(thiz); }},
+          t{std::move(t)} {}
       T t;
     };
 
-    std::unique_ptr<FunBase> fun;
+    struct FunDelete
+    {
+      void operator()(FunBase* fun) { fun->Delete(fun); }
+    };
+    std::unique_ptr<FunBase, FunDelete> fun;
   };
 }
 
