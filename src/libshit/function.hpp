@@ -23,11 +23,12 @@ namespace Libshit
 
     Function& operator=(Function&& o) noexcept = default;
 
-    explicit operator bool() const noexcept { return fun; }
-    Ret operator()(Args... args)
+    explicit operator bool() const noexcept { return static_cast<bool>(fun); }
+    Ret operator()(Args... args) const
     {
       LIBSHIT_ASSERT_MSG(fun, "Called empty Function");
-      return fun->Call(fun.get(), std::forward<Args>(args)...);
+      return fun->Call(
+        const_cast<FunBase*>(fun.get()), std::forward<Args>(args)...);
     }
 
   private:

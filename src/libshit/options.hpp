@@ -3,7 +3,8 @@
 #pragma once
 
 #include "except.hpp"
-#include <functional>
+#include "function.hpp"
+
 #include <vector>
 
 namespace Libshit
@@ -34,7 +35,7 @@ namespace Libshit
 
   struct Option final
   {
-    using Func = std::function<void (std::vector<const char*>&&)>;
+    using Func = Function<void (std::vector<const char*>&&)>;
     Option(OptionGroup& group, const char* name, char short_name,
            size_t args_count, const char* args_help, const char* help, Func func)
       : name{name}, short_name{short_name}, args_count{args_count},
@@ -69,7 +70,7 @@ namespace Libshit
     void SetUsage(const char* usage) { this->usage = usage; }
     const char* GetUsage() const noexcept { return usage; }
 
-    using NoArgFun = std::function<void (const char*)>;
+    using NoArgFun = Function<void (const char*)>;
     void SetNoArgHandler(NoArgFun fun) { no_arg_fun = std::move(fun); }
     void FailOnNoArg();
     const NoArgFun& GetNoArgHandler() const { return no_arg_fun; }
