@@ -6,6 +6,7 @@
 #include "lua/type_traits.hpp"
 
 #include <iosfwd>
+#include <mutex>
 
 namespace Libshit { class OptionGroup; }
 
@@ -36,6 +37,10 @@ namespace Libshit::Logger
 #else
 #  define LIBSHIT_LOG_ARGS LIBSHIT_FILE, __LINE__, LIBSHIT_FUNCTION
 #endif
+
+  // you can lock manually it if you want to make sure consecutive lines end up
+  // in one block
+  extern std::recursive_mutex log_mutex;
 
 #define LIBSHIT_LOG(name, level)              \
   ::Libshit::Logger::CheckLog(name, level) && \

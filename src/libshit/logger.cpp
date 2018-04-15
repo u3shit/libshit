@@ -38,6 +38,7 @@ namespace Libshit::Logger
 
   int global_level = -1;
   bool show_fun = false;
+  std::recursive_mutex log_mutex;
 
   static std::map<std::string, int, std::less<>> level_map;
 
@@ -106,42 +107,61 @@ namespace Libshit::Logger
 
   namespace
   {
-    struct LogBuffer final : public std::streambuf
+    struct Global
     {
-      LogBuffer()
+      Global()
       {
         // otherwise clog is actually unbuffered...
         static char buf[4096];
         // buf can be nullptr on linux (and posix?), but crashes on windows...
         setvbuf(stderr, buf, _IOFBF, 4096);
+        std::ios_base::sync_with_stdio(false);
 
 #ifdef WINDOWS
         colors = _isatty(2);
 #else
         const char* x;
-        if (isatty(2) && (x = getenv("TERM")) ? strcmp(x, "dummy") != 0 : false)
-          colors = true;
+        colors = isatty(2) &&
+          (x = getenv("TERM")) ? strcmp(x, "dummy") != 0 : false;
 #endif
       }
+      bool colors;
+    };
+    static Global global;
 
+    static size_t max_name = 8;
+#ifndef NDEBUG
+    static size_t max_file = 20, max_fun = 20;
+#endif
+
+    struct LogBuffer final : public std::streambuf
+    {
       std::streamsize xsputn(const char* msg, std::streamsize n) override
       {
+        std::unique_lock lock{log_mutex, std::defer_lock};
         auto old_n = n;
         while (n)
         {
-          if (line_begin)
-            WriteBegin();
-
           auto end = std::find(msg, msg+n, '\n');
-          os.write(msg, end-msg);
-          if (end < msg+n)
+          if (end == msg+n)
           {
-            // we had a newline
-            line_begin = true;
-            ++end;
-            WriteEnd();
+            if (lock.owns_lock()) lock.unlock();
+            buf.append(msg, msg+n);
+            return old_n;
           }
 
+          if (!lock.owns_lock()) lock.lock();
+
+          WriteBegin();
+          if (!buf.empty())
+          {
+            os.write(buf.data(), buf.size());
+            buf.clear();
+          }
+          os.write(msg, end-msg);
+          WriteEnd();
+
+          ++end; // skip \n -- WriteEnd wrote it
           n -= end-msg;
           msg = end;
         }
@@ -171,7 +191,7 @@ namespace Libshit::Logger
         HANDLE h;
         int color;
 #endif
-        if (colors)
+        if (global.colors)
         {
 #ifdef WINDOWS
           os.flush();
@@ -206,7 +226,7 @@ namespace Libshit::Logger
 
         max_name = std::max(max_name, std::strlen(name));
         os << '[' << std::setw(max_name) << name << ']';
-        if (colors)
+        if (global.colors)
         {
 #ifdef WINDOWS
           os.flush();
@@ -230,13 +250,11 @@ namespace Libshit::Logger
         }
 #endif
         os << ": ";
-
-        line_begin = false;
       }
 
       void WriteEnd()
       {
-        if (colors)
+        if (global.colors)
         {
 #ifdef WINDOWS
           os.flush();
@@ -250,22 +268,19 @@ namespace Libshit::Logger
         os << '\n';
       }
 
-      bool colors = false;
-      bool line_begin = true;
+      std::string buf;
       const char* name;
-      size_t max_name = 8;
       int level;
 #ifndef NDEBUG
       const char* file;
       unsigned line;
       const char* fun;
-      size_t max_file = 20, max_fun = 20;
 #endif
     };
   }
 
-  static LogBuffer filter;
-  static std::ostream log_os{&filter};
+  static thread_local LogBuffer filter;
+  static thread_local std::ostream log_os{&filter};
 
   bool CheckLog(const char* name, int level) noexcept
   {
