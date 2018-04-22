@@ -34,7 +34,7 @@ namespace Libshit
   private:
     struct FunBase
     {
-      Ret (*Call)(FunBase* thiz, Args... args);
+      Ret (*Call)(FunBase* thiz, Args&&... args);
       void (*Delete)(FunBase* thiz);
     };
 
@@ -43,7 +43,7 @@ namespace Libshit
     {
       FunImpl(T t)
         : FunBase{
-            [](FunBase* thiz, Args... args)
+            [](FunBase* thiz, Args&&... args) -> Ret
             {
               return std::invoke(static_cast<FunImpl*>(thiz)->t,
                                  std::forward<Args>(args)...);
