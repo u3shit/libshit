@@ -279,8 +279,15 @@ namespace Libshit::Logger
     };
   }
 
-  static thread_local LogBuffer filter;
-  static thread_local std::ostream log_os{&filter};
+#ifdef _MSC_VER
+  // crashes, at least with clang+msvc12
+#define THREAD_LOCAL
+#else
+#define THREAD_LOCAL thread_local
+#endif
+  static THREAD_LOCAL LogBuffer filter;
+  static THREAD_LOCAL std::ostream log_os{&filter};
+#undef THREAD_LOCAL
 
   bool CheckLog(const char* name, int level) noexcept
   {

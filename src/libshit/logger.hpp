@@ -42,9 +42,16 @@ namespace Libshit::Logger
   // in one block
   extern std::recursive_mutex log_mutex;
 
+#ifdef _MSC_VER // thread_local broken
+#define LIBSHIT_LOG(name, level)                   \
+  ::Libshit::Logger::CheckLog(name, level) &&      \
+  (std::unique_lock{::Libshit::Logger::log_mutex}, \
+   ::Libshit::Logger::Log(name, level, LIBSHIT_LOG_ARGS))
+#else
 #define LIBSHIT_LOG(name, level)              \
   ::Libshit::Logger::CheckLog(name, level) && \
   ::Libshit::Logger::Log(name, level, LIBSHIT_LOG_ARGS)
+#endif
 
 #define LIBSHIT_CHECK_LOG ::Libshit::Logger::CheckLog
 
