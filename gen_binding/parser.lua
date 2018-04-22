@@ -78,7 +78,8 @@ local collect_template_v = cl.regCursorVisitor(function (c, par)
   local kind = c:kind()
   if template_types[kind] then
     inst.collect_template_tbl[#inst.collect_template_tbl+1] = cl.Cursor(c)
-  elseif kind ~= "ParmDecl" and kind ~= "TypeRef" and kind ~= "AnnotateAttr" then
+  elseif kind ~= "ParmDecl" and kind ~= "TypeRef" and kind ~= "AnnotateAttr" and
+  kind ~= "NamespaceRef" then
     utils.print_warning("Unhandled arg type "..c:kind(), c)
   end
   return vr.Continue
@@ -112,7 +113,8 @@ local function default_hidden(c, tbl, parent)
   if kind == "FunctionDecl" then return false end
   if kind == "Constructor" and parent:type():isAbstract() then return true end
 
-  return c:access() ~= "public" or c:isDeleted() or c:isOverride() or
+  local acc = c:access() -- can be nil in case of enum constants...
+  return (acc and acc ~= "public") or c:isDeleted() or c:isOverride() or
     c:name():sub(1,8) == "operator"
 end
 
