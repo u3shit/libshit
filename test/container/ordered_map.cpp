@@ -345,6 +345,20 @@ assert(t[1].k == 'xyz' and t[1].v == -2) \n\
 assert(t[2].k == 'foo' and t[2].v == 5)  \n\
 assert(t[3] == nil)");
     }
+
+    SECTION("ipairs")
+    {
+      vm.DoString(R"(
+local nexti = 0
+local map = {[0] = {k='abc',v=7}, {k='xyz',v=-2}, {k='foo',v=5} }
+for i,v in ipairs(om) do
+  assert(i == nexti) nexti = i+1
+  assert(v.k == map[i].k)
+  assert(v.v == map[i].v)
+end
+assert(nexti == 3)
+)");
+    }
   }
 }
 #endif
