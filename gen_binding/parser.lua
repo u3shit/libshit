@@ -485,9 +485,11 @@ local function parse_templates(c)
   local cwd = utils.getcwd()
   local base = utils.parse_path(cwd, "src")
   local basetest = utils.parse_path(cwd, "test")
+  local libshittest = utils.parse_path(cwd, "libshit/test")
   inst.parse_filter = function(c)
     local this = utils.parse_path(cwd, c:location())
-    return utils.path_isbase(base, this) or utils.path_isbase(basetest, this)
+    return utils.path_isbase(base, this) or utils.path_isbase(basetest, this) or
+      utils.path_isbase(libshittest, this)
   end
 
   c:children(parse_templates_v)

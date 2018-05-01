@@ -347,6 +347,8 @@ def test(bld):
         #'test/main.cpp', workaround static lib linking problems, add it in main
         'test/char_utils.cpp',
         'test/options.cpp',
+        'test/container/ordered_map.cpp',
+        'test/container/parent_list.cpp',
     ]
     if not bld.env.WITHOUT_LUA:
         src += [

@@ -7,7 +7,10 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export LUA_PATH="$DIR/?.lua;$DIR/ext/ljclang/?.lua"
 export LD_LIBRARY_PATH="$DIR/ext/ljclang:$LD_LIBRARY_PATH"
 
-src+=("$DIR"/test/lua/function_ref "$DIR"/test/lua/user_type)
+src+=(
+    "$DIR"/test/container/ordered_map "$DIR"/test/container/parent_list
+    "$DIR"/test/lua/function_ref "$DIR"/test/lua/user_type
+)
 
 req=()
 while (( "$#" )); do
