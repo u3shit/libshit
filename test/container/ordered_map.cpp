@@ -337,13 +337,14 @@ TEST_CASE("OrderedMap::lua", "[ordered_map]")
 
     SECTION("to_table")
     {
-      vm.DoString("                      \n\
-local t = om:to_table()                  \n\
-assert(type(t) == 'table')               \n\
-assert(t[0].k == 'abc' and t[0].v == 7)  \n\
-assert(t[1].k == 'xyz' and t[1].v == -2) \n\
-assert(t[2].k == 'foo' and t[2].v == 5)  \n\
-assert(t[3] == nil)");
+      vm.DoString(R"(
+local t = om:to_table()
+assert(type(t) == 'table')
+assert(t[0].k == 'abc' and t[0].v == 7)
+assert(t[1].k == 'xyz' and t[1].v == -2)
+assert(t[2].k == 'foo' and t[2].v == 5)
+assert(t[3] == nil)
+)");
     }
 
     SECTION("ipairs")
