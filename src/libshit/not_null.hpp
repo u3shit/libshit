@@ -54,6 +54,8 @@ namespace Libshit
     template <typename U> friend class NotNull;
   };
 
+  template <typename T> NotNull(T) -> NotNull<T>;
+
   template <typename T>
   NotNull<T> MakeNotNull(T t) noexcept(noexcept(NotNull<T>(std::move(t))))
   { return NotNull<T>(std::move(t)); }
