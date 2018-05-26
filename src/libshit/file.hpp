@@ -15,21 +15,6 @@
 namespace Libshit
 {
 
-  template <char... Args> struct StringContainer
-  {
-    template <char C> using PushBack = StringContainer<Args..., C>;
-
-    static constexpr const char str[sizeof...(Args)+1] = { Args... };
-    static constexpr const wchar_t wstr[sizeof...(Args)+1] = { Args... };
-  };
-
-  template <char... Args>
-  constexpr const char StringContainer<Args...>::str[];
-
-  template <char... Args>
-  constexpr const wchar_t StringContainer<Args...>::wstr[];
-
-
   namespace FileTools
   {
 

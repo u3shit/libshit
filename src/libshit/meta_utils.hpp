@@ -13,6 +13,14 @@ namespace Libshit
   template <typename T>
   constexpr std::size_t EmptySizeof = std::is_empty_v<T> ? 0 : sizeof(T);
 
+  template <char... Args> struct StringContainer
+  {
+    template <char C> using PushBack = StringContainer<Args..., C>;
+
+    static constexpr inline const char str[sizeof...(Args)+1] = { Args... };
+    static constexpr inline const wchar_t wstr[sizeof...(Args)+1] = { Args... };
+  };
+
   // string->template char...
   template <typename X, template <char...> typename Wrap, typename Seq>
   struct ToCharPack;
