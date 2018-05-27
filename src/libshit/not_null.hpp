@@ -36,9 +36,9 @@ namespace Libshit
     // recheck because moving still can break it
     operator T() const { LIBSHIT_ASSERT(t); return t; }
     const T& Get() const noexcept { LIBSHIT_ASSERT(t); return t; }
-    decltype(*std::declval<T>()) operator*() const noexcept
+    decltype(auto) operator*() const noexcept
     { LIBSHIT_ASSERT(t); return *t; }
-    decltype(&*std::declval<T>()) operator->() const noexcept
+    decltype(auto) operator->() const noexcept
     { LIBSHIT_ASSERT(t); return &*t; }
 
     bool operator==(const NotNull& o) const noexcept { return t == o.t; }
