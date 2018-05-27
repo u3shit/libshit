@@ -178,7 +178,8 @@ def build(ctx):
 
     minilua = False
     if not ctx.env.LUA:
-        ctx.program(source = 'ljx/src/host/minilua.c',
+        ctx.program(idx    = 51199,
+                    source = 'ljx/src/host/minilua.c',
                     env    = host_env.derive(),
                     uselib = 'M',
                     target = 'minilua')
@@ -192,17 +193,18 @@ def build(ctx):
         old_env = ctx.env
         ctx.env = host_env
         ctx.env.LUA = old_env.LUA
-        build_ljx(ctx, minilua, host_env, 'host/', '_HOST')
+        build_ljx(ctx, minilua, host_env, 'host/', '_HOST', 51100)
         ctx.env = old_env
 
-    build_ljx(ctx, minilua, host_env, '', '')
+    build_ljx(ctx, minilua, host_env, '', '', 51150,)
 
-def build_ljx(ctx, minilua, host_env, pref, suf):
+def build_ljx(ctx, minilua, host_env, pref, suf, offs):
     from waflib import Task
 
     src = ['ljx/dynasm/dynasm.lua', 'ljx/src/vm_%s.dasc' % ctx.env.DASM_ARCH]
     if minilua: src += ['minilua']
-    ctx(features = 'dynasm',
+    ctx(idx      = offs+0,
+        features = 'dynasm',
         source   = src,
         target   = pref+'buildvm_arch.h')
 
@@ -213,7 +215,8 @@ def build_ljx(ctx, minilua, host_env, pref, suf):
         'ljx/src/host/buildvm_peobj.c',
         'ljx/src/host/buildvm.c',
     ]
-    tg = ctx.program(source   = src,
+    tg = ctx.program(idx      = offs+1,
+                     source   = src,
                      env      = host_env.derive(),
                      includes = pref+'. ljx/src',
                      defines  = 'LUAJIT_ENABLE_LUA53COMPAT',
@@ -231,7 +234,8 @@ def build_ljx(ctx, minilua, host_env, pref, suf):
     else:
         mode = 'elfasm'
 
-    ctx(features = 'buildvm',
+    ctx(idx      = offs+2,
+        features = 'buildvm',
         buildvm  = pref+'buildvm',
         mode     = mode,
         target   = tgt)
@@ -253,18 +257,21 @@ def build_ljx(ctx, minilua, host_env, pref, suf):
     # apparently only `bcdef` (and the obj file above) are different when cross
     # compiling, but generate all of them for extra safety (it's cheap, anyways)
     for mode in ['bcdef', 'ffdef', 'libdef', 'recdef']:
-        ctx(features = 'buildvm',
+        ctx(idx      = offs+3,
+            features = 'buildvm',
             buildvm  = pref+'buildvm',
             mode     = mode,
             source   = src,
             target   = '%slj_%s.h' % (pref, mode))
-    ctx(features = 'buildvm',
+    ctx(idx      = offs+4,
+        features = 'buildvm',
         mode     = 'folddef',
         buildvm  = pref+'buildvm',
         source   = 'ljx/src/lj_opt_fold.c',
         target   = pref+'lj_folddef.h')
     # only needed by luajit-ljx?
-    ctx(features = 'buildvm',
+    ctx(idx      = offs+5,
+        features = 'buildvm',
         mode     = 'vmdef',
         buildvm  = pref+'buildvm',
         source   = src,
@@ -272,7 +279,8 @@ def build_ljx(ctx, minilua, host_env, pref, suf):
 
 
     ver = 'LJX_VERSION="%s"' % ctx.path.find_node('ljx/.version').read().strip()
-    ctx(features        = ctx.env.LUA_DLL and 'c cshlib' or 'c cstlib',
+    ctx(idx             = offs+6,
+        features        = ctx.env.LUA_DLL and 'c cshlib' or 'c cstlib',
         source          = ['ljx/src/ljamalg.c', tgt],
         includes        = pref+'.',
         export_includes = 'ljx/src',
@@ -284,7 +292,8 @@ def build_ljx(ctx, minilua, host_env, pref, suf):
 
     # todo: maybe integrate into stcm-editor
     # only really needed for host
-    ctx.program(source  = 'ljx/src/luajit.c',
+    ctx.program(idx     = offs+7,
+                source  = 'ljx/src/luajit.c',
                 use     = pref+'lua',
                 uselib  = 'READLINE',
                 defines = [ ver, 'LUA_CREDITS=""' ],

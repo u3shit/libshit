@@ -25,7 +25,8 @@ def build(ctx):
     if 'system' in boost_libs:
         boost_libs.remove('system')
 
-        ctx.stlib(source  = 'boost/libs/system/src/error_code.cpp',
+        ctx.stlib(idx     = 51000,
+                  source  = 'boost/libs/system/src/error_code.cpp',
                   defines = 'BOOST_SYSTEM_STATIC_LINK=1',
                   target  = 'boost_system',
                   uselib  = 'BOOST EXT') # get proper includes
@@ -43,7 +44,8 @@ def build(ctx):
             'boost/libs/filesystem/src/utf8_codecvt_facet.cpp',
             'boost/libs/filesystem/src/windows_file_codecvt.cpp',
         ]
-        ctx.stlib(source  = fs_src,
+        ctx.stlib(idx     = 51001,
+                  source  = fs_src,
                   defines = 'BOOST_FILESYSTEM_STATIC_LINK=1',
                   target  = 'boost_filesystem',
                   uselib  = 'BOOST EXT') # get proper includes

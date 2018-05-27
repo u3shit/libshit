@@ -15,7 +15,8 @@ def configure(ctx):
     ctx.env.append_value('DEFINES_LUA', ['LUA_COMPAT_5_2', 'LUA_COMPAT_5_1'])
 
 def build(ctx):
-    ctx(source          = 'lua_one.cpp',
+    ctx(idx             = 51200,
+        source          = 'lua_one.cpp',
         features        = ctx.env.LUA_DLL and 'cxx cxxshlib' or 'cxx cxxstlib',
         includes        = SRC_DIR,
         export_includes = SRC_DIR,
@@ -25,11 +26,13 @@ def build(ctx):
         name            = 'lua')
 
     # maybe optional
-    ctx(features = 'cxx cxxprogram',
+    ctx(idx      = 51201,
+        features = 'cxx cxxprogram',
         source   = '%s/lua.c' % SRC_DIR,
         use      = 'lua',
         target   = 'libshit-lua')
-    ctx(features = 'cxx cxxprogram',
+    ctx(idx      = 51202,
+        features = 'cxx cxxprogram',
         source   = 'lua_one.cpp',
         defines  = 'MAKE_LUAC',
         use      = 'lua',

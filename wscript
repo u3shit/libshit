@@ -1,5 +1,11 @@
 # -*- mode: python -*-
 
+# idx map:
+# 500xx libshit
+# 510xx boost
+# 511xx ljx (host)
+# 513xx lua53
+
 import subprocess
 try:
     VERSION = subprocess.check_output(
@@ -34,7 +40,8 @@ except IOError:
 app = Context.g_module.APPNAME.upper()
 libshit_cross = getattr(Context.g_module, 'LIBSHIT_CROSS', False)
 
-all_system = []
+all_system = set()
+all_optional = set()
 def options(opt):
     opt.load('compiler_c compiler_cxx')
     grp = opt.get_option_group('configure options')
@@ -273,7 +280,8 @@ def build_libshit(ctx, pref):
             'src/libshit/lua/user_type.cpp',
         ]
 
-    ctx.stlib(source   = src,
+    ctx.stlib(idx      = 50000 + (len(pref)>0),
+              source   = src,
               uselib   = app,
               use      = 'BOOST BRIGAND lua',
               includes = 'src',
@@ -357,7 +365,8 @@ def test(bld):
             'test/lua/function_ref.cpp',
             'test/lua/user_type.cpp',
         ]
-    bld.objects(source   = src,
+    bld.objects(idx      = 50002,
+                source   = src,
                 includes = 'src',
                 uselib   = app,
                 use      = 'CATCH libshit',
@@ -461,19 +470,28 @@ Task.keyword = getname
 
 # system building helpers
 from waflib.Options import OptionsContext
-def system_opt(ctx, name, include_all=True, cross=False):
+def system_opt(ctx, name, include_all=True, cross=False, has_bundle=True,
+               optional=False):
     grp = ctx.get_option_group('Bundling options')
     def x(name):
         sname = 'system_' + name
         grp.add_option('--system-'+name, dest=sname,
                        action='store_const', const='system',
                        help='Use system '+name)
-        grp.add_option('--bundled-'+name, dest=sname,
-                       action='store_const', const='bundle',
-                       help='Use bundled '+name)
+        if has_bundle:
+            grp.add_option('--bundled-'+name, dest=sname,
+                           action='store_const', const='bundle',
+                           help='Use bundled '+name)
+        if optional:
+            grp.add_option('--disable-'+name, dest=sname,
+                           action='store_const', const='disable',
+                           help='Disable '+name)
         if include_all:
             global all_system
-            all_system += [name]
+            all_system.add(name)
+        if optional:
+            global all_optional
+            all_optional.add(name)
     x(name)
     if cross: x(name + '-host')
 OptionsContext.system_opt = system_opt
@@ -484,6 +502,7 @@ from waflib import Utils
 # bundle_chk: if string, header only lib's include path
 def system_chk(ctx, name, default, system_chk, bundle_chk, cross=False):
     envname = 'BUILD_' + Utils.quote_define_name(name)
+    hasname = 'HAS_'  + Utils.quote_define_name(name)
 
     if bundle_chk == None:
         def fun(ctx):
@@ -497,25 +516,30 @@ def system_chk(ctx, name, default, system_chk, bundle_chk, cross=False):
 
     def x(name):
         opt = getattr(ctx.options, 'system_'+name) or default
-        if opt == 'auto':
+        if opt == 'auto' or opt == 'system':
             try:
                 system_chk(ctx)
                 ctx.env[envname] = False
+                ctx.env[hasname] = True
                 ctx.msg('Using '+name, 'system')
                 return
             except ConfigurationError:
-                opt = 'bundle'
+                if opt == 'system': raise
 
-        if opt == 'system':
-            system_chk(ctx)
-            ctx.msg('Using '+name, 'system')
-            ctx.env[envname] = False
-        elif opt == 'bundle':
-            bundle_chk(ctx)
-            ctx.msg('Using '+name, 'bundled')
-            ctx.env[envname] = True
-        else:
-            ctx.fatal('Invalid opt')
+        if opt == 'auto' or opt == 'bundle':
+            try:
+                bundle_chk(ctx)
+                ctx.msg('Using '+name, 'bundled')
+                ctx.env[envname] = True
+                ctx.env[hasname] = True
+                return
+            except ConfigurationError:
+                if opt == 'bundle': raise
+
+        ctx.msg('Using '+name, False)
+        global all_optional
+        if opt == 'disable' or name in all_optional: return
+        ctx.fatal('Module '+name+' not found')
 
     x(name)
     if cross: ctx.only_host_env(lambda bull,shit: x(name+'-host'))
