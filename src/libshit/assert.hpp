@@ -17,7 +17,7 @@
 #if __has_builtin(__builtin_assume)
 #  define LIBSHIT_ASSUME(expr) __builtin_assume(!!(expr))
 #else
-#  define LIBSHIT_ASSUME(expr) ((void) sizeof(expr))
+#  define LIBSHIT_ASSUME(expr) (true ? ((void) 0) : ((void) (expr)))
 #endif
 
 #ifdef NDEBUG
