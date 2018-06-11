@@ -92,6 +92,7 @@ from waflib import Task
 @Task.update_outputs
 class bin2c(Task.Task):
     color = 'BLUE'
+    name_prefix = 'luaJIT_BC_'
 
     def run(self):
         inp = self.inputs[0]
@@ -99,17 +100,23 @@ class bin2c(Task.Task):
 
         name = str(inp.change_ext(''))
         out = """
-static constexpr const size_t luaJIT_BC_%s_SIZE = %d;
-static const char luaJIT_BC_%s[] = {
-""" % (name, len(data), name)
+static constexpr const size_t %s%s_SIZE = %d;
+static const char %s%s[] = {
+""" % (self.name_prefix, name, len(data), self.name_prefix, name)
         i = 0
         for c in data:
             if i > 16:
                 out += "\n"
                 i = 0
             i += 1
-            if ord(c) >= 32 and ord(c) < 127 and c != "'" and c != "\\":
+            if c == "'" or c == "\\":
+                out += "'\\%s'," % c
+            elif ord(c) >= 32 and ord(c) < 127:
                 out += "'%s'," % c
+            elif c == "\r":
+                out += "'\\r',"
+            elif c == "\n":
+                out += "'\\n',"
             else:
                 out += "'\%o'," % ord(c)
         out += "\n};\n"
