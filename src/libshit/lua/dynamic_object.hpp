@@ -26,12 +26,19 @@ namespace Libshit::Lua
 
 #else
 
-#include "userdata.hpp"
-#include "../meta.hpp"
-#include "../not_null.hpp"
-#include "../shared_ptr.hpp"
+#include "libshit/lua/type_traits.hpp"
+#include "libshit/lua/userdata.hpp"
 
+#include "libshit/meta.hpp"
+#include "libshit/not_null.hpp"
+#include "libshit/shared_ptr.hpp"
+
+#include <boost/config.hpp>
+#include <ostream>
 #include <type_traits>
+
+// IWYU pragma: no_forward_declare Libshit::Lua::TypeTraits
+// IWYU pragma: no_forward_declare Libshit::Lua::UserTypeTraits
 
 namespace Libshit::Lua
 {

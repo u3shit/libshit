@@ -2,11 +2,14 @@
 #define UUID_AA3FD944_B99F_4F56_B342_FFE9A6ACD9FE
 #pragma once
 
-#include "file.hpp"
-#include "lua/type_traits.hpp"
+#include "libshit/lua/type_traits.hpp"
 
 #include <iosfwd>
 #include <mutex>
+
+#ifndef NDEBUG
+#  include "libshit/file.hpp" /* IWYU pragma: export */ // IWYU pragma: keep
+#endif
 
 namespace Libshit { class OptionGroup; }
 

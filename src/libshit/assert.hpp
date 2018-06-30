@@ -27,7 +27,7 @@
 
 #else
 
-#  include "file.hpp"
+#  include "libshit/file.hpp" // IWYU pragma: export
 
 #  define LIBSHIT_ASSERT(expr) \
   (BOOST_LIKELY(!!(expr)) ? ((void)0) : LIBSHIT_ASSERT_FAILED(#expr, nullptr))

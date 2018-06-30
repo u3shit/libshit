@@ -6,9 +6,15 @@
 #define LIBSHIT_PARENT_LIST_LUAGEN(name, ...)
 #else
 
-#include "parent_list.hpp"
-#include "../lua/type_traits.hpp"
-#include "../lua/function_ref.hpp"
+#include "libshit/container/parent_list.hpp" // IWYU pragma: associated
+#include "libshit/lua/type_traits.hpp"
+#include "libshit/lua/function_call_types.hpp"
+#include "libshit/lua/function_ref.hpp" // IWYU pragma: keep
+#include "libshit/check.hpp" // IWYU pragma: keep
+
+#include <ostream>
+
+// IWYU pragma: no_forward_declare Libshit::Lua::TypeTraits
 
 template <typename Traits, bool IsConst>
 struct Libshit::Lua::TypeTraits<Libshit::ParentListIterator<Traits, IsConst>>

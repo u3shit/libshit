@@ -2,7 +2,10 @@
 #define UUID_42B45AF9_5F0C_4F7F_8E80_CD0C4408F8A7
 #pragma once
 
-#include "assert.hpp"
+#include "libshit/assert.hpp"
+
+#include <cstddef>
+#include <type_traits>
 #include <utility>
 
 namespace Libshit

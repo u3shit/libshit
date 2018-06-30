@@ -16,18 +16,20 @@ namespace Libshit::Lua
 
 #else
 
-#include "base.hpp"
-#include "function_call_types.hpp"
-#include "../nullable.hpp"
-#include "../nonowning_string.hpp"
+#include "libshit/lua/base.hpp" // IWYU pragma: export
+#include "libshit/nonowning_string.hpp"
+#include "libshit/nullable.hpp"
 
-// small enough to don't care. probably.
-// something already includes it on linux with libc++...
 #include <array>
+#include <boost/config.hpp>
+#include <cstring>
+#include <ostream>
+#include <string>
+#include <type_traits>
+
+// IWYU pragma: no_forward_declare Libshit::Lua::TypeTraits
 
 namespace boost { namespace filesystem { class path; } }
-
-namespace Libshit { template <typename T> class NotNull; }
 
 namespace Libshit::Lua
 {
@@ -175,7 +177,7 @@ namespace Libshit::Lua
     template <bool Unsafe>
     static T Get(StateRef vm, bool arg, int idx)
     {
-      size_t len;
+      std::size_t len;
       auto str = lua_tolstring(vm, idx, &len);
       if (Unsafe || BOOST_LIKELY(!!str)) return T(str, len);
       vm.TypeError(arg, TYPE_NAME<std::string>, idx);
@@ -190,7 +192,7 @@ namespace Libshit::Lua
     static void PrintName(std::ostream& os) { os << TYPE_NAME<std::string>; }
   };
 
-  template <size_t N>
+  template <std::size_t N>
   struct TypeTraits<std::array<unsigned char, N>>
   {
     using Type = std::array<unsigned char, N>;
@@ -198,7 +200,7 @@ namespace Libshit::Lua
     template <bool Unsafe>
     static Type Get(StateRef vm, bool arg, int idx)
     {
-      size_t len;
+      std::size_t len;
       auto str = lua_tolstring(vm, idx, &len);
       if (!Unsafe && BOOST_UNLIKELY(!str))
         vm.TypeError(arg, TYPE_NAME<const char*>, idx);
@@ -210,7 +212,7 @@ namespace Libshit::Lua
       }
 
       Type ret;
-      memcpy(ret.data(), str, N);
+      std::memcpy(ret.data(), str, N);
       return ret;
     }
 

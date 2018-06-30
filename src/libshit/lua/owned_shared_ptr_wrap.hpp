@@ -4,9 +4,13 @@
 
 #ifndef LIBSHIT_WITHOUT_LUA
 
-#include "base.hpp"
-#include "../meta_utils.hpp"
-#include "../shared_ptr.hpp"
+#include "libshit/meta_utils.hpp"
+#include "libshit/shared_ptr.hpp"
+
+#include <brigand/sequences/list.hpp>
+#include <functional>
+#include <type_traits>
+#include <utility>
 
 namespace Libshit::Lua
 {
@@ -18,7 +22,7 @@ namespace Libshit::Lua
   struct OwnedSharedPtrWrap<Fun, brigand::list<Class, Args...>>
   {
     using OrigRet = std::remove_reference_t<FunctionReturn<decltype(Fun)>>;
-    using NewRet = NotNull<SharedPtr<OrigRet>>;
+    using NewRet = NotNullSharedPtr<OrigRet>;
 
     static NewRet Wrap(Class&& thiz, Args&&... args)
     {

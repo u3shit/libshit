@@ -1,5 +1,8 @@
+#include "libshit/char_utils.hpp"
+
+#include <cstddef>
 #include <iomanip>
-#include "char_utils.hpp"
+#include <ostream>
 
 namespace Libshit
 {
@@ -36,7 +39,7 @@ namespace Libshit
   {
     os << '"';
     bool hex = false;
-    for (size_t i = 0; i < data.length(); ++i)
+    for (std::size_t i = 0; i < data.length(); ++i)
       hex = DumpByte(os, data[i], hex);
     os << '"';
   }

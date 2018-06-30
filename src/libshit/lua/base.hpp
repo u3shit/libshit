@@ -4,19 +4,22 @@
 
 #ifndef LIBSHIT_WITHOUT_LUA
 
-#include "../assert.hpp"
-#include "../except.hpp"
+#include "libshit/assert.hpp"
+#include "libshit/except.hpp"
 
+#include <cstddef>
+#include <exception>
+#include <stdexcept>
+#include <type_traits>
+#include <utility>
 #include <vector>
-#include <lua.hpp>
 
-// what the hell are you doing, boost?
+#include <boost/config.hpp>
+#include <lua.hpp> // IWYU pragma: export
+
 #ifdef _MSC_VER
-using std::is_default_constructible;
-using std::is_assignable;
-#  include <excpt.h>
+#  include <excpt.h> // needed for SEHFilter under clang
 #endif
-#include <boost/optional.hpp>
 
 #ifdef NDEBUG
 #  define LIBSHIT_LUA_GETTOP(vm, name) ((void) 0)
@@ -29,7 +32,8 @@ using std::is_assignable;
 namespace Libshit::Lua
 {
 
-  template <typename T, typename Enable = void> struct TypeTraits;
+  template <typename T, typename Enable = void>
+  struct TypeTraits; // IWYU pragma: keep
   extern char reftbl;
 
   LIBSHIT_GEN_EXCEPTION_TYPE(Error, std::runtime_error);
@@ -47,7 +51,7 @@ namespace Libshit::Lua
 #ifdef _MSC_VER
       auto vm_ = vm;
       const char* error_msg;
-      size_t error_len;
+      std::size_t error_len;
       __try { return f(std::forward<Args>(args)...); }
       __except (SEHFilter(vm_, GetExceptionCode(), &error_msg, &error_len))
       { throw Error({error_msg, error_len}); }
@@ -77,11 +81,12 @@ namespace Libshit::Lua
     void SetRecTable(const char* name, int idx = -1);
 
     // use optional<T>::value_or to get default value
-    template <typename T> boost::optional<T> Opt(int idx)
-    {
-      if (lua_isnoneornil(vm, idx)) return {};
-      return {Check<T>(idx)};
-    }
+    // todo: no optional in vs
+    // template <typename T> std::optional<T> Opt(int idx)
+    // {
+    //   if (lua_isnoneornil(vm, idx)) return {};
+    //   return {Check<T>(idx)};
+    // }
 
     template <typename T, bool Unsafe = false> decltype(auto) Get(int idx = -1)
     { return TypeTraits<T>::template Get<Unsafe>(*this, false, idx); }
@@ -102,7 +107,7 @@ namespace Libshit::Lua
     BOOST_NORETURN
     void GetError(bool arg, int idx, const char* msg);
 
-    struct RawLen01Ret { size_t len; bool one_based; };
+    struct RawLen01Ret { std::size_t len; bool one_based; };
     RawLen01Ret RawLen01(int idx);
     template <typename Fun>
     void Ipairs01(int idx, Fun f)
@@ -120,9 +125,9 @@ namespace Libshit::Lua
       lua_pop(vm, 1); // 0
     }
     template <typename Fun>
-    void Fori(int idx, size_t offset, size_t len, Fun f)
+    void Fori(int idx, std::size_t offset, std::size_t len, Fun f)
     {
-      for (size_t i = 0; i < len; ++i)
+      for (std::size_t i = 0; i < len; ++i)
       {
         LIBSHIT_LUA_GETTOP(vm, top);
         f(i, lua_rawgeti(vm, idx, i + offset));
@@ -130,21 +135,21 @@ namespace Libshit::Lua
         LIBSHIT_LUA_CHECKTOP(vm, top);
       }
     }
-    size_t Unpack01(int idx); // +ret
+    std::size_t Unpack01(int idx); // +ret
 
   protected:
     lua_State* vm;
 
   private:
-    std::pair<size_t, int> Ipairs01Prep(int idx);
+    std::pair<std::size_t, int> Ipairs01Prep(int idx);
 
 #ifdef _MSC_VER
     static int SEHFilter(lua_State* vm, unsigned code,
-                         const char** error_msg, size_t* error_len);
+                         const char** error_msg, std::size_t* error_len);
 #else
     void HandleDotdotdotCatch();
     static thread_local const char* error_msg;
-    static thread_local size_t error_len;
+    static thread_local std::size_t error_len;
 #endif
   };
 

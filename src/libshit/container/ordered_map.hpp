@@ -2,23 +2,33 @@
 #define GUARD_INDISTINCTIVELY_BOTRYOMYCOTIC_CAP_REFILL_HELLENISES_7812
 #pragma once
 
-#include "intrusive.hpp"
+#include "libshit/assert.hpp"
+#include "libshit/check.hpp"
+#include "libshit/container/intrusive.hpp"
+#include "libshit/except.hpp"
+#include "libshit/lua/dynamic_object.hpp"
+#include "libshit/lua/type_traits.hpp"
+#include "libshit/meta.hpp"
+#include "libshit/shared_ptr.hpp"
 
-#include "../check.hpp"
-#include "../meta.hpp"
-#include "../shared_ptr.hpp"
-#include "../lua/dynamic_object.hpp"
-#include "../lua/type_traits.hpp"
-
-#include <boost/intrusive/set.hpp>
+#include <cstddef>
+#include <functional>
+#include <iterator>
+#include <stdexcept>
+#include <type_traits>
+#include <utility>
 #include <vector>
+
+#include <boost/intrusive/intrusive_fwd.hpp> // IWYU pragma: keep
+#include <boost/intrusive/set.hpp>
+#include <boost/intrusive/set_hook.hpp>
 
 namespace Libshit
 {
 
   template <typename T, typename KeyOfValue,
             typename Compare = std::less<typename KeyOfValue::type>>
-  class OrderedMap;
+  class OrderedMap; // IWYU pragma: keep
 
   using OrderedMapItemHook = boost::intrusive::set_base_hook<
     boost::intrusive::tag<struct OrderedMapItemTag>,
@@ -28,7 +38,7 @@ namespace Libshit
   struct OrderedMapItem : public Libshit::RefCounted, public OrderedMapItemHook
   {
   private:
-    size_t vector_index = -1;
+    std::size_t vector_index = -1;
     template <typename T, typename KeyOfValue, typename Compare>
     friend class OrderedMap;
   };
@@ -96,7 +106,7 @@ namespace Libshit
     LIBSHIT_LUA_CLASS;
   private:
     static_assert(std::is_base_of_v<OrderedMapItem, T>);
-    using ElemType = Libshit::NotNull<Libshit::SmartPtr<T>>;
+    using ElemType = Libshit::NotNullSmartPtr<T>;
     using VectorType = std::vector<ElemType>;
     using VectorPtr = typename VectorType::pointer;
     using ConstVectorPtr = typename VectorType::const_pointer;
@@ -123,23 +133,23 @@ namespace Libshit
     ~OrderedMap() noexcept { for (auto& x : vect) RemoveItem(*x); }
     // set should have a move ctor but no copy ctor
 
-    T& at(size_t i)
+    T& at(size_type i)
     {
       LIBSHIT_ASSERT(VectorIndex(*vect.at(i)) == i);
       return *vect.at(i);
     }
-    LIBSHIT_NOLUA const T& at(size_t i) const
+    LIBSHIT_NOLUA const T& at(size_type i) const
     {
       LIBSHIT_ASSERT(VectorIndex(*vect.at(i)) == i);
       return *vect.at(i);
     }
 
-    T& operator[](size_t i) noexcept
+    T& operator[](size_type i) noexcept
     {
       LIBSHIT_ASSERT(i < size() && VectorIndex(*vect[i]) == i);
       return *vect[i];
     }
-    const T& operator[](size_t i) const noexcept
+    const T& operator[](size_type i) const noexcept
     {
       LIBSHIT_ASSERT(i < size() && VectorIndex(*vect[i]) == i);
       return *vect[i];
@@ -180,13 +190,13 @@ namespace Libshit
       return vect.empty();
     }
     LIBSHIT_LUAGEN() LIBSHIT_LUAGEN(name="__len") // alias as # operator
-    size_t size() const noexcept { return vect.size(); }
+    size_type size() const noexcept { return vect.size(); }
     // boost::intrusive doesn't have max size
-    size_t max_size() const noexcept { return vect.max_size(); }
+    size_type max_size() const noexcept { return vect.max_size(); }
 
     // only modifies the vector part
     void reserve(size_t cap) { vect.reserve(cap); }
-    size_t capacity() const noexcept { return vect.capacity(); }
+    size_type capacity() const noexcept { return vect.capacity(); }
     void shrink_to_fit() { vect.shrink_to_fit(); }
 
     // modify both
@@ -281,34 +291,34 @@ namespace Libshit
 
     // boost extensions
     // not template checker -> we need 2 different checks...
-    LIBSHIT_NOLUA iterator nth(size_t i) noexcept
+    LIBSHIT_NOLUA iterator nth(size_type i) noexcept
     { return iterator{&vect[i]}; }
-    LIBSHIT_NOLUA iterator checked_nth(size_t i)
+    LIBSHIT_NOLUA iterator checked_nth(size_type i)
     {
       if (i < size()) return nth(i);
       else LIBSHIT_THROW(std::out_of_range, "OrderedMap::checked_nth");
     }
-    LIBSHIT_NOLUA iterator checked_nth_end(size_t i)
+    LIBSHIT_NOLUA iterator checked_nth_end(size_type i)
     {
       if (i <= size()) return nth(i);
       else LIBSHIT_THROW(std::out_of_range, "OrderedMap::checked_nth_end");
     }
 
-    LIBSHIT_NOLUA const_iterator nth(size_t i) const noexcept
+    LIBSHIT_NOLUA const_iterator nth(size_type i) const noexcept
     { return const_iterator{&vect[i]}; }
-    LIBSHIT_NOLUA const_iterator checked_nth(size_t i) const
+    LIBSHIT_NOLUA const_iterator checked_nth(size_type i) const
     {
       if (i < size()) return nth(i);
       else LIBSHIT_THROW(std::out_of_range, "OrderedMap::checked_nth");
     }
-    LIBSHIT_NOLUA const_iterator checked_nth_end(size_t i) const
+    LIBSHIT_NOLUA const_iterator checked_nth_end(size_type i) const
     {
       if (i <= size()) return nth(i);
       else LIBSHIT_THROW(std::out_of_range, "OrderedMap::checked_nth_end");
     }
 
     template <typename Checker = Libshit::Check::Assert>
-    LIBSHIT_NOLUA size_t index_of(const_iterator it)
+    LIBSHIT_NOLUA size_type index_of(const_iterator it)
       const noexcept(Checker::IS_NOEXCEPT)
     {
       if (it == end()) return size();
@@ -318,17 +328,17 @@ namespace Libshit
     }
 
     template <typename Checker = Libshit::Check::Assert>
-    size_t index_of(const T& t) const noexcept(Checker::IS_NOEXCEPT)
+    size_type index_of(const T& t) const noexcept(Checker::IS_NOEXCEPT)
     {
       CheckPtr<Checker>(ToPtr(t));
       return VectorIndex(**ToPtr(t));
     }
 
     // map portions
-    size_t count(const key_type& key) const { return set.count(key); }
+    size_type count(const key_type& key) const { return set.count(key); }
     // comp must yield the same ordering as the used comparator in the tree...
     template <typename Key, typename Comp>
-    LIBSHIT_NOLUA size_t count(const Key& key, Comp comp) const
+    LIBSHIT_NOLUA size_type count(const Key& key, Comp comp) const
     { return set.count(key, comp); }
 
     LIBSHIT_NOLUA iterator find(const key_type& key)
@@ -387,9 +397,9 @@ namespace Libshit
     }
 
   private:
-    static size_t& VectorIndex(OrderedMapItem& i) noexcept
+    static size_type& VectorIndex(OrderedMapItem& i) noexcept
     { return i.vector_index; }
-    static size_t VectorIndex(const OrderedMapItem& i) noexcept
+    static size_type VectorIndex(const OrderedMapItem& i) noexcept
     { return i.vector_index; }
 
     void FixupIndex(typename VectorType::iterator b) noexcept
@@ -400,7 +410,7 @@ namespace Libshit
     template <typename Checker, typename U>
     std::pair<iterator, bool> InsertGen(const_iterator p, U&& t)
     {
-      LIBSHIT_CHECK(ItemAlreadyAdded, VectorIndex(*t) == size_t(-1),
+      LIBSHIT_CHECK(ItemAlreadyAdded, VectorIndex(*t) == size_type(-1),
                     "Item alread added to an OrderedMap");
 
       typename SetType::insert_commit_data data{};

@@ -1,8 +1,14 @@
-#include "type_traits.hpp"
-#include "../assert.hpp"
+#include "libshit/lua/base.hpp"
+
+#include "libshit/assert.hpp"
 #include "libshit/lua/base_funcs.lua.h"
 
+#include <climits>
 #include <cstring>
+#include <new>
+#include <sstream>
+#include <string>
+#include <tuple>
 
 namespace Libshit::Lua
 {

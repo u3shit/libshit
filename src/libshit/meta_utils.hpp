@@ -4,7 +4,7 @@
 
 #include <brigand/sequences/list.hpp>
 
-#include <type_traits>
+#include <cstddef>
 #include <utility>
 
 namespace Libshit
@@ -24,7 +24,7 @@ namespace Libshit
   // string->template char...
   template <typename X, template <char...> typename Wrap, typename Seq>
   struct ToCharPack;
-  template <typename X, template <char...> typename Wrap, size_t... Idx>
+  template <typename X, template <char...> typename Wrap, std::size_t... Idx>
   struct ToCharPack<X, Wrap, std::index_sequence<Idx...>>
   {
     using Type = Wrap<X::Get(Idx)...>;
@@ -33,11 +33,11 @@ namespace Libshit
   template <typename X, template <char...> typename Wrap, typename Seq>
   using ToCharPackV = typename ToCharPack<X, Wrap, Seq>::Type;
 
-#define LIBSHIT_LITERAL_CHARPACK(type, str)                                \
-  ([]{                                                                     \
-    struct X { static constexpr char Get(size_t i) { return (str)[i]; } }; \
-    return ::Libshit::ToCharPackV<                                         \
-      X, type, std::make_index_sequence<sizeof(str)-1>>{};                 \
+#define LIBSHIT_LITERAL_CHARPACK(type, str)                                     \
+  ([]{                                                                          \
+    struct X { static constexpr char Get(std::size_t i) { return (str)[i]; } }; \
+    return ::Libshit::ToCharPackV<                                              \
+      X, type, std::make_index_sequence<sizeof(str)-1>>{};                      \
   }())
 
 

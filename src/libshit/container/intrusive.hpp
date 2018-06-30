@@ -2,8 +2,11 @@
 #define GUARD_SUITABLY_PANDEROUS_ENFRINGEMENT_OUTMATCHES_9679
 #pragma once
 
-#include "../except.hpp"
+#include "libshit/except.hpp"
 
+#include <stdexcept>
+
+#include <boost/intrusive/link_mode.hpp>
 #include <boost/intrusive/options.hpp>
 
 namespace Libshit

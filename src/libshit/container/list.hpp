@@ -2,6 +2,10 @@
 #define GUARD_DEATHLESSLY_BRONCHOTRACHEAL_AMBO_ROPES_4263
 #pragma once
 
+#include <functional>
+#include <type_traits>
+#include <utility>
+
 #include <boost/intrusive/list.hpp>
 
 namespace Libshit
@@ -127,7 +131,7 @@ namespace Libshit
     void splice(
       const_iterator p, List& l, const_iterator b, const_iterator e) noexcept
     {
-      size_t dist = 0;
+      size_type dist = 0;
       for (auto it = b; it != e; ++it)
       {
         ++dist;

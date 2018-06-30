@@ -2,18 +2,25 @@
 #define GUARD_OVER_HERE_TRANSFLUVIAL_ANTHRACITISM_MYTHOPOETICIZES_9087
 #pragma once
 
-#include "intrusive.hpp"
+#include "libshit/container/intrusive.hpp" /* IWYU pragma: keep */ // exceptions
 
-#include "../assert.hpp"
-#include "../check.hpp"
-#include "../meta.hpp"
-#include "../shared_ptr.hpp"
-#include "../lua/type_traits.hpp"
-#include "../lua/dynamic_object.hpp"
+#include "libshit/assert.hpp"
+#include "libshit/check.hpp"
+#include "libshit/except.hpp" /* IWYU pragma: keep */ // OutOfRange
+#include "libshit/meta.hpp"
+#include "libshit/lua/type_traits.hpp"
+#include "libshit/lua/dynamic_object.hpp"
+
+#include <cstddef>
+#include <functional>
+#include <iterator>
+#include <type_traits>
+#include <utility>
 
 #include <boost/intrusive/circular_list_algorithms.hpp>
 #include <boost/intrusive/pointer_traits.hpp>
-#include <iterator>
+
+// IWYU pragma: no_forward_declare Libshit::Lua::TypeTraits
 
 namespace Libshit
 {
@@ -418,24 +425,24 @@ namespace Libshit
     {
       // based on
       // http://www.chiark.greenend.org.uk/~sgtatham/algorithms/listsort.html
-      for (size_t k = 1; ; k *= 2)
+      for (size_type k = 1; ; k *= 2)
       {
         // break cycle
         node_traits::set_next(node_traits::get_previous(GetRoot()), nullptr);
         auto p = node_traits::get_next(GetRoot());
         ListAlgo::init_header(GetRoot()); // GetRoot(): L in paper
-        size_t merges = 0;
+        size_type merges = 0;
 
         while (p)
         {
           ++merges;
           auto q = p;
 
-          size_t psize;
+          size_type psize;
           for (psize = 0; q && psize < k; ++psize)
             q = node_traits::get_next(q);
 
-          size_t qsize = k;
+          size_type qsize = k;
           try
           {
             while (psize > 0 || (qsize > 0 && q))

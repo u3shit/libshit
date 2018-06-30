@@ -2,7 +2,17 @@
 #define UUID_D13BEDEB_B9E0_4D88_A07E_03C11564BE1C
 #pragma once
 
-#include "value.hpp"
+#include "libshit/lua/base.hpp"
+#include "libshit/lua/value.hpp"
+
+#include "libshit/assert.hpp"
+
+#include <boost/config.hpp>
+#include <ostream>
+#include <type_traits>
+#include <utility>
+
+// IWYU pragma: no_forward_declare Libshit::Lua::TypeTraits
 
 namespace Libshit::Lua
 {

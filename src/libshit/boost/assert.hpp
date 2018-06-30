@@ -1,6 +1,6 @@
 // fuck you boost, use our own assert
 
-#include "../assert.hpp"
+#include "libshit/assert.hpp"
 
 #undef BOOST_ASSERT
 #undef BOOST_ASSERT_MSG

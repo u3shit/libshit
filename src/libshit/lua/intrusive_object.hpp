@@ -6,18 +6,23 @@
 
 namespace Libshit::Lua
 {
-
   struct IntrusiveObject {};
-
 }
 
 #else
 
-#include "type_traits.hpp"
-#include "userdata.hpp"
-#include "../meta.hpp"
+#include "libshit/lua/type_traits.hpp"
+#include "libshit/lua/userdata.hpp"
 
-#include <boost/intrusive_ptr.hpp>
+#include "libshit/meta.hpp"
+#include "libshit/not_null.hpp"
+
+#include <boost/smart_ptr/intrusive_ptr.hpp>
+#include <ostream>
+#include <type_traits>
+
+// IWYU pragma: no_forward_declare Libshit::Lua::TypeTraits
+// IWYU pragma: no_forward_declare Libshit::Lua::UserTypeTraits
 
 namespace Libshit::Lua
 {
@@ -26,7 +31,6 @@ namespace Libshit::Lua
 
   template <typename T>
   constexpr bool IS_INTRUSIVE_OBJECT = std::is_base_of_v<IntrusiveObject, T>;
-
 
 
   template <typename T>

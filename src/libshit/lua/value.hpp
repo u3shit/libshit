@@ -2,7 +2,9 @@
 #define UUID_610B8988_C51F_4145_9579_4503FF5A294B
 #pragma once
 
-#include "base.hpp"
+#include "libshit/lua/base.hpp"
+
+#include "libshit/assert.hpp"
 
 namespace Libshit::Lua
 {

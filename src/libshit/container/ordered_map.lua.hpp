@@ -6,9 +6,14 @@
 #define LIBSHIT_ORDERED_MAP_LUAGEN(name, ...)
 #else
 
-#include "ordered_map.hpp"
-#include "../lua/auto_table.hpp"
-#include "../lua/function_call.hpp"
+#include "libshit/container/ordered_map.hpp" // IWYU pragma: associated
+#include "libshit/lua/auto_table.hpp"
+#include "libshit/lua/function_call.hpp"
+
+#include <ostream>
+#include <tuple>
+
+// IWYU pragma: no_forward_declare Libshit::Lua::TypeTraits
 
 namespace Libshit
 {
@@ -18,7 +23,7 @@ namespace Libshit
   struct OrderedMapLua
   {
     using FakeClass = OrderedMap<T, Traits, Compare>;
-    using NotNullPtr = Libshit::NotNull<Libshit::SmartPtr<T>>;
+    using NotNullPtr = Libshit::NotNullSmartPtr<T>;
     using Throw = Libshit::Check::Throw;
 
     static Libshit::SmartPtr<T> get(

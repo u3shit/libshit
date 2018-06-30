@@ -2,12 +2,18 @@
 #define UUID_3EC30B5B_ABF6_4EFD_94F4_CC95DF4F9A2D
 #pragma once
 
-#include <cstring>
-#include <string>
+#include "libshit/lua/type_traits.hpp"
+
 #include <algorithm>
+#include <cstring>
+#include <ostream>
+#include <string>
+
+#include <boost/config.hpp>
 #include <boost/operators.hpp>
 
-#include "lua/type_traits.hpp"
+// IWYU pragma: no_forward_declare Libshit::Lua::TypeTraits
+// IWYU pragma: no_forward_declare boost::operators_impl::totally_ordered
 
 namespace Libshit
 {

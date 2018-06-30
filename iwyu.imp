@@ -1,0 +1,37 @@
+# -*- yaml -*-
+
+# boost
+- include: ['@<boost/config/.*>', private, '<boost/config.hpp>', public]
+- include: ['<boost/smart_ptr/detail/operator_bool.hpp>', private,
+            '<boost/smart_ptr/intrusive_ptr.hpp>', public]
+- symbol: ['boost::endian::align', private,
+           '<boost/endian/arithmetic.hpp>', public]
+- symbol: ['boost::endian::order', private,
+           '<boost/endian/arithmetic.hpp>', public]
+
+# lua
+- include: ['<lua.h>', private, '<lua.hpp>', public]
+- include: ['<lauxlib.h>', private, '<lua.hpp>', public]
+- include: ['<lualib.h>', private, '<lua.hpp>', public]
+
+# stl/libc++
+# don't require #include <utility> when a map should already include it...
+- symbol: ['std::pair', private, '<utility>', public]
+- symbol: ['std::pair', private, '<map>', public]
+- symbol: ['std::pair', private, '<unordered_map>', public]
+
+- symbol: ['std::basic_ostream', private, '<iosfwd>', public]
+- symbol: ['std::basic_ostream', private, '<ostream>', public]
+- symbol: ['std::basic_ostream', private, '<iostream>', public]
+
+# _LIBCPP_VERSION is automatically defined when you include "one of the standard header files"
+- symbol: [_LIBCPP_VERSION, private, '<cstddef>', public]
+
+# from standard libcxx.imp
+- include: ['<__functional_base>', private, '<functional>', public ]
+- include: ['<__mutex_base>', private, '<mutex>', public ]
+- symbol: [ 'std::declval', private, '<utility>', public ]
+- symbol: [ 'std::forward', private, '<utility>', public ]
+- symbol: [ 'std::move', private, '<utility>', public ]
+- symbol: [ 'std::nullptr_t', private, '<cstddef>', public ]
+- symbol: [ 'std::string', private, '<string>', public ]

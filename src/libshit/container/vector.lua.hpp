@@ -7,11 +7,22 @@
 #define LIBSHIT_STD_VECTOR_FWD(...)
 #else
 
-#include <vector>
+#include "libshit/lua/auto_table.hpp"
+#include "libshit/lua/base.hpp"
+#include "libshit/lua/dynamic_object.hpp"
+#include "libshit/lua/function_call_types.hpp"
+#include "libshit/lua/user_type.hpp"
 
-#include "../lua/auto_table.hpp"
-#include "../lua/dynamic_object.hpp"
-#include "../lua/user_type.hpp"
+#include "libshit/except.hpp"
+#include "libshit/shared_ptr.hpp"
+
+#include <boost/config.hpp>
+#include <cstddef>
+#include <limits>
+#include <stdexcept>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 template <typename T, typename Allocator>
 struct Libshit::Lua::IsSmartObject<std::vector<T, Allocator>>

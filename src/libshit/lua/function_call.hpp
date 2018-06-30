@@ -4,11 +4,26 @@
 
 #ifndef LIBSHIT_WITHOUT_LUA
 
-#include "function_call_types.hpp"
-#include "type_traits.hpp"
-#include "../meta_utils.hpp"
+#include "libshit/lua/function_call_types.hpp" // IWYU pragma: export
+#include "libshit/lua/type_traits.hpp"
 
+#include "libshit/assert.hpp"
+#include "libshit/except.hpp"
+#include "libshit/meta_utils.hpp" // IWYU pragma: keep
+
+#include <boost/config.hpp>
 #include <brigand/sequences/list.hpp>
+#include <cstddef>
+#include <exception>
+#include <functional>
+#include <limits>
+#include <ostream>
+#include <string>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+
+// IWYU pragma: no_forward_declare Libshit::Lua::TupleLike
 
 #if defined(_LIBCPP_VERSION) && _LIBCPP_VERSION <= 5000
 namespace std
@@ -38,9 +53,9 @@ namespace Libshit::Lua
   template <typename... Args> struct TupleLike<std::tuple<Args...>>
   {
     using Tuple = std::tuple<Args...>;
-    template <size_t I> static decltype(auto) Get(const Tuple& t)
+    template <std::size_t I> static decltype(auto) Get(const Tuple& t)
     { return std::get<I>(t); }
-    static constexpr size_t SIZE = sizeof...(Args);
+    static constexpr std::size_t SIZE = sizeof...(Args);
   };
 
   template <typename T>
@@ -49,13 +64,13 @@ namespace Libshit::Lua
   namespace Detail
   {
 
-    inline constexpr size_t IDX_VARARG =
-      size_t{1} << (std::numeric_limits<size_t>::digits-1);
+    inline constexpr std::size_t IDX_VARARG =
+      std::size_t{1} << (std::numeric_limits<std::size_t>::digits-1);
     inline constexpr size_t IDX_MASK = IDX_VARARG - 1;
 
     template <typename T, typename Enable = void> struct GetArgImpl
     {
-      template <size_t Idx> static constexpr size_t NEXT_IDX = Idx+1;
+      template <std::size_t Idx> static constexpr std::size_t NEXT_IDX = Idx+1;
 
       template <bool Unsafe> static decltype(auto) Get(StateRef vm, int idx)
       { return vm.Check<T, Unsafe>(idx); }
@@ -70,7 +85,7 @@ namespace Libshit::Lua
 
     template <> struct GetArgImpl<Skip>
     {
-      template <size_t Idx> static constexpr size_t NEXT_IDX = Idx+1;
+      template <std::size_t Idx> static constexpr std::size_t NEXT_IDX = Idx+1;
       template <bool>
       static constexpr Skip Get(StateRef, int) noexcept { return {}; }
       static constexpr bool Is(StateRef, int) noexcept { return true; }
@@ -79,7 +94,8 @@ namespace Libshit::Lua
 
     template <> struct GetArgImpl<VarArg>
     {
-      template <size_t Idx> static constexpr size_t NEXT_IDX = IDX_VARARG | Idx;
+      template <std::size_t Idx> static constexpr std::size_t NEXT_IDX =
+        IDX_VARARG | Idx;
       template <bool> static constexpr VarArg Get(StateRef, int) noexcept
       { return {}; }
       static constexpr bool Is(StateRef, int) noexcept { return true; }
@@ -91,7 +107,7 @@ namespace Libshit::Lua
 
     template <> struct GetArgImpl<StateRef>
     {
-      template <size_t Idx> static constexpr size_t NEXT_IDX = Idx;
+      template <std::size_t Idx> static constexpr std::size_t NEXT_IDX = Idx;
       template <bool>
       static constexpr StateRef Get(StateRef vm, int) noexcept { return vm; }
       static constexpr bool Is(StateRef, int) noexcept { return true; }
@@ -100,7 +116,7 @@ namespace Libshit::Lua
 
     template <> struct GetArgImpl<Any>
     {
-      template <size_t Idx> static constexpr size_t NEXT_IDX = Idx+1;
+      template <std::size_t Idx> static constexpr std::size_t NEXT_IDX = Idx+1;
       template <bool>
       static constexpr Any Get(StateRef, int idx) noexcept { return {idx}; }
       static constexpr bool Is(StateRef, int) noexcept { return true; }
@@ -113,7 +129,7 @@ namespace Libshit::Lua
 
     template <int LType> struct GetArgImpl<Raw<LType>>
     {
-      template <size_t Idx> static constexpr size_t NEXT_IDX = Idx+1;
+      template <std::size_t Idx> static constexpr std::size_t NEXT_IDX = Idx+1;
       template <bool Unsafe>
       static Raw<LType> Get(StateRef vm, int idx)
       {
@@ -130,15 +146,15 @@ namespace Libshit::Lua
       }
     };
 
-    template <typename Tuple, size_t I>
+    template <typename Tuple, std::size_t I>
     using TupleElement = std::decay_t<decltype(
       TupleLike<Tuple>::template Get<I>(std::declval<Tuple>()))>;
 
     template <typename Tuple, typename Index> struct TupleGet;
-    template <typename Tuple, size_t... Index>
+    template <typename Tuple, std::size_t... Index>
     struct TupleGet<Tuple, std::index_sequence<Index...>>
     {
-      template <size_t Idx> static constexpr size_t NEXT_IDX =
+      template <std::size_t Idx> static constexpr std::size_t NEXT_IDX =
         Idx + sizeof...(Index);
 
       template <bool Unsafe>
@@ -162,19 +178,19 @@ namespace Libshit::Lua
     template <typename T> using GetArg = GetArgImpl<std::decay_t<T>>;
 
 
-    template <size_t I, typename Argument> struct Arg
+    template <std::size_t I, typename Argument> struct Arg
     {
-      static constexpr const size_t Idx = I & IDX_MASK;
+      static constexpr const std::size_t Idx = I & IDX_MASK;
       using ArgT = Argument;
     };
 
 
-    template <size_t Len, typename Args> struct ArgSeq;
+    template <std::size_t Len, typename Args> struct ArgSeq;
 
-    template <size_t N, typename Seq, typename Args>
+    template <std::size_t N, typename Seq, typename Args>
     struct GenArgSequence;
 
-    template <size_t N, typename... Seq, typename Head, typename... Args>
+    template <std::size_t N, typename... Seq, typename Head, typename... Args>
     struct GenArgSequence<N, brigand::list<Seq...>, brigand::list<Head, Args...>>
     {
       using Type = typename GenArgSequence<
@@ -182,7 +198,7 @@ namespace Libshit::Lua
         brigand::list<Seq..., Arg<N, Head>>,
         brigand::list<Args...>>::Type;
     };
-    template <size_t N, typename Seq>
+    template <std::size_t N, typename Seq>
     struct GenArgSequence<N, Seq, brigand::list<>>
     { using Type = ArgSeq<N-1, Seq>; };
 
@@ -210,7 +226,7 @@ namespace Libshit::Lua
     { static int Push(StateRef, RetNum r) { return r.n; } };
 
     template <typename Tuple, typename Index> struct TuplePush;
-    template <typename Tuple, size_t... I>
+    template <typename Tuple, std::size_t... I>
     struct TuplePush<Tuple, std::index_sequence<I...>>
     {
       static int Push(StateRef vm, const Tuple& ret)
@@ -259,7 +275,7 @@ namespace Libshit::Lua
     template <auto Fun, bool Unsafe, typename Ret, typename Args>
     struct WrapFunGen;
 
-    template <auto Fun, bool Unsafe, typename Ret, size_t N, typename... Args>
+    template <auto Fun, bool Unsafe, typename Ret, std::size_t N, typename... Args>
     struct WrapFunGen<Fun, Unsafe, Ret, ArgSeq<N, brigand::list<Args...>>>
     {
       static int Func(lua_State* l)
@@ -272,7 +288,7 @@ namespace Libshit::Lua
       }
     };
 
-    template <auto Fun, bool Unsafe, size_t N, typename... Args>
+    template <auto Fun, bool Unsafe, std::size_t N, typename... Args>
     struct WrapFunGen<Fun, Unsafe, void, ArgSeq<N, brigand::list<Args...>>>
     {
       static int Func(lua_State* l)
@@ -298,14 +314,14 @@ namespace Libshit::Lua
     template <auto... args> struct AutoList;
 
     template <typename Args> struct OverloadCheck;
-    template <size_t N, typename... Args>
+    template <std::size_t N, typename... Args>
     struct OverloadCheck<ArgSeq<N, brigand::list<Args...>>>
     {
       static bool Is(StateRef vm)
       {
         auto top = lua_gettop(vm);
-        if (N & IDX_VARARG && size_t(top) >= N & IDX_MASK) return false;
-        if (!(N & IDX_VARARG) && size_t(top) != N)         return false;
+        if ((N & IDX_VARARG) && std::size_t(top) >= (N & IDX_MASK)) return false;
+        if (!(N & IDX_VARARG) && std::size_t(top) != N)             return false;
 
         return (GetArg<typename Args::ArgT>::Is(vm, Args::Idx) && ...);
       }
@@ -326,7 +342,7 @@ namespace Libshit::Lua
     };
 
     template <typename Args> struct PrintOverload;
-    template <size_t N, typename... Args>
+    template <std::size_t N, typename... Args>
     struct PrintOverload<ArgSeq<N, brigand::list<Args...>>>
     {
       static void Print(std::ostream& os)

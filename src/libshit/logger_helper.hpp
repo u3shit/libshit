@@ -6,8 +6,8 @@
 #define UUID_C94AAE56_E97F_45DC_A3AB_5475B7C3BDCD
 #pragma once
 
-#include "logger.hpp"
-#include <iostream>
+#include "libshit/logger.hpp" // IWYU pragma: export
+#include <ostream> // IWYU pragma: export
 
 #define LOG(level) LIBSHIT_LOG(LIBSHIT_LOG_NAME, level)
 #define CHECK_LOG(level) LIBSHIT_CHECK_LOG(LIBSHIT_LOG_NAME, level)

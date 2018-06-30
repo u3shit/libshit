@@ -4,9 +4,14 @@
 
 #ifndef LIBSHIT_WITHOUT_LUA
 
-#include "base.hpp"
-#include "function_call_types.hpp"
-#include "../meta_utils.hpp"
+#include "libshit/lua/base.hpp"
+#include "libshit/lua/function_call_types.hpp"
+#include "libshit/meta_utils.hpp"
+
+#include <brigand/sequences/list.hpp>
+#include <cstddef>
+#include <functional>
+#include <utility>
 
 namespace Libshit::Lua
 {
@@ -30,7 +35,7 @@ namespace Libshit::Lua
       auto size = ret.size();
 
       lua_createtable(vm, size ? size-1 : 0, 0); //+1
-      size_t i = 0;
+      std::size_t i = 0;
       for (const auto& it : ret)
       {
         // HACK

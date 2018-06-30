@@ -2,7 +2,7 @@
 #define UUID_BCBF4E5C_155A_4984_902F_4A42237608D8
 #pragma once
 
-#include "except.hpp"
+#include <type_traits>
 
 namespace Libshit
 {
@@ -17,11 +17,10 @@ namespace Libshit
   template <typename T, typename U>
   T asserted_cast(U& ref)
   {
-#ifndef NDEBUG // gcc shut up about unused typedef
     using raw_t = std::remove_reference_t<T>;
     LIBSHIT_ASSERT_MSG(
       dynamic_cast<raw_t*>(&ref) == static_cast<raw_t*>(&ref), "U is not T");
-#endif
+
     return static_cast<T>(ref);
   }
 

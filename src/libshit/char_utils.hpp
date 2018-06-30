@@ -2,7 +2,9 @@
 #define UUID_B5A33FF9_4631_49A7_901C_FD43CB3C3C9B
 #pragma once
 
-#include "nonowning_string.hpp"
+#include "libshit/assert.hpp"
+#include "libshit/nonowning_string.hpp"
+
 #include <iosfwd>
 
 namespace Libshit

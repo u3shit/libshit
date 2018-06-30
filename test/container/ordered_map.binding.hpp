@@ -43,7 +43,7 @@ namespace Libshit::Lua
       &::Libshit::Lua::TypeTraits<::om_item_test>::Make<>
     >("new");
     bld.AddFunction<
-      static_cast<::Libshit::Test::OMItemTest & (::om_item_test::*)(::size_t)>(&::om_item_test::at)
+      static_cast<::Libshit::Test::OMItemTest & (::om_item_test::*)(::om_item_test::size_type)>(&::om_item_test::at)
     >("at");
     bld.AddFunction<
       static_cast<::Libshit::Test::OMItemTest & (::om_item_test::*)()>(&::om_item_test::front<Check::Throw>)
@@ -55,19 +55,19 @@ namespace Libshit::Lua
       static_cast<bool (::om_item_test::*)() const noexcept>(&::om_item_test::empty)
     >("empty");
     bld.AddFunction<
-      static_cast<::size_t (::om_item_test::*)() const noexcept>(&::om_item_test::size)
+      static_cast<::om_item_test::size_type (::om_item_test::*)() const noexcept>(&::om_item_test::size)
     >("__len");
     bld.AddFunction<
-      static_cast<::size_t (::om_item_test::*)() const noexcept>(&::om_item_test::size)
+      static_cast<::om_item_test::size_type (::om_item_test::*)() const noexcept>(&::om_item_test::size)
     >("size");
     bld.AddFunction<
-      static_cast<::size_t (::om_item_test::*)() const noexcept>(&::om_item_test::max_size)
+      static_cast<::om_item_test::size_type (::om_item_test::*)() const noexcept>(&::om_item_test::max_size)
     >("max_size");
     bld.AddFunction<
       static_cast<void (::om_item_test::*)(::size_t)>(&::om_item_test::reserve)
     >("reserve");
     bld.AddFunction<
-      static_cast<::size_t (::om_item_test::*)() const noexcept>(&::om_item_test::capacity)
+      static_cast<::om_item_test::size_type (::om_item_test::*)() const noexcept>(&::om_item_test::capacity)
     >("capacity");
     bld.AddFunction<
       static_cast<void (::om_item_test::*)()>(&::om_item_test::shrink_to_fit)
@@ -82,10 +82,10 @@ namespace Libshit::Lua
       static_cast<void (::om_item_test::*)(::om_item_test &)>(&::om_item_test::swap)
     >("swap");
     bld.AddFunction<
-      static_cast<::size_t (::om_item_test::*)(const ::Libshit::Test::OMItemTest &) const>(&::om_item_test::index_of<Check::Throw>)
+      static_cast<::om_item_test::size_type (::om_item_test::*)(const ::Libshit::Test::OMItemTest &) const>(&::om_item_test::index_of<Check::Throw>)
     >("index_of");
     bld.AddFunction<
-      static_cast<::size_t (::om_item_test::*)(const ::om_item_test::key_type &) const>(&::om_item_test::count)
+      static_cast<::om_item_test::size_type (::om_item_test::*)(const ::om_item_test::key_type &) const>(&::om_item_test::count)
     >("count");
     bld.AddFunction<
       static_cast<Libshit::SmartPtr<::Libshit::Test::OMItemTest> (*)(::om_item_test &, ::size_t) noexcept>(::Libshit::OrderedMapLua<::Libshit::Test::OMItemTest, ::Libshit::Test::OMItemTestTraits>::get),

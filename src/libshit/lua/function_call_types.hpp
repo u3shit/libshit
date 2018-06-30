@@ -6,12 +6,10 @@
 #  include <lua.hpp>
 #endif
 
-#include "../assert.hpp"
+#include "libshit/assert.hpp"
 
 namespace Libshit::Lua
 {
-
-  class StateRef;
 
   // placeholder to skip parsing this argument
   struct Skip {};
@@ -60,7 +58,8 @@ namespace Libshit::Lua
   using RawTable = Raw<LUA_TTABLE>;
 #endif
 
-  template <typename T, typename Enable = void> struct TupleLike;
+  template <typename T, typename Enable = void>
+  struct TupleLike; // IWYU pragma: keep
 
 }
 

@@ -2,9 +2,13 @@
 #define UUID_A1233430_4156_4C5B_A938_774F7FB4A2A5
 #pragma once
 
-#include "base.hpp"
-#include "function_call_types.hpp"
-#include "type_traits.hpp"
+#include "libshit/lua/function_call_types.hpp"
+#include "libshit/lua/type_traits.hpp" // IWYU pragma: keep
+
+#include "libshit/assert.hpp"
+
+#include <new>
+#include <utility>
 
 namespace Libshit::Lua::Userdata
 {

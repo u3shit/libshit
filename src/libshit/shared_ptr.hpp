@@ -2,11 +2,16 @@
 #define UUID_1472EFCC_6110_4A95_BDB7_2EE28E2207E4
 #pragma once
 
-#include "except.hpp"
-#include "not_null.hpp"
+#include "libshit/assert.hpp"
+#include "libshit/except.hpp"
+#include "libshit/not_null.hpp"
 
 #include <atomic>
+#include <cstddef>
 #include <memory>
+#include <new>
+#include <type_traits>
+#include <utility>
 
 namespace Libshit
 {
@@ -21,9 +26,9 @@ namespace Libshit
 
     virtual void Dispose() noexcept {}
 
-    size_t use_count() const // emulate boost refcount
+    unsigned use_count() const // emulate boost refcount
     { return strong_count.load(std::memory_order_relaxed); }
-    size_t weak_use_count() const
+    unsigned weak_use_count() const
     { return weak_count.load(std::memory_order_relaxed); }
 
     void AddRef()
@@ -54,7 +59,7 @@ namespace Libshit
     }
     bool LockWeak()
     {
-      size_t count = strong_count.load(std::memory_order_relaxed);
+      auto count = strong_count.load(std::memory_order_relaxed);
       do
         if (count == 0) return false;
       while (!strong_count.compare_exchange_weak(
@@ -66,7 +71,7 @@ namespace Libshit
   private:
     // every object has an implicit weak_count, removed when removing last
     // strong ref
-    std::atomic<size_t> weak_count{1}, strong_count{1};
+    std::atomic<unsigned> weak_count{1}, strong_count{1};
   };
 
   template <typename T>
@@ -224,7 +229,7 @@ namespace Libshit
     T* get() const noexcept { return s.GetPtr(); }
     T& operator*() const noexcept { return *s.GetPtr(); }
     T* operator->() const noexcept { return s.GetPtr(); }
-    size_t use_count() const noexcept
+    unsigned use_count() const noexcept
     { return s.GetCtrl() ? s.GetCtrl()->use_count() : 0; }
     bool unique() const noexcept { return use_count() == 1; }
     explicit operator bool() const noexcept { return s.GetPtr(); }
@@ -374,7 +379,7 @@ namespace Libshit
     void reset() noexcept { WeakPtrBase{}.swap(*this); }
     void swap(WeakPtrBase& o) noexcept { s.Swap(o.s); }
 
-    size_t use_count() const noexcept
+    unsigned use_count() const noexcept
     { return s.GetCtrl() ? s.GetCtrl()->use_count() : 0; }
     bool expired() const noexcept { return use_count() == 0; }
 
@@ -391,7 +396,7 @@ namespace Libshit
     {
       auto ctrl = s.GetCtrl();
       if (ctrl && ctrl->LockWeak()) return {ctrl, s.GetPtr(), false};
-      else LIBSHIT_THROW(std::bad_weak_ptr, std::make_tuple());
+      else LIBSHIT_THROW(std::bad_weak_ptr, std::tuple{});
     }
 
     // not in weak_ptr

@@ -2,17 +2,19 @@
 #define UUID_365580B3_AF64_4E79_8FC1_35F50DFF840F
 #pragma once
 
-#include "user_type_fwd.hpp"
+#include "libshit/lua/user_type_fwd.hpp" // IWYU pragma: export
 
 #ifndef LIBSHIT_WITHOUT_LUA
 
-#include "function_call.hpp"
-#include "type_traits.hpp"
-#include "../shared_ptr.hpp"
+#include "libshit/lua/function_call.hpp"
+#include "libshit/lua/type_traits.hpp"
 
+#include <boost/config.hpp>
+#include <cstddef>
 #include <type_traits>
+#include <utility>
 
-namespace Libshit { template <typename T> class NotNull; }
+// IWYU pragma: no_include "libshit/meta_utils.hpp"
 
 namespace Libshit::Lua
 {

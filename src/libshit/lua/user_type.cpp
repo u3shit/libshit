@@ -1,4 +1,7 @@
-#include "user_type.hpp"
+#include "libshit/lua/user_type.hpp"
+
+#include "libshit/assert.hpp"
+
 #include <cstring>
 
 namespace Libshit::Lua

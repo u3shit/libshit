@@ -2,8 +2,14 @@
 #define UUID_C93BD681_48D9_4438_8FBF_15DBED6015BB
 #pragma once
 
-#include "type_traits.hpp"
-#include "../meta.hpp"
+#include "libshit/lua/type_traits.hpp"
+#include "libshit/meta.hpp"
+
+#include <ostream>
+#include <type_traits>
+
+// IWYU pragma: no_forward_declare Libshit::Lua::TypeTraits
+// IWYU pragma: no_forward_declare Libshit::Lua::UserTypeTraits
 
 namespace Libshit::Lua
 {

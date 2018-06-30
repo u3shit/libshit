@@ -2,12 +2,18 @@
 #define UUID_4B926C10_9735_4A15_BC4B_22DE65201DD1
 #pragma once
 
-#include "assert.hpp"
-#include "except.hpp"
+#include "libshit/assert.hpp"
+#include "libshit/except.hpp"
 
 #include <algorithm> // std::min
-#include <cstring>
+#include <cstddef>
 #include <iosfwd>
+#include <iterator>
+#include <limits>
+#include <stdexcept>
+#include <string>
+#include <type_traits>
+
 #include <boost/operators.hpp>
 
 namespace Libshit

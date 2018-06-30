@@ -2,12 +2,20 @@
 #define UUID_4999021A_F41A_400B_A951_CDE022AF7331
 #pragma once
 
-#include <boost/intrusive_ptr.hpp>
-#include <atomic>
+#include <boost/config.hpp>
+#include <boost/smart_ptr/intrusive_ptr.hpp>
+
+#include <functional>
 #include <sstream>
+#include <stdexcept>
+#include <string>
+#include <system_error>
+#include <tuple>
 #include <type_traits>
+#include <utility>
+
 #ifndef NDEBUG
-#  include "file.hpp"
+#  include "libshit/file.hpp" // IWYU pragma: export
 #endif
 
 namespace Libshit

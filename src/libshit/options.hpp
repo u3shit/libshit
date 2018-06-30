@@ -2,9 +2,13 @@
 #define UUID_BCBAF2F6_1339_4E4C_843F_373C736EBC69
 #pragma once
 
-#include "except.hpp"
-#include "function.hpp"
+#include "libshit/except.hpp"
+#include "libshit/function.hpp"
 
+#include <cstddef>
+#include <iosfwd>
+#include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace Libshit
@@ -37,18 +41,19 @@ namespace Libshit
   {
     using Func = Function<void (std::vector<const char*>&&)>;
     Option(OptionGroup& group, const char* name, char short_name,
-           size_t args_count, const char* args_help, const char* help, Func func)
+           std::size_t args_count, const char* args_help, const char* help,
+           Func func)
       : name{name}, short_name{short_name}, args_count{args_count},
         args_help{args_help}, help{help}, func{std::move(func)}
     { group.options.push_back(this); }
 
-    Option(OptionGroup& group, const char* name, size_t args_count,
+    Option(OptionGroup& group, const char* name, std::size_t args_count,
            const char* args_help, const char* help, Func func)
       : Option{group, name, 0, args_count, args_help, help, std::move(func)} {}
 
     const char* const name;
     const char short_name;
-    const size_t args_count;
+    const std::size_t args_count;
 
     const char* const args_help;
     const char* const help;

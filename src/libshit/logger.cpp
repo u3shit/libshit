@@ -5,9 +5,9 @@
 #  include <io.h>
 #endif
 
-#include "logger.hpp"
-#include "options.hpp"
-#include "lua/function_call.hpp"
+#include "libshit/logger.hpp"
+#include "libshit/options.hpp"
+#include "libshit/lua/function_call.hpp"
 
 #ifndef LIBSHIT_WITHOUT_LUA
 #  include "libshit/logger.lua.h"
@@ -15,16 +15,23 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <iomanip>
 #include <map>
+
+#ifndef WINDOWS
+#include <unistd.h>
+#endif
 
 #include <boost/tokenizer.hpp>
 
 #ifdef _MSC_VER
 #  define strncasecmp _strnicmp
 #  define strcasecmp _stricmp
+#else
+#  include <strings.h>
 #endif
 
 namespace Libshit::Logger

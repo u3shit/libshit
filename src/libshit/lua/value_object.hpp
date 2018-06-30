@@ -13,10 +13,18 @@ namespace Libshit::Lua
 
 #else
 
-#include "function_call_types.hpp"
-#include "type_traits.hpp"
-#include "userdata.hpp"
-#include "../meta.hpp"
+#include "libshit/lua/function_call_types.hpp"
+#include "libshit/lua/type_traits.hpp"
+#include "libshit/lua/userdata.hpp"
+#include "libshit/meta.hpp"
+
+#include <boost/config.hpp>
+#include <ostream>
+#include <type_traits>
+#include <utility>
+
+// IWYU pragma: no_forward_declare Libshit::Lua::TypeTraits
+// IWYU pragma: no_forward_declare Libshit::Lua::UserTypeTraits
 
 namespace Libshit::Lua
 {

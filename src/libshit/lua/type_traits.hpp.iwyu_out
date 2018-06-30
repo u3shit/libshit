@@ -1,0 +1,20 @@
+
+src/libshit/lua/type_traits.hpp should add these lines:
+#include <lua.h>                         // for lua_type, lua_tonumberx, lua...
+
+src/libshit/lua/type_traits.hpp should remove these lines:
+
+The full include-list for src/libshit/lua/type_traits.hpp:
+#include <lua.h>                         // for lua_type, lua_tonumberx, lua...
+#include <array>                         // for array
+#include <boost/config.hpp>              // for BOOST_LIKELY, BOOST_UNLIKELY
+#include <cstring>                       // for memcpy, size_t
+#include <ostream>                       // for operator<<, ostream, basic_o...
+#include <string>                        // for string, basic_string, char_t...
+#include <type_traits>                   // for enable_if_t, false_type, rem...
+#include "libshit/lua/base.hpp"          // for StateRef, TypeTraits
+#include "libshit/nonowning_string.hpp"  // for NonowningString, StringView
+#include "libshit/nullable.hpp"          // for ToNotNullable, ToNullable
+namespace Libshit { namespace Lua { template <typename T, typename Enable = void> struct UserTypeTraits; } }  // lines 282-282
+namespace boost { namespace filesystem { class path; } }  // lines 32-32
+---

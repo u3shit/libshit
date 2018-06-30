@@ -2,12 +2,15 @@
 #define UUID_A21F2BE3_75BB_4F94_9C73_1AC078681341
 #pragma once
 
-#include "assert.hpp"
-#include "except.hpp"
+#include "libshit/assert.hpp"
+#include "libshit/except.hpp"
+
+#include <boost/config.hpp>
 
 #ifdef NDEBUG
 #  define LIBSHIT_CHECK_ARGS nullptr, 0, nullptr
 #else
+#  include "libshit/file.hpp" // IWYU pragma: export
 #  define LIBSHIT_CHECK_ARGS LIBSHIT_FILE, __LINE__, LIBSHIT_FUNCTION
 #endif
 

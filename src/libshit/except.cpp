@@ -1,13 +1,17 @@
-#include "except.hpp"
+#include "libshit/except.hpp"
 
-#include "assert.hpp"
+#include "libshit/assert.hpp"
 
 #include <boost/core/demangle.hpp>
-#include <iostream>
+
+#include <atomic>
+#include <cstdlib>
+#include <exception>
 #include <map>
+#include <typeinfo>
 
 #define LIBSHIT_LOG_NAME "except"
-#include "logger_helper.hpp"
+#include "libshit/logger_helper.hpp"
 
 #ifdef WINDOWS
 extern "C" void _assert(const char* msg, const char* file, unsigned line);
@@ -161,7 +165,7 @@ namespace Libshit
     if (msg)
       log << "Message: " << msg << '\n';
     log << std::flush;
-    abort();
+    std::abort();
 #endif
   }
 }

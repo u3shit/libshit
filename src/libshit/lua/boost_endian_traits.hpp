@@ -4,14 +4,18 @@
 
 #ifndef LIBSHIT_WITHOUT_LUA
 
-#include "type_traits.hpp"
+#include "libshit/lua/type_traits.hpp"
 
 #include <boost/endian/arithmetic.hpp>
+#include <cstddef>
+#include <type_traits>
+
+// IWYU pragma: no_forward_declare boost::endian::endian_arithmetic
 
 namespace Libshit::Lua
 {
 
-  template <boost::endian::order Order, typename T, size_t N,
+  template <boost::endian::order Order, typename T, std::size_t N,
             boost::endian::align A>
   struct IsBoostEndian<boost::endian::endian_arithmetic<Order, T, N, A>>
     : std::true_type {};
