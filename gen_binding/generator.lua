@@ -45,6 +45,7 @@ template_tostring = function(x, env)
 end
 
 local template_str = [=[
+//$ local function strip(s) return string.gsub(s, "[ \t]+$", "") end
 // Auto generated code, do not edit. See gen_binding in project root.
 #ifndef LIBSHIT_WITHOUT_LUA
 #include <libshit/lua/user_type.hpp>
@@ -87,7 +88,7 @@ namespace Libshit::Lua
     >("/*$= k */");
 //$     end
 //$   end
-/*$= cls.post_register or "", cls */
+/*$= strip(cls.post_register or ""), cls */
   }
   static TypeRegister::StateRegister</*$= cls.cpp_name */> reg_/*$= (cls.name:gsub("%.", "_")) */;
 //$ end
