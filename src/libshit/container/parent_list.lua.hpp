@@ -24,13 +24,19 @@ struct Libshit::Lua::TypeTraits<Libshit::ParentListIterator<Traits, IsConst>>
 
   template <bool Unsafe>
   static Iterator Get(StateRef vm, bool arg, int idx)
-  { return TypeTraits<RawType>::template Get<Unsafe>(vm, arg, idx); }
+  {
+    if (lua_isnil(vm, idx)) return {};
+    return TypeTraits<RawType>::template Get<Unsafe>(vm, arg, idx);
+  }
 
   static bool Is(StateRef vm, int idx)
-  { return TypeTraits<RawType>::Is(vm, idx); }
+  { return lua_isnil(vm, idx) || TypeTraits<RawType>::Is(vm, idx); }
 
   static void Push(StateRef vm, Iterator it)
-  { TypeTraits<RawType>::Push(vm, *it); }
+  {
+    if (it.is_end()) lua_pushnil(vm);
+    else TypeTraits<RawType>::Push(vm, *it);
+  }
 
   static void PrintName(std::ostream& os) { os << TYPE_NAME<RawType>; }
   static constexpr const char* TAG = TYPE_NAME<RawType>;

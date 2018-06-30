@@ -2,11 +2,12 @@
 #define UUID_FA716317_5F3D_4D93_B0D5_5DE60DD4B9BF
 #pragma once
 
+#include "libshit/assert.hpp"
+#include "libshit/utils.hpp"
+
 #include <functional>
 #include <memory>
 #include <utility>
-
-#include "libshit/assert.hpp"
 
 namespace Libshit
 {
@@ -21,7 +22,7 @@ namespace Libshit
     Function() noexcept = default;
     Function(Function&& o) noexcept = default;
     template <typename T> Function(T t)
-      : fun{new FunImpl<T>{std::move(t)}} {}
+      : fun{new FunImpl<T>{Move(t)}} {}
 
     Function& operator=(Function&& o) noexcept = default;
 
@@ -51,7 +52,7 @@ namespace Libshit
                                  std::forward<Args>(args)...);
             },
             [](FunBase* thiz) { delete static_cast<FunImpl*>(thiz); }},
-          t{std::move(t)} {}
+          t{Move(t)} {}
       T t;
     };
 

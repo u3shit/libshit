@@ -15,6 +15,7 @@ The full include-list for src/libshit/lua/type_traits.hpp:
 #include "libshit/lua/base.hpp"          // for StateRef, TypeTraits
 #include "libshit/nonowning_string.hpp"  // for NonowningString, StringView
 #include "libshit/nullable.hpp"          // for ToNotNullable, ToNullable
-namespace Libshit { namespace Lua { template <typename T, typename Enable = void> struct UserTypeTraits; } }  // lines 282-282
-namespace boost { namespace filesystem { class path; } }  // lines 32-32
+#include "libshit/utils.hpp"             // for Move
+namespace Libshit { namespace Lua { template <typename T, typename Enable = void> struct UserTypeTraits; } }  // lines 283-283
+namespace boost { namespace filesystem { class path; } }  // lines 33-33
 ---

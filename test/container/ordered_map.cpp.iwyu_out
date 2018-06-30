@@ -18,7 +18,7 @@ The full include-list for src/libshit/container/ordered_map.hpp:
 #include <iterator>                         // for reverse_iterator, iterator
 #include <stdexcept>                        // for out_of_range
 #include <type_traits>                      // for remove_const_t
-#include <utility>                          // for pair, move, forward
+#include <utility>                          // for pair, forward
 #include <vector>                           // for vector
 #include "libshit/assert.hpp"               // for LIBSHIT_ASSERT
 #include "libshit/check.hpp"                // for Assert, LIBSHIT_CHECK
@@ -28,7 +28,8 @@ The full include-list for src/libshit/container/ordered_map.hpp:
 #include "libshit/lua/type_traits.hpp"      // for LIBSHIT_LUA_CLASS
 #include "libshit/meta.hpp"                 // for LIBSHIT_NOLUA, LIBSHIT_LU...
 #include "libshit/shared_ptr.hpp"           // for MakeSmart, NotNullSmartPtr
-namespace Libshit { template <typename T, typename KeyOfValue, typename Compare = std::less<typename KeyOfValue::type>> class OrderedMap; }  // lines 29-31
+#include "libshit/utils.hpp"                // for Move
+namespace Libshit { template <typename T, typename KeyOfValue, typename Compare = std::less<typename KeyOfValue::type>> class OrderedMap; }  // lines 30-32
 namespace boost { namespace intrusive { template <bool Enabled> struct constant_time_size; } }
 namespace boost { namespace intrusive { template <bool Enabled> struct optimize_size; } }
 namespace boost { namespace intrusive { template <class BaseHook> struct base_hook; } }
@@ -37,17 +38,4 @@ namespace boost { namespace intrusive { template <class KeyOfValue> struct key_o
 namespace boost { namespace intrusive { template <class Tag> struct tag; } }
 ---
 
-test/container/ordered_map.cpp should add these lines:
-#include "libshit/not_null.hpp"                   // for NotNull
-
-test/container/ordered_map.cpp should remove these lines:
-
-The full include-list for test/container/ordered_map.cpp:
-#include <libshit/container/ordered_map.hpp>
-#include <catch.hpp>                              // for ResultBuilder, CHECK
-#include <libshit/container/ordered_map.lua.hpp>  // for LIBSHIT_ORDERED_MAP...
-#include <ostream>                                // for operator<<, basic_o...
-#include <string>                                 // for operator<, basic_st...
-#include "libshit/not_null.hpp"                   // for NotNull
-#include "ordered_map.binding.hpp"
----
+(test/container/ordered_map.cpp has correct #includes/fwd-decls)

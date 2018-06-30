@@ -1,6 +1,8 @@
 #include <libshit/container/ordered_map.hpp>
 #include <catch.hpp>
 
+#include <libshit/utils.hpp>
+
 #include <ostream>
 #include <string>
 
@@ -13,7 +15,7 @@ namespace Libshit::Test
   {
     LIBSHIT_DYNAMIC_OBJECT;
   public:
-    OMItemTest(std::string k, int v) : k{std::move(k)}, v{v} { ++count; }
+    OMItemTest(std::string k, int v) : k{Move(k)}, v{v} { ++count; }
     ~OMItemTest() { --count; }
     OMItemTest(const OMItemTest&) = delete;
     void operator=(const OMItemTest&) = delete;

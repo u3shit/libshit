@@ -54,7 +54,7 @@ namespace Libshit
   void Exception::AddInfo(std::string key, std::string value)
   {
     EnsureInfo();
-    info->map.emplace(std::move(key), std::move(value));
+    info->map.emplace(Move(key), Move(value));
   }
 
   void Exception::AddLocation(

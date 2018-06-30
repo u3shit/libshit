@@ -4,7 +4,7 @@
 
 #include "libshit/assert.hpp"
 #include "libshit/except.hpp"
-#include "libshit/not_null.hpp"
+#include "libshit/not_null.hpp" // IWYU pragma: export
 
 #include <atomic>
 #include <cstddef>

@@ -23,6 +23,8 @@ namespace Libshit
   LIBSHIT_GEN_EXCEPTION_TYPE(ItemAlreadyAdded, ContainerConsistency);
   // item not linked, linked to a different container, item is a root node, ...
   LIBSHIT_GEN_EXCEPTION_TYPE(ItemNotInContainer, ContainerConsistency);
+  // invalid item (nullptr, ...)
+  LIBSHIT_GEN_EXCEPTION_TYPE(InvalidItem, ContainerConsistency);
 
 }
 

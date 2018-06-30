@@ -1,6 +1,9 @@
 #include <libshit/container/parent_list.hpp>
 #include <catch.hpp>
 
+#include <libshit/shared_ptr.hpp>
+#include <libshit/utils.hpp>
+
 #include <algorithm>
 #include <initializer_list>
 #include <ostream>
@@ -120,7 +123,7 @@ TEST_CASE("ParentList::basic", "[parent_list]")
 
     SECTION("move ctor")
     {
-      List lst2{std::move(lst)};
+      List lst2{Move(lst)};
       CAPTURE(lst2);
       CHECK(Equal(xs, xs+3, lst2));
       CHECK(lst.empty()); // not part of API
@@ -130,7 +133,7 @@ TEST_CASE("ParentList::basic", "[parent_list]")
     SECTION("move assign")
     {
       List lst2{xs+3, xs+6};
-      lst2 = std::move(lst);
+      lst2 = Move(lst);
       CHECK(Equal(xs, xs+3, lst2));
       CHECK(lst.empty()); // not part of API
       CHECK(&List::get_parent(xs[0]) == &lst2);
@@ -392,8 +395,11 @@ TEST_CASE("ParentList::basic", "[parent_list]")
 
       SECTION("insert")
       { CHECK_THROWS(lst.insert<Check::Throw>(itb, xs[4])); }
-      SECTION("insert range")
-      { CHECK_THROWS(lst.insert<Check::Throw>(ite, xs+4, xs+6)); }
+
+      // the following is UB as end points to lst2 itself which is destructed
+      // at this point (fortunately iterators are never passed to lua code)
+      // SECTION("insert range")
+      // { CHECK_THROWS(lst.insert<Check::Throw>(ite, xs+4, xs+6)); }
 
       SECTION("iterator_to")
       { CHECK_THROWS(lst.iterator_to<Check::Throw>(xs[4])); }

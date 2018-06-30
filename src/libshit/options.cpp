@@ -84,11 +84,11 @@ namespace Libshit
             args.push_back(argv[i+j]);
           }
 
-          opt->func(std::move(args));
+          opt->func(Move(args));
           return count;
         }
 
-        opt->func(std::move(args));
+        opt->func(Move(args));
       }
       return 0;
     }, [&](auto& e) { AddInfos(e, "Processed option", std::string{'-', *ptr}); });
@@ -140,7 +140,7 @@ namespace Libshit
       args.push_back(argv[i+j]);
     }
 
-    opt->func(std::move(args));
+    opt->func(Move(args));
     return count;
   }
 

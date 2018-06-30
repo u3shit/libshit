@@ -19,6 +19,7 @@ namespace Libshit::Lua
 #include "libshit/lua/base.hpp" // IWYU pragma: export
 #include "libshit/nonowning_string.hpp"
 #include "libshit/nullable.hpp"
+#include "libshit/utils.hpp"
 
 #include <array>
 #include <boost/config.hpp>
@@ -263,7 +264,7 @@ namespace Libshit::Lua
 
     static void Push(StateRef vm, T obj)
     {
-      if (obj) BaseTraits::Push(vm, ToNotNullable<T>::Conv(std::move(obj)));
+      if (obj) BaseTraits::Push(vm, ToNotNullable<T>::Conv(Move(obj)));
       else lua_pushnil(vm);
     }
 

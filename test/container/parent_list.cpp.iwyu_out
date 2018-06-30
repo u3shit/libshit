@@ -3,7 +3,6 @@
 
 test/container/parent_list.cpp should add these lines:
 #include "libshit/not_null.hpp"                   // for NotNull
-#include "libshit/shared_ptr.hpp"                 // for SharedPtrBase, Make...
 
 test/container/parent_list.cpp should remove these lines:
 
@@ -13,9 +12,10 @@ The full include-list for test/container/parent_list.cpp:
 #include <catch.hpp>                              // for ResultBuilder, Section
 #include <initializer_list>                       // for initializer_list
 #include <libshit/container/parent_list.lua.hpp>  // for ParentList<>::iterator
+#include <libshit/shared_ptr.hpp>                 // for SharedPtrBase, Make...
+#include <libshit/utils.hpp>                      // for Move
 #include <ostream>                                // for operator<<, ostream
 #include <stdexcept>                              // for out_of_range
 #include "libshit/not_null.hpp"                   // for NotNull
-#include "libshit/shared_ptr.hpp"                 // for SharedPtrBase, Make...
 #include "parent_list.binding.hpp"
 ---

@@ -30,7 +30,7 @@ namespace Libshit::Lua
 #include "libshit/lua/userdata.hpp"
 
 #include "libshit/meta.hpp"
-#include "libshit/not_null.hpp"
+#include "libshit/not_null.hpp" // IWYU pragma: keep
 #include "libshit/shared_ptr.hpp"
 
 #include <boost/config.hpp>

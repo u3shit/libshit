@@ -9,6 +9,7 @@
 #include "libshit/container/ordered_map.hpp" // IWYU pragma: associated
 #include "libshit/lua/auto_table.hpp"
 #include "libshit/lua/function_call.hpp"
+#include "libshit/utils.hpp"
 
 #include <ostream>
 #include <tuple>
@@ -37,7 +38,7 @@ namespace Libshit
       OrderedMap<T, Traits, Compare>& om,
       const typename OrderedMap<T, Traits, Compare>::key_type& key)
     {
-      auto it = om.find(std::move(key));
+      auto it = om.find(key);
       if (it == om.end()) return nullptr;
       else return &*it;
     }
@@ -53,7 +54,7 @@ namespace Libshit
     static std::tuple<bool, size_t> insert(
       OrderedMap<T, Traits, Compare>& om, size_t i, NotNullPtr&& t)
     {
-      auto r = om.template insert<Throw>(om.nth(i), std::move(t));
+      auto r = om.template insert<Throw>(om.nth(i), Move(t));
       return {r.second, om.index_of(r.first)};
     }
 
@@ -81,7 +82,7 @@ namespace Libshit
     static std::tuple<bool, size_t> push_back(
       OrderedMap<T, Traits, Compare>& om, NotNullPtr&& t)
     {
-      auto r = om.template push_back<Throw>(std::move(t));
+      auto r = om.template push_back<Throw>(Move(t));
       return {r.second, om.index_of(r.first)};
     }
 

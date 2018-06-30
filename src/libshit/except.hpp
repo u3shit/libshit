@@ -2,6 +2,8 @@
 #define UUID_4999021A_F41A_400B_A951_CDE022AF7331
 #pragma once
 
+#include "libshit/utils.hpp"
+
 #include <boost/config.hpp>
 #include <boost/smart_ptr/intrusive_ptr.hpp>
 
@@ -58,7 +60,7 @@ namespace Libshit
 
     template <typename T>
     void AddInfo(std::string key, const T& value)
-    { AddInfo(std::move(key), ToString(value)); }
+    { AddInfo(Move(key), ToString(value)); }
 
     std::string operator[](const std::string& s) const;
 
@@ -74,7 +76,7 @@ namespace Libshit
     MakeExceptionClass(const T& t) noexcept(std::is_nothrow_copy_constructible_v<T>)
       : T(t) {}
     MakeExceptionClass(T&& t) noexcept(std::is_nothrow_move_constructible_v<T>)
-      : T(std::move(t)) {}
+      : T(Move(t)) {}
   };
 
   template <typename T, typename = void> struct EnableErrorInfoT

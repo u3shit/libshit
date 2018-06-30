@@ -2,7 +2,7 @@
 #define UUID_A4AD7BE1_0609_42C3_ADAB_61F7CED45A4D
 #pragma once
 
-#include <utility>
+#include "libshit/utils.hpp"
 
 namespace boost { template <typename T> class intrusive_ptr; }
 namespace Libshit
@@ -47,14 +47,14 @@ namespace Libshit
   {
     using Type = NotNull<SharedPtrBase<T, Storage>>;
     static Type Conv(SharedPtrBase<T, Storage> ptr) noexcept
-    { return Type{std::move(ptr)}; }
+    { return Type{Move(ptr)}; }
   };
 
   template <typename T> struct ToNotNullable<boost::intrusive_ptr<T>>
   {
     using Type = NotNull<boost::intrusive_ptr<T>>;
     static Type Conv(boost::intrusive_ptr<T> ptr) noexcept
-    { return Type{std::move(ptr)}; }
+    { return Type{Move(ptr)}; }
   };
 
 }

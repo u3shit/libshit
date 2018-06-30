@@ -4,6 +4,7 @@
 #include <libshit/lua/dynamic_object.hpp>
 #include <libshit/lua/type_traits.hpp>
 #include <libshit/meta.hpp>
+#include <libshit/shared_ptr.hpp>
 
 #include <algorithm>
 #include <vector>

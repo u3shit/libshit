@@ -4,11 +4,11 @@
 
 #include "libshit/except.hpp"
 #include "libshit/function.hpp"
+#include "libshit/utils.hpp"
 
 #include <cstddef>
 #include <iosfwd>
 #include <stdexcept>
-#include <utility>
 #include <vector>
 
 namespace Libshit
@@ -44,12 +44,12 @@ namespace Libshit
            std::size_t args_count, const char* args_help, const char* help,
            Func func)
       : name{name}, short_name{short_name}, args_count{args_count},
-        args_help{args_help}, help{help}, func{std::move(func)}
+        args_help{args_help}, help{help}, func{Move(func)}
     { group.options.push_back(this); }
 
     Option(OptionGroup& group, const char* name, std::size_t args_count,
            const char* args_help, const char* help, Func func)
-      : Option{group, name, 0, args_count, args_help, help, std::move(func)} {}
+      : Option{group, name, 0, args_count, args_help, help, Move(func)} {}
 
     const char* const name;
     const char short_name;
@@ -76,7 +76,7 @@ namespace Libshit
     const char* GetUsage() const noexcept { return usage; }
 
     using NoArgFun = Function<void (const char*)>;
-    void SetNoArgHandler(NoArgFun fun) { no_arg_fun = std::move(fun); }
+    void SetNoArgHandler(NoArgFun fun) { no_arg_fun = Move(fun); }
     void FailOnNoArg();
     const NoArgFun& GetNoArgHandler() const { return no_arg_fun; }
 

@@ -10,6 +10,7 @@
 #include "libshit/lua/type_traits.hpp"
 #include "libshit/meta.hpp"
 #include "libshit/shared_ptr.hpp"
+#include "libshit/utils.hpp"
 
 #include <cstddef>
 #include <functional>
@@ -218,7 +219,7 @@ namespace Libshit
       const_iterator p, ElemType&& t)
     {
       CheckPtrEnd<Checker>(ToPtr(p));
-      return InsertGen<Checker>(p, std::move(t));
+      return InsertGen<Checker>(p, Move(t));
     }
 
     template <typename Checker = Libshit::Check::Assert, typename... Args>
@@ -264,7 +265,7 @@ namespace Libshit
 
     template <typename Checker = Libshit::Check::Assert>
     LIBSHIT_NOLUA std::pair<iterator, bool> push_back(ElemType&& t)
-    { return InsertGen<Checker>(end(), std::move(t)); }
+    { return InsertGen<Checker>(end(), Move(t)); }
 
     template <typename Checker = Libshit::Check::Assert, typename... Args>
     LIBSHIT_NOLUA std::pair<iterator, bool> emplace_back(Args&&... args)
@@ -461,13 +462,17 @@ namespace Libshit
     ConstVectorPtr ToPtr(const OrderedMapItem& it) const noexcept
     { return &vect[VectorIndex(it)]; }
     ConstVectorPtr ToPtr(typename VectorType::const_iterator it) const noexcept
-    { return &*it; }
+    {
+      // compiles to a single mov with clang/gcc -O2 but avoids dereferencing
+      // a null pointer/end iterator (that would happen with &*it)
+      return vect.data() - (vect.begin() - it);
+    }
     ConstVectorPtr ToPtr(typename SetType::const_iterator it) const noexcept
     { return &vect[VectorIndex(*it)]; }
     ConstVectorPtr ToPtr(const_iterator it) const noexcept { return it.ptr; }
 
     typename VectorType::iterator ToVectIt(ConstVectorPtr ptr) noexcept
-    { return vect.begin() + (ptr - &*vect.begin()); }
+    { return vect.begin() + (ptr - ToPtr(vect.begin())); }
     typename SetType::iterator ToSetIt(ConstVectorPtr ptr) noexcept
     { return set.iterator_to(**ptr); }
 

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "libshit/assert.hpp"
+#include "libshit/utils.hpp"
 
 #include <cstddef>
 #include <type_traits>
@@ -30,8 +31,8 @@ namespace Libshit
     { LIBSHIT_ASSERT(t); }
 
     template <typename U>
-    NotNull(NotNull<U> o) noexcept(noexcept(T{std::move(o.t)}))
-      : t{std::move(o.t)} {}
+    NotNull(NotNull<U> o) noexcept(noexcept(T{Move(o.t)}))
+      : t{Move(o.t)} {}
 
     NotNull& operator=(const NotNull&) = default;
     NotNull& operator=(NotNull&&) = default; // NOLINT
@@ -60,8 +61,8 @@ namespace Libshit
   template <typename T> NotNull(T) -> NotNull<T>;
 
   template <typename T>
-  NotNull<T> MakeNotNull(T t) noexcept(noexcept(NotNull<T>(std::move(t))))
-  { return NotNull<T>(std::move(t)); }
+  NotNull<T> MakeNotNull(T t) noexcept(noexcept(NotNull<T>(Move(t))))
+  { return NotNull<T>(Move(t)); }
 }
 
 #endif

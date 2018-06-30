@@ -28,7 +28,8 @@ The full include-list for src/libshit/container/ordered_map.hpp:
 #include "libshit/lua/type_traits.hpp"      // for LIBSHIT_LUA_CLASS
 #include "libshit/meta.hpp"                 // for LIBSHIT_NOLUA, LIBSHIT_LU...
 #include "libshit/shared_ptr.hpp"           // for MakeSmart, NotNullSmartPtr
-namespace Libshit { template <typename T, typename KeyOfValue, typename Compare = std::less<typename KeyOfValue::type>> class OrderedMap; }  // lines 29-31
+#include "libshit/utils.hpp"                // for Move
+namespace Libshit { template <typename T, typename KeyOfValue, typename Compare = std::less<typename KeyOfValue::type>> class OrderedMap; }  // lines 30-32
 namespace boost { namespace intrusive { template <bool Enabled> struct constant_time_size; } }
 namespace boost { namespace intrusive { template <bool Enabled> struct optimize_size; } }
 namespace boost { namespace intrusive { template <class BaseHook> struct base_hook; } }

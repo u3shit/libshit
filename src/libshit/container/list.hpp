@@ -2,6 +2,8 @@
 #define GUARD_DEATHLESSLY_BRONCHOTRACHEAL_AMBO_ROPES_4263
 #pragma once
 
+#include "libshit/utils.hpp"
+
 #include <functional>
 #include <type_traits>
 #include <utility>
@@ -50,9 +52,9 @@ namespace Libshit
 
     List() = default;
     explicit List(const value_traits& vt) : list{vt} {}
-    explicit List(Traits ts) : Traits{std::move(ts)} {}
+    explicit List(Traits ts) : Traits{Move(ts)} {}
     explicit List(const value_traits& vt, Traits ts)
-      : list{vt}, Traits{std::move(ts)} {}
+      : list{vt}, Traits{Move(ts)} {}
 
     template <typename Iterator>
     List(Iterator b, Iterator e, const value_traits& vt = {}) : list{vt}

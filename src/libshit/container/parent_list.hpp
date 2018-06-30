@@ -151,6 +151,10 @@ namespace Libshit
     LIBSHIT_GEN(++, get_next) LIBSHIT_GEN(--, get_previous)
 #undef LIBSHIT_GEN
 
+    // with Throw checker only!!
+    bool is_end() const noexcept
+    { return !ptr || NodeTraits::get_parent(ptr) == ptr; }
+
   private:
     NodePtr ptr = nullptr;
 
@@ -665,7 +669,7 @@ namespace Libshit
     }
 
     template <typename Checker>
-    void CheckNodePtr(const_node_ptr ptr) noexcept(Checker::IS_NOEXCEPT)
+    void CheckNodePtr(node_ptr& ptr) noexcept(Checker::IS_NOEXCEPT)
     {
       CheckNodePtrEnd<Checker>(ptr);
       LIBSHIT_CHECK(
@@ -673,8 +677,10 @@ namespace Libshit
     }
 
     template <typename Checker>
-    void CheckNodePtrEnd(const_node_ptr ptr) noexcept(Checker::IS_NOEXCEPT)
+    void CheckNodePtrEnd(node_ptr& ptr) noexcept(Checker::IS_NOEXCEPT)
     {
+      if constexpr (std::is_same_v<Checker, Check::Throw>)
+        if (!ptr) ptr = GetRoot();
       LIBSHIT_CHECK(
         ItemNotInContainer, node_traits::get_parent(ptr) == GetRoot(),
         "Item not in this list");
@@ -683,6 +689,7 @@ namespace Libshit
     template <typename Checker>
     static void CheckUnlinked(const_node_ptr ptr) noexcept(Checker::IS_NOEXCEPT)
     {
+      LIBSHIT_CHECK(InvalidItem, ptr, "nullptr item");
       LIBSHIT_CHECK(
         ItemAlreadyAdded, node_traits::get_parent(ptr) == nullptr,
         "Item already linked");
@@ -691,6 +698,7 @@ namespace Libshit
     template <typename Checker>
     static void CheckLinkedAny(const_node_ptr ptr) noexcept(Checker::IS_NOEXCEPT)
     {
+      LIBSHIT_CHECK(InvalidItem, ptr, "nullptr item");
       LIBSHIT_CHECK(
         ItemNotInContainer, node_traits::get_parent(ptr),
         "Item not in any container");
@@ -699,6 +707,7 @@ namespace Libshit
     template <typename Checker>
     void CheckLinkedThis(const_node_ptr ptr) const noexcept(Checker::IS_NOEXCEPT)
     {
+      LIBSHIT_CHECK(InvalidItem, ptr, "nullptr item");
       LIBSHIT_CHECK(
         ItemNotInContainer, node_traits::get_parent(ptr) == GetRoot(),
         "Item not in this container");
