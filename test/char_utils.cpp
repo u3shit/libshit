@@ -2,6 +2,9 @@
 #include <catch.hpp>
 
 #include <climits>
+#include <ctype.h>
+#include <sstream>
+#include <string>
 
 using namespace Libshit;
 

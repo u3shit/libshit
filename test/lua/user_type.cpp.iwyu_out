@@ -1,0 +1,17 @@
+
+(src/libshit/lua/user_type.hpp has correct #includes/fwd-decls)
+
+test/lua/user_type.cpp should add these lines:
+#include "libshit/not_null.hpp"            // for NotNull
+
+test/lua/user_type.cpp should remove these lines:
+
+The full include-list for test/lua/user_type.cpp:
+#include <libshit/lua/user_type.hpp>
+#include <catch.hpp>                       // for Section, ResultBuilder
+#include <libshit/lua/dynamic_object.hpp>  // for LIBSHIT_DYNAMIC_OBJECT
+#include <libshit/meta.hpp>                // for LIBSHIT_LUAGEN
+#include <libshit/shared_ptr.hpp>          // for MakeSmart, RefCounted, Sha...
+#include "libshit/not_null.hpp"            // for NotNull
+#include "user_type.binding.hpp"
+---

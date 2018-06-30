@@ -1,9 +1,9 @@
 #include <libshit/lua/user_type.hpp>
-#include <libshit/lua/dynamic_object.hpp>
-#include <libshit/lua/function_call.hpp>
 #include <catch.hpp>
 
-#define FT(x) decltype(&x), &x
+#include <libshit/lua/dynamic_object.hpp>
+#include <libshit/meta.hpp>
+#include <libshit/shared_ptr.hpp>
 
 using namespace Libshit;
 using namespace Libshit::Lua;
@@ -199,4 +199,4 @@ assert(m.y == 13, "m.y")
 }
 
 
-#include "user_type.binding.hpp"
+#include "user_type.binding.hpp" // IWYU pragma: keep

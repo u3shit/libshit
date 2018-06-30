@@ -1,6 +1,10 @@
 #include <libshit/container/parent_list.hpp>
-#include <libshit/lua/base.hpp>
 #include <catch.hpp>
+
+#include <algorithm>
+#include <initializer_list>
+#include <ostream>
+#include <stdexcept>
 
 using namespace Libshit;
 using namespace Libshit::Lua;
@@ -660,4 +664,4 @@ assert(tbl[5] == nil)");
 LIBSHIT_PARENT_LIST_LUAGEN(
   parent_list_item, true, Libshit::Test::ParentListItem,
   Libshit::Test::ParentListItemTraits);
-#include "parent_list.binding.hpp"
+#include "parent_list.binding.hpp" // IWYU pragma: keep

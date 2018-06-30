@@ -1,6 +1,9 @@
 #include <libshit/options.hpp>
 #include <catch.hpp>
+
 #include <cstring>
+#include <sstream>
+#include <string>
 
 #pragma GCC diagnostic ignored "-Waddress"
 

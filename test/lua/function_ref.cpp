@@ -1,7 +1,12 @@
 #include <libshit/lua/function_ref.hpp>
-#include <libshit/lua/type_traits.hpp>
-#include <libshit/lua/dynamic_object.hpp>
 #include <catch.hpp>
+
+#include <libshit/lua/dynamic_object.hpp>
+#include <libshit/lua/type_traits.hpp>
+#include <libshit/meta.hpp>
+
+#include <algorithm>
+#include <vector>
 
 using namespace Libshit;
 using namespace Libshit::Lua;
@@ -98,4 +103,4 @@ TEST_CASE("Lua::FunctionWrap parameters")
   CHECK(x->y == Approx(2*3.1415));
 }
 
-#include "function_ref.binding.hpp"
+#include "function_ref.binding.hpp" // IWYU pragma: keep

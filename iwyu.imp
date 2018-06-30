@@ -14,6 +14,9 @@
 - include: ['<lauxlib.h>', private, '<lua.hpp>', public]
 - include: ['<lualib.h>', private, '<lua.hpp>', public]
 
+# catch
+- include: ['@<internal/.*catch.*>', private, '<catch.hpp>', public]
+
 # stl/libc++
 # don't require #include <utility> when a map should already include it...
 - symbol: ['std::pair', private, '<utility>', public]

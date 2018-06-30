@@ -1,0 +1,53 @@
+
+src/libshit/container/ordered_map.hpp should add these lines:
+namespace boost { namespace intrusive { template <bool Enabled> struct constant_time_size; } }
+namespace boost { namespace intrusive { template <bool Enabled> struct optimize_size; } }
+namespace boost { namespace intrusive { template <class BaseHook> struct base_hook; } }
+namespace boost { namespace intrusive { template <class Compare> struct compare; } }
+namespace boost { namespace intrusive { template <class KeyOfValue> struct key_of_value; } }
+namespace boost { namespace intrusive { template <class Tag> struct tag; } }
+
+src/libshit/container/ordered_map.hpp should remove these lines:
+
+The full include-list for src/libshit/container/ordered_map.hpp:
+#include <boost/intrusive/intrusive_fwd.hpp>
+#include <boost/intrusive/set.hpp>          // for set
+#include <boost/intrusive/set_hook.hpp>     // for set_base_hook
+#include <cstddef>                          // for ptrdiff_t, size_t
+#include <functional>                       // for less
+#include <iterator>                         // for reverse_iterator, iterator
+#include <stdexcept>                        // for out_of_range
+#include <type_traits>                      // for remove_const_t
+#include <utility>                          // for pair, move, forward
+#include <vector>                           // for vector
+#include "libshit/assert.hpp"               // for LIBSHIT_ASSERT
+#include "libshit/check.hpp"                // for Assert, LIBSHIT_CHECK
+#include "libshit/container/intrusive.hpp"  // for ItemNotInContainer (ptr o...
+#include "libshit/except.hpp"               // for LIBSHIT_THROW
+#include "libshit/lua/dynamic_object.hpp"   // for SmartObject
+#include "libshit/lua/type_traits.hpp"      // for LIBSHIT_LUA_CLASS
+#include "libshit/meta.hpp"                 // for LIBSHIT_NOLUA, LIBSHIT_LU...
+#include "libshit/shared_ptr.hpp"           // for MakeSmart, NotNullSmartPtr
+namespace Libshit { template <typename T, typename KeyOfValue, typename Compare = std::less<typename KeyOfValue::type>> class OrderedMap; }  // lines 29-31
+namespace boost { namespace intrusive { template <bool Enabled> struct constant_time_size; } }
+namespace boost { namespace intrusive { template <bool Enabled> struct optimize_size; } }
+namespace boost { namespace intrusive { template <class BaseHook> struct base_hook; } }
+namespace boost { namespace intrusive { template <class Compare> struct compare; } }
+namespace boost { namespace intrusive { template <class KeyOfValue> struct key_of_value; } }
+namespace boost { namespace intrusive { template <class Tag> struct tag; } }
+---
+
+test/container/ordered_map.cpp should add these lines:
+#include "libshit/not_null.hpp"                   // for NotNull
+
+test/container/ordered_map.cpp should remove these lines:
+
+The full include-list for test/container/ordered_map.cpp:
+#include <libshit/container/ordered_map.hpp>
+#include <catch.hpp>                              // for ResultBuilder, CHECK
+#include <libshit/container/ordered_map.lua.hpp>  // for LIBSHIT_ORDERED_MAP...
+#include <ostream>                                // for operator<<, basic_o...
+#include <string>                                 // for operator<, basic_st...
+#include "libshit/not_null.hpp"                   // for NotNull
+#include "ordered_map.binding.hpp"
+---

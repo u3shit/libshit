@@ -1,6 +1,8 @@
 #include <libshit/container/ordered_map.hpp>
-#include <libshit/lua/base.hpp>
 #include <catch.hpp>
+
+#include <ostream>
+#include <string>
 
 using namespace Libshit;
 using namespace Libshit::Lua;
@@ -367,4 +369,4 @@ assert(nexti == 3)
 #include <libshit/container/ordered_map.lua.hpp>
 LIBSHIT_ORDERED_MAP_LUAGEN(
   om_item_test, Libshit::Test::OMItemTest, Libshit::Test::OMItemTestTraits);
-#include "ordered_map.binding.hpp"
+#include "ordered_map.binding.hpp" // IWYU pragma: keep

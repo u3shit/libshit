@@ -1,5 +1,9 @@
-#include <libshit/lua/type_traits.hpp>
+#include <libshit/lua/type_traits.hpp> // IWYU pragma: keep
 #include <catch.hpp>
+
+#include <libshit/lua/base.hpp>
+#include <stdexcept>
+#include <string>
 
 using namespace Libshit::Lua;
 
@@ -96,6 +100,7 @@ TEST_CASE("successful gets", "[lua]")
   CHECK(lua_gettop(vm) == 0);
 }
 
+/* todo optional support
 TEST_CASE("optional vals", "[lua]")
 {
   State vm;
@@ -117,6 +122,7 @@ TEST_CASE("optional vals", "[lua]")
 
   CHECK(lua_gettop(vm) == 0);
 }
+*/
 
 TEST_CASE("fail get", "[lua]")
 {
@@ -184,6 +190,7 @@ TEST_CASE("fail check", "[lua]")
                       BADARG "(boolean expected, got number)"));
 }
 
+/* todo optional support
 TEST_CASE("opt correct", "[lua]")
 {
   State vm;
@@ -222,6 +229,7 @@ TEST_CASE("opt invalid", "[lua]")
                       BADARG "(integer expected, got string)"));
 #undef BADARG
 }
+*/
 
 namespace
 {
