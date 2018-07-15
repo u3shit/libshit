@@ -184,11 +184,15 @@ def configure_variant(ctx, clang_hack):
 
         '-fdiagnostics-color', '-fdiagnostics-show-option',
     ])
+    if ctx.env['COMPILER_CXX'] != 'msvc':
+        # since clang-6 clang-cl -Wall maps to -Weverything..........
+        ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], ['-Wall'])
     ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], [
-        '-Wall', '-Wextra', '-pedantic',
+        '-Wextra', '-pedantic',
         '-Wno-parentheses', '-Wno-assume', '-Wno-attributes',
         '-Wold-style-cast', '-Woverloaded-virtual', '-Wimplicit-fallthrough',
         '-Wno-undefined-var-template', # TYPE_NAME usage
+        '-Wno-dangling-else',
     ])
     ctx.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], [
         '-Wno-parentheses-equality', # boost fs, windows build
@@ -210,7 +214,7 @@ def configure_variant(ctx, clang_hack):
     if ctx.env['COMPILER_CXX'] == 'msvc':
         ctx.define('_CRT_SECURE_NO_WARNINGS', 1)
         ctx.env.append_value('CXXFLAGS', [
-            '-Xclang', '-std=c++1z',
+            '-Xclang', '-std=c++17',
             '-Xclang', '-fdiagnostics-format', '-Xclang', 'clang',
             '-EHsa', '-MD'])
         ctx.env.append_value('CFLAGS_EXT', ['-EHsa', '-MD'])
@@ -219,14 +223,14 @@ def configure_variant(ctx, clang_hack):
         cpp_ver = m['_CPPLIB_VER']
         if cpp_ver == '610':
             ctx.end_msg('610, activating include patching', color='YELLOW')
-            inc = '-I' + ctx.path.find_node('msvc_include').abspath()
+            inc = ['-imsvc', ctx.path.find_node('msvc_include').abspath()]
             ctx.env.prepend_value('CFLAGS', inc)
             ctx.env.prepend_value('CXXFLAGS', inc)
         else:
             ctx.end_msg(cpp_ver)
     else:
-        ctx.check_cxx(cxxflags='-std=c++1z')
-        ctx.env.append_value('CXXFLAGS', ['-std=c++1z'])
+        ctx.check_cxx(cxxflags='-std=c++17')
+        ctx.env.append_value('CXXFLAGS', ['-std=c++17'])
 
         ctx.filter_flags(['CFLAGS', 'CXXFLAGS'], ['-fvisibility=hidden'])
         ctx.env.append_value('LINKFLAGS', '-rdynamic')

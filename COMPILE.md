@@ -157,15 +157,15 @@ CC=$clangbin/clang-cl CXX=$clangbin/clang-cl LINK_CXX=$clangbin/lld-link AR=$cla
 Some potential problems with the clang toolchain
 ------------------------------------------------
 
-When using LTO, it can still crash lld when creating a dll. See `llvm.patch` for
-a path that fixes it for the time being.
+When using LTO and llvm 5.0, it can still crash lld when creating a dll. See
+`llvm-5.0.patch` for a path that fixes it for the time being.
 
-Using LLD-5.0.0 to link, the generated executable will crash when the first
-exception is thrown. Use `lld-5.0.patch` to fix this.
+Using lld 5.0.0 to link, the generated executable will crash when the first
+exception is thrown. Use `lld-5.0.patch` to fix this or upgrade to 6.0.1.
 
 Third problem: llvm/clang doesn't support the `/EHsa` flag, only `/EHs`, but
-that won't catch LuaJIT/ljx exceptions. The `clang.patch` (for clang 4.0) or
-`clang-5.0.patch`) (for 5.0, duh) includes a quick hack that'll at least make
+that won't catch LuaJIT/ljx exceptions. The `llvm.patch` (for llvm 5.0) and
+`llvm-6.0.patch` (for llvm 6.0.1) includes a quick hack that'll at least make
 sure destructors are called when unwinding lua exceptions (and exceptions are
 handled manually by `__try`/`__except`).
 
@@ -226,8 +226,8 @@ only want to compile.
 Requirements:
 
 * `luajit` (probably works with ljx too :p)
-* patched clang: apply `clang.patch` to clang 4.0 or `clang-5.0.patch` to clang
-  5.0.
+* patched clang: apply `clang-5.0.patch` to clang 5.0 or `clang-6.0.patch` to
+  clang 6.0.1.
 
 Compile helper library:
 
