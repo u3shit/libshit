@@ -9,6 +9,21 @@
 - symbol: ['boost::endian::order', private,
            '<boost/endian/arithmetic.hpp>', public]
 
+- include: ['<boost/container/vector.hpp>', public,
+            '<boost/container/static_vector.hpp>', public]
+- include: ['<boost/container/vector.hpp>', public,
+            '<boost/container/small_vector.hpp>', public]
+- include: ['<boost/intrusive/detail/reverse_iterator.hpp>', private,
+            '<boost/intrusive/bstree.hpp>', public]
+- include: ['<boost/intrusive/detail/reverse_iterator.hpp>', private,
+            '<boost/intrusive/list.hpp>', public]
+- include: ['<boost/intrusive/detail/reverse_iterator.hpp>', private,
+            '<boost/container/flat_map.hpp>', public]
+- include: ['<boost/container/vector.hpp>', public,
+            '<boost/container/flat_map.hpp>', public]
+- include: ['@<boost/spirit/home/x3/.*>', public,
+            '<boost/spirit/home/x3.hpp>', public]
+
 # lua
 - include: ['<lua.h>', private, '<lua.hpp>', public]
 - include: ['<lauxlib.h>', private, '<lua.hpp>', public]
@@ -27,8 +42,21 @@
 - symbol: ['std::basic_ostream', private, '<ostream>', public]
 - symbol: ['std::basic_ostream', private, '<iostream>', public]
 
+# don't include <ratio> just because chrono typedefs happen to use it...
+- symbol: ['std::ratio', private, '<ratio>', public]
+- symbol: ['std::ratio', private, '<chrono>', public]
+
 # _LIBCPP_VERSION is automatically defined when you include "one of the standard header files"
 - symbol: [_LIBCPP_VERSION, private, '<cstddef>', public]
+
+- symbol: [int8_t, private, '<cstdint>', public]
+- symbol: [uint8_t, private, '<cstdint>', public]
+- symbol: [int16_t, private, '<cstdint>', public]
+- symbol: [uint16_t, private, '<cstdint>', public]
+- symbol: [int32_t, private, '<cstdint>', public]
+- symbol: [uint32_t, private, '<cstdint>', public]
+- symbol: [int64_t, private, '<cstdint>', public]
+- symbol: [uint64_t, private, '<cstdint>', public]
 
 # from standard libcxx.imp
 - include: ['<__functional_base>', private, '<functional>', public ]
