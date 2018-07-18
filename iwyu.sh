@@ -14,8 +14,10 @@ flags+=(
     -std=c++17 -stdlib=libc++
     -Xiwyu --mapping_file="$dir/iwyu.imp"
     -I"$dir/src"
+    -I"$dir/build/src"
     -I"$dir/../build/clang-debug/libshit/src"
     -I"$dir/../build/libshit/src"
+    -isystem "$dir/ext/boost"
     -isystem "$dir/ext/brigand/include"
     -isystem "$dir/ext/lua-5.3.4/src"
     -isystem "$dir/ext/catch/include"

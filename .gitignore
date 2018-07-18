@@ -2,5 +2,9 @@
 \#*#
 .#*
 
+build
+.lock-waf_*
+.waf*
+
 ext/boost
 ext/boost.tar.bz2

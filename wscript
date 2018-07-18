@@ -37,6 +37,17 @@ try:
 except IOError:
     pass
 
+if not Context.g_module:
+    APPNAME = 'libshit'
+    try: did_I_mention_that_python_is_a_horrible_language()
+    except:
+        class AttributeDict(dict):
+            def __init__(self, *args, **kwargs):
+                super(AttributeDict, self).__init__(*args, **kwargs)
+                self.__dict__ = self
+        import sys
+        Context.g_module = AttributeDict(sys.exc_info()[2].tb_frame.f_globals)
+
 app = Context.g_module.APPNAME.upper()
 libshit_cross = getattr(Context.g_module, 'LIBSHIT_CROSS', False)
 
