@@ -208,7 +208,7 @@ namespace Libshit
     // manage existing non refcounted ptrs
     template <typename U,
               typename = std::enable_if_t<IS_NORMAL_S<T> && IS_NORMAL_S<U>>>
-    SharedPtrBase(U* ptr)
+    explicit SharedPtrBase(U* ptr)
       try : SharedPtrBase{new Detail::RefCountedPtrContainer<U>{ptr}, ptr, false}
     {} catch (...) { delete ptr; }
 
@@ -304,6 +304,11 @@ namespace Libshit
   template <typename T>
   using NotNullSmartPtr = NotNull<SmartPtr<T>>;
 
+  template <typename T>
+  RefCountedPtr<T> ToRefCountedPtr(T* t) noexcept { return {t}; }
+  template <typename T>
+  NotNullRefCountedPtr<T> ToNotNullRefCountedPtr(T* t) noexcept
+  { return NotNullRefCountedPtr<T>{t}; }
 
   // weak ptr
   template <typename T, template<typename> class Storage>
@@ -447,6 +452,10 @@ namespace Libshit
     IS_REFCOUNTED<T>,
     WeakPtrBase<T, SharedPtrStorageRefCounted>,
     WeakPtrBase<T, SharedPtrStorageNormal>>;
+
+  template <typename T>
+  WeakRefCountedPtr<T> ToWeakRefCountedPtr(T* t) noexcept
+  { return {t}; }
 
 
   template <typename T, template<typename> class Storage>
