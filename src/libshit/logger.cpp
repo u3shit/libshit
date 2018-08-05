@@ -46,6 +46,9 @@ namespace Libshit::Logger
   int global_level = -1;
   bool show_fun = false;
   std::recursive_mutex log_mutex;
+#ifdef NDEBUG
+  std::ostream* nullptr_ostream;
+#endif
 
   static std::map<std::string, int, std::less<>> level_map;
 

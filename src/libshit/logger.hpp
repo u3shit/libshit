@@ -71,8 +71,11 @@ namespace Libshit::Logger
   LIBSHIT_LOG(name, level)
 #  define LIBSHIT_CHECK_DBG(name, level) LIBSHIT_CHECK_LOG(name, level)
 #else
+  // silence warnings about null pointer dereference with clang in template
+  // instatiations
+  extern std::ostream* nullptr_ostream;
 #  define LIBSHIT_DBG(name, level) \
-  while (false) *static_cast<std::ostream*>(nullptr)
+  while (false) *::Libshit::Logger::nullptr_ostream
 #  define LIBSHIT_CHECK_DBG(name, level) false
 #endif
 
