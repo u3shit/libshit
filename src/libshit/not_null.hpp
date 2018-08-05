@@ -23,7 +23,7 @@ namespace Libshit
     NotNull(std::nullptr_t) = delete;
     NotNull(NotNull&) = default;
     NotNull(const NotNull&) = default;
-    NotNull(NotNull&&) = default; // NOLINT a moved out NotNull might be null...
+    NotNull(NotNull&&) = default;
     NotNull(EmptyNotNull) noexcept(noexcept(T{})) {}
 
     template <typename... Args>
@@ -35,11 +35,14 @@ namespace Libshit
       : t{Move(o.t)} {}
 
     NotNull& operator=(const NotNull&) = default;
-    NotNull& operator=(NotNull&&) = default; // NOLINT
+    NotNull& operator=(NotNull&&) = default;
 
-    // recheck because moving still can break it
-    operator T() const { LIBSHIT_ASSERT(t); return t; }
-    const T& Get() const noexcept { LIBSHIT_ASSERT(t); return t; }
+    // recheck because moving can break it
+    operator const T() const & { LIBSHIT_ASSERT(t); return t; }
+    operator T() && { LIBSHIT_ASSERT(t); return Move(t); }
+
+    const T& Get() const & noexcept { LIBSHIT_ASSERT(t); return t; }
+    T&& Get() && noexcept { LIBSHIT_ASSERT(t); return Move(t); }
     decltype(auto) operator*() const noexcept
     { LIBSHIT_ASSERT(t); return *t; }
     decltype(auto) operator->() const noexcept
