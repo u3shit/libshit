@@ -1,0 +1,16 @@
+// -*- c++ -*-
+#pragma once
+
+#include_next <string>
+
+namespace std
+{
+  inline namespace literals
+  {
+    inline namespace string_literals
+    {
+      inline std::string operator ""s(const char* str, std::size_t len)
+      { return {str, len}; }
+    }
+  }
+}

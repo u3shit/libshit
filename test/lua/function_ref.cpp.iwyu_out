@@ -2,7 +2,6 @@
 (src/libshit/lua/function_ref.hpp has correct #includes/fwd-decls)
 
 test/lua/function_ref.cpp should add these lines:
-#include <exception>                       // for exception
 #include "libshit/not_null.hpp"            // for NotNull
 
 test/lua/function_ref.cpp should remove these lines:
@@ -10,13 +9,12 @@ test/lua/function_ref.cpp should remove these lines:
 The full include-list for test/lua/function_ref.cpp:
 #include <libshit/lua/function_ref.hpp>
 #include <algorithm>                       // for sort
-#include <catch.hpp>                       // for ResultBuilder, CHECK, Section
-#include <exception>                       // for exception
+#include <libshit/doctest.hpp>             // for ResultBuilder, CHECK, Subcase
 #include <libshit/lua/dynamic_object.hpp>  // for SmartObject
 #include <libshit/lua/type_traits.hpp>     // for LIBSHIT_LUA_CLASS
 #include <libshit/meta.hpp>                // for LIBSHIT_LUAGEN
 #include <libshit/shared_ptr.hpp>          // for MakeSmart
-#include <vector>                          // for vector, operator==, allocator
+#include <vector>                          // for vector, operator==
 #include "function_ref.binding.hpp"
 #include "libshit/not_null.hpp"            // for NotNull
 ---

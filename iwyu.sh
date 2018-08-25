@@ -20,7 +20,7 @@ flags+=(
     -isystem "$dir/ext/boost"
     -isystem "$dir/ext/brigand/include"
     -isystem "$dir/ext/lua-5.3.4/src"
-    -isystem "$dir/ext/catch/include"
+    -isystem "$dir/ext/doctest/doctest"
     -Wno-parentheses -Wno-dangling-else
 )
 

@@ -6,7 +6,6 @@
 
 #include <atomic>
 #include <cstdlib>
-#include <exception>
 #include <map>
 #include <typeinfo>
 

@@ -5,20 +5,26 @@ libshit_cross = getattr(Context.g_module, 'LIBSHIT_CROSS', False)
 
 def options(ctx):
     ctx.system_opt('brigand', cross=libshit_cross)
-    ctx.system_opt('catch')
+    ctx.system_opt('doctest')
 
     ctx.recurse('.', name='options', wscript='wscript_boost', once=False)
     ctx.recurse('.', name='options', wscript='wscript_lua', once=False)
 
 def configure(ctx):
-    def system_catch(ctx):
-        ctx.check_cxx(header_name='catch.hpp', uselib_store='CATCH')
-        ctx.undefine('HAVE_CATCH_HPP') # why must u define it
+    def system_doctest(ctx):
+        ctx.check_cxx(header_name='doctest.h', uselib_store='DOCTEST')
+        ctx.undefine('HAVE_DOCTEST_H') # why must u define it
     def system_brigand(ctx):
         ctx.check_cfg(package='libbrigand', args='--cflags',
                       global_define=True, uselib_store='BRIGAND')
         ctx.undefine('HAVE_LIBBRIGAND') # ...
-    ctx.system_chk('catch', 'auto', system_catch, 'catch/include')
+
+    ctx.system_chk('doctest', 'auto', system_doctest, 'doctest/doctest')
+    if ctx.env.WITH_TESTS:
+        ctx.env.append_value('DEFINES_DOCTEST', 'DOCTEST_CONFIG_SUPER_FAST_ASSERTS')
+    else:
+        ctx.env.append_value('DEFINES_DOCTEST', 'DOCTEST_CONFIG_DISABLE')
+
     ctx.system_chk('brigand', 'auto', system_brigand, 'brigand/include', libshit_cross)
 
     ctx.recurse('.', name='configure', wscript='wscript_boost', once=False)

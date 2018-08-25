@@ -9,9 +9,9 @@ test/container/parent_list.cpp should remove these lines:
 The full include-list for test/container/parent_list.cpp:
 #include <libshit/container/parent_list.hpp>
 #include <algorithm>                              // for equal
-#include <catch.hpp>                              // for ResultBuilder, Section
 #include <initializer_list>                       // for initializer_list
-#include <libshit/container/parent_list.lua.hpp>  // for ParentList<>::iterator
+#include <libshit/container/parent_list.lua.hpp>  // for ParentListIterator
+#include <libshit/doctest.hpp>                    // for ResultBuilder, Subcase
 #include <libshit/shared_ptr.hpp>                 // for SharedPtrBase, Make...
 #include <libshit/utils.hpp>                      // for Move
 #include <ostream>                                // for operator<<, ostream

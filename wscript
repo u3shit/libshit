@@ -60,12 +60,18 @@ def options(opt):
                    help='Read COMPILE.md...')
     grp.add_option('--clang-hack-host', action='store_true', default=False,
                    help='Read COMPILE.md...')
+
+    grp.add_option('--debug', action='store_true', default=False,
+                   help='Enable some extra debugging')
     grp.add_option('--optimize', action='store_true', default=False,
                    help='Enable some default optimizations')
     grp.add_option('--optimize-ext', action='store_true', default=False,
                    help='Optimize ext libs even if %s is in debug mode' % app.title())
     grp.add_option('--release', action='store_true', default=False,
-                   help='Enable some flags for release builds')
+                   help='Release mode (NDEBUG + optimize)')
+    grp.add_option('--with-tests', action='store_true', default=False,
+                   help='Enable tests')
+
     bnd = opt.add_option_group('Bundling options')
     bnd.add_option('--all-system', dest='all_system',
                    action='store_const', const='system',
@@ -74,8 +80,6 @@ def options(opt):
                    action='store_const', const='bundle',
                    help="Use bundled libs where it's generally ok")
 
-    opt.add_option('--skip-run-tests', action='store_true', default=False,
-                   help="Skip actually running tests with `test'")
     opt.recurse('ext', name='options')
 
 def configure(cfg):
@@ -125,6 +129,10 @@ def configure(cfg):
     configure_variant(cfg, cfg.options.clang_hack)
 
     if cfg.env['COMPILER_CXX'] == 'msvc':
+        if cfg.options.debug:
+            cfg.filter_flags(['CFLAGS', 'CXXFLAGS'], ['/Z7'])
+            cfg.env.prepend_value('LINKFLAGS', ['/debug'])
+
         if cfg.options.optimize:
             for f in ['CFLAGS', 'CXXFLAGS']:
                 cfg.env.prepend_value(f, ['-O2', '-flto'])
@@ -132,6 +140,9 @@ def configure(cfg):
         elif cfg.options.optimize_ext:
             cfg.env.prepend_value('CXXFLAGS_EXT', '-O2')
     else:
+        if cfg.options.debug:
+            cfg.filter_flags(['CFLAGS', 'CXXFLAGS', 'LINKFLAGS'], ['-ggdb3'])
+
         if cfg.options.optimize:
             cfg.filter_flags(['CFLAGS', 'CXXFLAGS', 'LINKFLAGS'], [
                 '-Ofast', '-flto', '-fno-fat-lto-objects',
@@ -139,10 +150,11 @@ def configure(cfg):
 
             cfg.env.append_value('LINKFLAGS', '-Wl,-O1')
         elif cfg.options.optimize_ext:
-            cfg.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], ['-g0', '-Ofast'])
+            cfg.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], ['-Ofast'])
 
     if cfg.options.release:
         cfg.define('NDEBUG', 1)
+    cfg.env.WITH_TESTS = cfg.options.with_tests
 
     Logs.pprint('NORMAL', 'Configuring ext '+variant)
     cfg.recurse('ext', name='configure', once=False)
@@ -204,6 +216,12 @@ def configure_variant(ctx, clang_hack):
         '-Wold-style-cast', '-Woverloaded-virtual', '-Wimplicit-fallthrough',
         '-Wno-undefined-var-template', # TYPE_NAME usage
         '-Wno-dangling-else',
+        # -Wsubobject-linkage: warning message is criminally bad, basically it
+        # complains about defining/using something from anonymous namespace in a
+        # header which normally makes sense, except in "*.binding.hpp"s.
+        # unfortunately pragma disabling this warning in the binding files does
+        # not work. see also https://gcc.gnu.org/bugzilla/show_bug.cgi?id=51440
+        '-Wno-subobject-linkage',
     ])
     ctx.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], [
         '-Wno-parentheses-equality', # boost fs, windows build
@@ -264,6 +282,7 @@ def configure_variant(ctx, clang_hack):
 
 def build(bld):
     fixup_msvc()
+    fixup_fail_cxx()
     bld.recurse('ext', name='build', once=False)
 
     import re
@@ -295,24 +314,34 @@ def build_libshit(ctx, pref):
             'src/libshit/lua/user_type.cpp',
         ]
 
-    ctx.stlib(idx      = 50000 + (len(pref)>0),
-              source   = src,
-              uselib   = app,
-              use      = 'BOOST BRIGAND lua',
-              includes = 'src',
-              export_includes = 'src',
-              target   = pref+'libshit')
+    if ctx.env.WITH_TESTS:
+        src += [
+            'test/main.cpp',
+            'test/container/ordered_map.cpp',
+            'test/container/parent_list.cpp',
+        ]
+        if not ctx.env.WITHOUT_LUA:
+            src += [
+                'test/lua/function_call.cpp',
+                'test/lua/function_ref.cpp',
+                'test/lua/type_traits.cpp',
+                'test/lua/user_type.cpp',
+            ]
 
 
-from waflib.Build import BuildContext
-class TestContext(BuildContext):
-    cmd = 'test'
-    fun = 'test'
-Context.g_module.TestContext = TestContext
+    ctx.objects(idx      = 50000 + (len(pref)>0),
+                source   = src,
+                uselib   = app,
+                use      = 'BOOST BRIGAND DOCTEST lua',
+                includes = 'src',
+                export_includes = 'src',
+                target   = pref+'libshit')
 
-def test(bld):
-    build(bld)
 
+################################################################################
+# random utilities
+
+def fixup_fail_cxx():
     # feature fail_cxx: expect compilation failure
     import sys
     from waflib import Logs
@@ -366,37 +395,7 @@ def test(bld):
         ext_in  = ['.h'] # set the build order easily by using ext_out=['.h']
         scan    = c_preproc.scan
 
-    src = [
-        #'test/main.cpp', workaround static lib linking problems, add it in main
-        'test/char_utils.cpp',
-        'test/options.cpp',
-        'test/container/ordered_map.cpp',
-        'test/container/parent_list.cpp',
-    ]
-    if not bld.env.WITHOUT_LUA:
-        src += [
-            'test/lua/base.cpp',
-            'test/lua/function_call.cpp',
-            'test/lua/function_ref.cpp',
-            'test/lua/user_type.cpp',
-        ]
-    bld.objects(idx      = 50002,
-                source   = src,
-                includes = 'src',
-                uselib   = app,
-                use      = 'CATCH libshit',
-                target   = 'libshit-tests')
 
-    if not bld.options.skip_run_tests:
-        bld.add_post_fun(lambda ctx:
-            ctx.exec_command([
-                bld.get_tgen_by_name('run-tests').link_task.outputs[0].abspath(),
-                '--use-colour', 'yes'], cwd=bld.variant_dir) == 0 or ctx.fatal('Test failure')
-        )
-
-
-################################################################################
-# random utilities
 from waflib.Configure import conf
 @conf
 def filter_flags(cfg, vars, flags):

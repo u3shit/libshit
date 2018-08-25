@@ -14,7 +14,6 @@
 #include <boost/config.hpp>
 #include <brigand/sequences/list.hpp>
 #include <cstddef>
-#include <exception>
 #include <functional>
 #include <limits>
 #include <ostream>

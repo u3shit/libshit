@@ -1,202 +1,220 @@
 #include <libshit/lua/user_type.hpp>
-#include <catch.hpp>
 
 #include <libshit/lua/dynamic_object.hpp>
 #include <libshit/meta.hpp>
 #include <libshit/shared_ptr.hpp>
 
-using namespace Libshit;
-using namespace Libshit::Lua;
+#include <libshit/doctest.hpp>
 
-static int global;
-
-struct Smart final : public SmartObject
+namespace Libshit::Lua::Test
 {
-  int x = 0;
+  TEST_SUITE_BEGIN("Libshit::Lua::UserType");
+  static int global;
 
-  LIBSHIT_LUA_CLASS;
-};
-
-struct Foo final : public RefCounted, public DynamicObject
-{
-  int local_var = 0;
-  LIBSHIT_LUAGEN(get="::Libshit::Lua::GetRefCountedOwnedMember")
-  Smart smart;
-  void DoIt(int x) { local_var = x; }
-
-  Foo() = default; // no ctor generated otherwise.. (bug?)
-  ~Foo() { global += 13; }
-
-  LIBSHIT_DYNAMIC_OBJECT;
-};
-
-namespace Bar
-{
-  namespace Baz
+  namespace
   {
-    struct Asdfgh final : public DynamicObject
+    struct Smart final : public SmartObject
     {
-      Asdfgh() = default;
+      int x = 0;
+
+      LIBSHIT_LUA_CLASS;
+    };
+
+    struct Foo final : public RefCounted, public DynamicObject
+    {
+      int local_var = 0;
+      LIBSHIT_LUAGEN(get="::Libshit::Lua::GetRefCountedOwnedMember")
+      Smart smart;
+      void DoIt(int x) { local_var = x; }
+
+      Foo() = default; // no ctor generated otherwise.. (bug?)
+      ~Foo() { global += 13; }
+
+      LIBSHIT_DYNAMIC_OBJECT;
+    };
+
+    namespace Bar
+    {
+      namespace Baz
+      {
+        struct Asdfgh final : public DynamicObject
+        {
+          Asdfgh() = default;
+          LIBSHIT_DYNAMIC_OBJECT;
+        };
+      }
+    }
+
+    struct Baz : public DynamicObject
+    {
+      Baz() = default;
+      void SetGlobal(int val) { global = val; }
+      int GetRandom() { return 4; }
+
       LIBSHIT_DYNAMIC_OBJECT;
     };
   }
-}
 
-struct Baz : public DynamicObject
-{
-  Baz() = default;
-  void SetGlobal(int val) { global = val; }
-  int GetRandom() { return 4; }
+  TEST_CASE("shared check memory")
+  {
+    {
+      State vm;
 
-  LIBSHIT_DYNAMIC_OBJECT;
-};
+      global = 0;
+      const char* str;
+      SUBCASE("normal") str = "local x = libshit.lua.test.foo.new()";
+      SUBCASE("short-cut") str = "local x = libshit.lua.test.foo()";
+      SUBCASE("explicit call") str = "local x = libshit.lua.test.foo():__gc()";
 
-TEST_CASE("shared check memory", "[lua]")
-{
+      vm.DoString(str);
+    }
+    CHECK(global == 13);
+  }
+
+  TEST_CASE("resurrect shared object")
+  {
+    global = 0;
+
+    {
+      State vm;
+      vm.Catch([&]()
+      {
+        auto ptr = MakeSmart<Foo>();
+        vm.Push(ptr);
+        lua_setglobal(vm, "fooobj");
+
+        vm.DoString("fooobj:__gc() assert(getmetatable(fooobj) == nil)");
+        REQUIRE(global == 0);
+
+        vm.Push(ptr);
+        lua_setglobal(vm, "fooobj");
+        vm.DoString("fooobj:do_it(123)");
+        CHECK(global == 0);
+        CHECK(ptr->local_var == 123);
+      });
+    }
+    CHECK(global == 13);
+  }
+
+  TEST_CASE("member function without helpers")
   {
     State vm;
 
-    global = 0;
+    vm.DoString("local x = libshit.lua.test.foo() x:do_it(77) return x");
+    CHECK(vm.Catch([&]() { return vm.Get<Foo>().local_var; }) == 77);
+  }
+
+  TEST_CASE("member function with helpers")
+  {
+    State vm;
+
     const char* str;
-    SECTION("normal") str = "local x = foo.new()";
-    SECTION("short-cut") str = "local x = foo()";
-    SECTION("explicit call") str = "local x = foo():__gc()";
+    int val;
+    SUBCASE("normal call")
+    { str = "libshit.lua.test.baz():set_global(42)"; val = 42; }
+    SUBCASE("sugar")
+    { str = "libshit.lua.test.baz().global = 43"; val = 43; }
+    SUBCASE("read")
+    { str = "local x = libshit.lua.test.baz() x.global = x.random"; val = 4; }
 
     vm.DoString(str);
+    CHECK(global == val);
   }
-  CHECK(global == 13);
-}
 
-TEST_CASE("resurrect shared object", "[lua]")
-{
+  TEST_CASE("field access")
   {
     State vm;
-
-    global = 0;
     auto ptr = MakeSmart<Foo>();
-    vm.Push(ptr);
-    lua_setglobal(vm, "fooobj");
+    vm.Catch([&]()
+    {
+      vm.Push(ptr);
+      lua_setglobal(vm, "foo");
+      ptr->local_var = 13;
+    });
 
-    vm.DoString("fooobj:__gc() assert(getmetatable(fooobj) == nil)");
-    REQUIRE(global == 0);
+    SUBCASE("get")
+    {
+      const char* str;
+      SUBCASE("plain") { str = "return foo:get_local_var()"; }
+      SUBCASE("sugar") { str = "return foo.local_var"; }
+      vm.DoString(str);
+      CHECK(vm.Get<int>() == 13);
+    }
 
-    vm.Push(ptr);
-    lua_setglobal(vm, "fooobj");
-    vm.DoString("fooobj:do_it(123)");
-    CHECK(global == 0);
-    CHECK(ptr->local_var == 123);
+    SUBCASE("set")
+    {
+      const char* str;
+      SUBCASE("plain") { str = "foo:set_local_var(42)"; }
+      SUBCASE("sugar") { str = "foo.local_var = 42"; }
+      vm.DoString(str);
+      CHECK(ptr->local_var == 42);
+    }
   }
-  CHECK(global == 13);
-}
 
-TEST_CASE("member function without helpers", "[lua]")
-{
-  State vm;
-
-  REQUIRE(luaL_loadstring(vm, "local x = foo() x:do_it(77) return x") == 0);
-  lua_call(vm, 0, 1);
-  CHECK(vm.Get<Foo>().local_var == 77);
-}
-
-TEST_CASE("member function with helpers", "[lua]")
-{
-  State vm;
-
-  const char* str;
-  int val;
-  SECTION("normal call") { str = "baz():set_global(42)"; val = 42; }
-  SECTION("sugar") { str = "baz().global = 43"; val = 43; }
-  SECTION("read") { str = "local x = baz() x.global = x.random"; val = 4; }
-
-  vm.DoString(str);
-  CHECK(global == val);
-}
-
-TEST_CASE("field access", "[lua]")
-{
-  State vm;
-  auto ptr = MakeSmart<Foo>();
-  vm.Push(ptr);
-  lua_setglobal(vm, "foo");
-  ptr->local_var = 13;
-
-  SECTION("get")
+  TEST_CASE("invalid field access yields nil")
   {
-    const char* str;
-    SECTION("plain") { str = "return foo:get_local_var()"; }
-    SECTION("sugar") { str = "return foo.local_var"; }
-    vm.DoString(str);
-    CHECK(vm.Get<int>() == 13);
+    State vm;
+    vm.DoString("return libshit.lua.test.foo().bar");
+    CHECK(lua_isnil(vm, -1));
   }
 
-  SECTION("set")
+  TEST_CASE("dotted type name")
   {
-    const char* str;
-    SECTION("plain") { str = "foo:set_local_var(42)"; }
-    SECTION("sugar") { str = "foo.local_var = 42"; }
-    vm.DoString(str);
-    CHECK(ptr->local_var == 42);
+    State vm;
+    vm.DoString("local x = libshit.lua.test.bar.baz.asdfgh()");
   }
-}
 
-TEST_CASE("invalid field access yields nil", "[lua]")
-{
-  State vm;
-  vm.DoString("return foo().bar");
-  CHECK(lua_isnil(vm, -1));
-}
+  TEST_CASE("aliased objects")
+  {
+    State vm;
+    vm.DoString(R"(
+local f = libshit.lua.test.foo()
+assert(f ~= f.smart and f.smart == f.smart)
+f.smart.x = 7
+assert(f.smart.x == 7)
+)");
+  }
 
-TEST_CASE("dotted type name", "[lua]")
-{
-  State vm;
-  vm.DoString("local x = bar.baz.asdfgh()");
-}
+  namespace
+  {
+    struct A : public DynamicObject
+    {
+      int x = 0;
 
-TEST_CASE("aliased objects", "[lua]")
-{
-  State vm;
-  vm.DoString(
-    "local f = foo()\n"
-    "assert(f ~= f.smart and f.smart == f.smart)\n"
-    "f.smart.x = 7\n"
-    "assert(f.smart.x == 7)\n");
-}
+      LIBSHIT_DYNAMIC_OBJECT;
+    };
 
-struct A : public DynamicObject
-{
-  int x = 0;
+    struct B : public DynamicObject
+    {
+      int y = 1;
 
-  LIBSHIT_DYNAMIC_OBJECT;
-};
+      LIBSHIT_DYNAMIC_OBJECT;
+    };
 
-struct B : public DynamicObject
-{
-  int y = 1;
+    struct Multi : public A, public B
+    {
+      Multi() = default;
+      SharedPtr<B> ptr;
 
-  LIBSHIT_DYNAMIC_OBJECT;
-};
+      LIBSHIT_DYNAMIC_OBJECT;
+    };
 
-struct Multi : public A, public B
-{
-  Multi() = default;
-  SharedPtr<B> ptr;
+    static DynamicObject& GetDynamicObject(Multi& m) { return static_cast<A&>(m); }
+  }
 
-  LIBSHIT_DYNAMIC_OBJECT;
-};
-
-static DynamicObject& GetDynamicObject(Multi& m) { return static_cast<A&>(m); }
-
-TEST_CASE("multiple inheritance", "[lua]")
-{
-  State vm;
-  vm.DoString(R"(
-local m = multi()
+  TEST_CASE("multiple inheritance")
+  {
+    State vm;
+    vm.DoString(R"(
+local m = libshit.lua.test.multi()
 m.ptr = m
 m.ptr.y = 13
 assert(m.x == 0, "m.x")
 assert(m.y == 13, "m.y")
 )");
-}
+  }
 
+  TEST_SUITE_END();
+}
 
 #include "user_type.binding.hpp" // IWYU pragma: keep

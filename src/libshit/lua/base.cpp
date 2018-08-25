@@ -10,15 +10,33 @@
 #include <string>
 #include <tuple>
 
+#include "libshit/doctest.hpp"
+
+using namespace std::string_literals;
+
 namespace Libshit::Lua
 {
-
+  TEST_SUITE_BEGIN("Libshit::Lua::State");
   char reftbl;
 
   State::State(int) : StateRef{luaL_newstate()}
   {
     if (!vm) LIBSHIT_THROW(std::bad_alloc, std::make_tuple());
   }
+
+  TEST_CASE("state creation")
+  {
+    State vm;
+    vm.Catch([&]()
+    {
+      luaL_checkversion(vm);
+
+      lua_pushinteger(vm, 123456);
+      auto n = lua_tointeger(vm, -1);
+      CHECK(n == 123456);
+    });
+  }
+
 
   // plain lua needs it
   // probably optional in ljx, but it won't hurt...
@@ -31,6 +49,7 @@ namespace Libshit::Lua
   }
 
 #ifndef LUA_VERSION_LJX
+  // polyfill getfenv/setfenv for plain lua 5.2+
   static void getfunc(lua_State* vm, bool opt)
   {
     if (lua_isfunction(vm, 1))
@@ -79,6 +98,48 @@ namespace Libshit::Lua
   }
 #endif
 
+  TEST_CASE("getfenv/setfenv compat")
+  {
+    State vm;
+    vm.DoString(R"(
+global = 1
+local function luafun() return global end
+assert(getfenv(luafun) == _G)
+assert(luafun() == 1)
+
+setfenv(luafun, {global=2})
+assert(luafun() == 2)
+)");
+
+    vm.DoString(R"(
+local getfenv, setfenv, assert = getfenv, setfenv, assert
+global = 0
+local atbl = {global=1}
+local btbl = {global=2}
+local function a()
+  assert(getfenv(1) == _G)
+  assert(getfenv(2) == _G)
+  setfenv(1, atbl)
+  setfenv(2, btbl)
+  assert(getfenv(1) == atbl)
+  assert(getfenv(2) == btbl)
+
+  return global
+end
+local function b()
+  assert(getfenv(1) == _G)
+  local ret = a()
+  assert(getfenv(1) == btbl)
+  return ret, global
+ end
+local ret = {b()}
+assert(ret[1] == 1)
+assert(ret[2] == 2)
+assert(getfenv(a) == atbl)
+assert(getfenv(b) == btbl)
+)");
+  }
+
   const char* StateRef::TypeName(int idx)
   {
     LIBSHIT_LUA_GETTOP(vm, top);
@@ -93,6 +154,35 @@ namespace Libshit::Lua
     lua_pop(vm, 1); // 0
     LIBSHIT_LUA_CHECKTOP(vm, top);
     return ret;
+  }
+
+  TEST_CASE("TypeName check")
+  {
+    State vm;
+    vm.Catch([&]()
+    {
+      vm.DoString(R"(stuff = setmetatable({}, {__name="stuff"}))");
+      lua_newuserdata(vm, 0); // +1
+      lua_setglobal(vm, "stuff_ud"); // 0
+
+      lua_pushliteral(vm, "foo"); // +1
+      CHECK(vm.TypeName(1) == "string"s);
+      lua_pop(vm, 1); // 0
+      lua_getglobal(vm, "stuff"); // +1
+      CHECK(vm.TypeName(1) == "stuff"s);
+      lua_pop(vm, 1); // 0
+      lua_getglobal(vm, "stuff_ud");
+      CHECK(vm.TypeName(1) == "userdata"s);
+      lua_pop(vm, 1); // 0
+
+      // atm lua uses a pure lua implementation of this method in base_funcs.lua
+      // but check it here anyways as it should work the same
+      vm.DoString(R"(
+assert(typename("foo") == "string")
+assert(typename(stuff) == "stuff")
+assert(typename(stuff_ud) == "userdata")
+)");
+    });
   }
 
   State::State() : State(0)
@@ -213,10 +303,85 @@ namespace Libshit::Lua
     return len;
   }
 
+  TEST_CASE("RawLen01/Ipairs01/Unpack01")
+  {
+    State vm;
+    auto collect = [&]()
+    {
+      bool zero_based = false;
+      std::vector<int> ret;
+      vm.Ipairs01(1, [&](size_t i, int)
+      {
+        if (i == 0) zero_based = true;
+        ret.push_back(lua_tointeger(vm, -1));
+      });
+      return std::make_tuple(zero_based, Move(ret));
+    };
+    using Tuple = decltype(collect());
+
+    lua_pushcfunction(vm, [](lua_State* vm) -> int
+    {
+      return StateRef(vm).Unpack01(1);
+    });
+    lua_setglobal(vm, "myunpack");
+    auto check_unpack = [&](std::initializer_list<int> exp)
+    {
+      LIBSHIT_LUA_GETTOP(vm, top);
+      lua_getglobal(vm, "myunpack");
+      lua_pushvalue(vm, 1);
+      auto old_top = lua_gettop(vm) - 2;
+      lua_call(vm, 1, LUA_MULTRET);
+      auto n = lua_gettop(vm) - old_top;
+
+      REQUIRE(n == exp.size());
+      for (int it : exp)
+        REQUIRE(lua_tointeger(vm, ++old_top) == it);
+      lua_pop(vm, n);
+      LIBSHIT_LUA_CHECKTOP(vm, top);
+    };
+
+    vm.Catch([&]()
+    {
+      lua_createtable(vm, 4, 2);
+      CHECK(vm.RawLen01(1).len == 0);
+
+      lua_pushliteral(vm, "test");
+      lua_setfield(vm, 1, "foo");
+      CHECK(vm.RawLen01(1).len == 0); // non-integer keys are ignored
+      CHECK(collect() == Tuple{false, {}});
+      check_unpack({});
+
+      lua_pushboolean(vm, true);
+      lua_rawseti(vm, 1, -1);
+      CHECK(vm.RawLen01(1).len == 0); // negative keys ignored
+      CHECK(collect() == Tuple{false, {}});
+      check_unpack({});
+
+      lua_pushinteger(vm, 10);
+      lua_rawseti(vm, 1, 1);
+      CHECK(vm.RawLen01(1) == State::RawLen01Ret{1, true});
+      CHECK(collect() == Tuple{false, {10}});
+      check_unpack({10});
+
+      lua_pushinteger(vm, 77);
+      lua_rawseti(vm, 1, 2);
+      CHECK(vm.RawLen01(1) == State::RawLen01Ret{2, true});
+      CHECK(collect() == Tuple{false, {10, 77}});
+      check_unpack({10, 77});
+
+      lua_pushinteger(vm, 42);
+      lua_rawseti(vm, 1, 0);
+      CHECK(vm.RawLen01(1) == State::RawLen01Ret{3, false}); // 0-based
+      CHECK(collect() == Tuple{true, {42, 10, 77}});
+      check_unpack({42, 10, 77});
+    });
+  }
+
 
   void StateRef::SetRecTable(const char* name, int idx)
   {
     LIBSHIT_LUA_GETTOP(vm, top);
+    LIBSHIT_ASSERT_MSG(*name, "name can't be empty");
 
     const char* dot;
     while (dot = strchr(name, '.'))
@@ -250,14 +415,102 @@ namespace Libshit::Lua
     LIBSHIT_LUA_CHECKTOP(vm, top-1);
   }
 
+  TEST_CASE("SetRecTable")
+  {
+    State vm;
+    vm.Catch([&]()
+    {
+      lua_pushliteral(vm, "foo"); // +1
+      lua_createtable(vm, 0, 0);  // +2
+      lua_pushvalue(vm, -1); // +3
+      lua_setglobal(vm, "tbl"); // +2
+      vm.SetRecTable("test", 1); // +1
+      vm.DoString(R"(assert(tbl.test == "foo"))");
+
+      lua_getglobal(vm, "tbl"); // +2
+      vm.SetRecTable("nested.table.hell", 1); // +1
+      vm.DoString(R"(assert(tbl.nested.table.hell == "foo"))");
+
+      lua_getglobal(vm, "tbl"); // +2
+      vm.SetRecTable("nested.table.other_hell", 1); // +1
+      vm.DoString(R"(assert(tbl.nested.table.other_hell == "foo"))");
+
+      lua_getglobal(vm, "tbl"); // +2
+      vm.SetRecTable("nested.something", 1); // +1
+      vm.DoString(R"(assert(tbl.nested.something == "foo"))");
+
+      lua_getglobal(vm, "tbl"); // +2
+    });
+
+    CHECK_THROWS(vm.Catch([&]() { vm.SetRecTable("nested.something.foo", 1); }));
+    vm.DoString(R"(assert(tbl.nested.something == "foo"))");
+  }
+
   void StateRef::DoString(const char* str)
   {
     if (luaL_dostring(vm, str))
-      LIBSHIT_THROW(std::runtime_error, lua_tostring(vm, -1));
+      LIBSHIT_THROW(Error, lua_tostring(vm, -1));
+  }
+
+  TEST_CASE("DoString")
+  {
+    State vm;
+    vm.DoString("global = 3");
+    lua_getglobal(vm, "global");
+    REQUIRE(lua_tointeger(vm, -1) == 3);
+    lua_pop(vm, 1);
+
+    CHECK_THROWS_AS(vm.DoString("error('foo')"), Error);
   }
 
 #ifndef _MSC_VER
   thread_local const char* StateRef::error_msg;
   thread_local size_t StateRef::error_len;
 #endif
+
+  TEST_CASE("Catch lua error")
+  {
+    State vm;
+    try
+    {
+      vm.Catch([&]() { return luaL_error(vm, "foobar"); });
+      FAIL("Expected Catch to throw an Error");
+    }
+    catch (const Error& e)
+    {
+      CHECK(e.what() == "foobar"s);
+    }
+  }
+
+  TEST_CASE("Catch C++ error")
+  {
+    State vm;
+    try
+    {
+      vm.Catch([]() { throw std::runtime_error("zzfoo"); });
+      FAIL("Expected Catch to throw an Error");
+    }
+    catch (const std::runtime_error& e)
+    {
+      CHECK(e.what() == "zzfoo"s);
+    }
+  }
+
+  TEST_CASE("Exception interoperability")
+  {
+    State vm;
+
+    static int global;
+    global = 0;
+    struct DestructorTest
+    {
+      ~DestructorTest() { global = 17; }
+    };
+
+    LIBSHIT_CHECK_LUA_THROWS(
+      vm, DestructorTest tst; luaL_error(vm, "foobaz"), "foobaz");
+    CHECK_MESSAGE(global == 17, "destructor didn't run!");
+  }
+
+  TEST_SUITE_END();
 }

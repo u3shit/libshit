@@ -24,15 +24,19 @@
 - include: ['@<boost/spirit/home/x3/.*>', public,
             '<boost/spirit/home/x3.hpp>', public]
 
+- include: ['<boost/iterator/iterator_traits.hpp>', public,
+            '<boost/algorithm/string/replace.hpp>', public]
+
 # lua
 - include: ['<lua.h>', private, '<lua.hpp>', public]
 - include: ['<lauxlib.h>', private, '<lua.hpp>', public]
 - include: ['<lualib.h>', private, '<lua.hpp>', public]
 
-# catch
-- include: ['@<internal/.*catch.*>', private, '<catch.hpp>', public]
+# doctest
+- include: ['<doctest.h>', private, '<libshit/doctest.hpp>', public]
 
 # stl/libc++
+- include: ['<exception>', public, '<stdexcept>', public]
 # don't require #include <utility> when a map should already include it...
 - symbol: ['std::pair', private, '<utility>', public]
 - symbol: ['std::pair', private, '<map>', public]

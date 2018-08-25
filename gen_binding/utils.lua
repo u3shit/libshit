@@ -28,8 +28,12 @@ function ret.print(str, c)
   print_fancy("", str, c)
 end
 
+local function remove_anon_ns(str)
+  return str:gsub("::%(anonymous namespace%)", "")
+end
+
 function ret.default_name_class(c)
-  return c:name():gsub("<.*", ""): -- eat template arguments
+  return remove_anon_ns(c:name()):gsub("<.*", ""): -- eat template arguments
     gsub("(%u)(%u%l)", "%1_%2"):gsub("(%l)(%u)", "%1_%2"):gsub("::", "."):lower()
 end
 
@@ -72,12 +76,13 @@ local function escape_alias_value(str)
   return "%1" .. escape_gsub_repl(str) .. "%2"
 end
 
+
 local builtins = {
   signed = true, unsigned = true, char = true, short = true, int = true,
   long = true, float = true, double = true, bool = true
 }
 function ret.add_alias(aliases, type, alias)
-  local n = type:name():gsub(
+  local n = remove_anon_ns(type:name()):gsub(
     "([^a-zA-Z:_])([a-zA-Z_][a-zA-Z0-9_]*)([^a-zA-Z0-9_])",
     function(pre, typ, suf)
       if builtins[typ] then return pre..typ..suf
@@ -126,15 +131,17 @@ collect_ns_cur = function(tbl, cur, prio)
   local par = cur:parent()
   while par and par:kind() ~= "TranslationUnit" do
     collect_ns(tbl, par:type())
-    path[i] = par:name()
-    repl[i] = par:displayName()
-    i=i-1
+    if par:name() ~= "" then
+      path[i] = par:name()
+      repl[i] = par:displayName()
+      i=i-1
+    end
     par = par:parent()
   end
 
   path.start = i+1
   path.prio = prio
-  --print("collect ns", table.concat(repl, "::", i+1, 1), table.concat(path, "::", path.start, 1))
+  -- print("collect ns", table.concat(repl, "::", i+1, 1), table.concat(path, "::", path.start, 1))
   tbl["::"..table.concat(repl, "::", i+1, 1)] = path
 end
 
@@ -145,7 +152,7 @@ local function gen_gsub(tbl)
   --print() print("===============================start==========================")
 
   for k,v in pairs(tbl) do
-    local repl = escape_alias_value(k)
+    local repl = escape_alias_value(remove_anon_ns(k))
     --print(k, table.concat(v, "::", v.start, 1))
 
     -- generate fqns too (::Libshit::Foo::Bar)
@@ -185,7 +192,7 @@ end
 
 local function apply_rules(str, pats, verbose)
   if verbose then print(debug.traceback()) end
-  local ret = "#"..str.."#"
+  local ret = "#"..remove_anon_ns(str).."#"
   local chg = true
   if verbose then print("##start", ret) end
   while chg do
@@ -226,7 +233,7 @@ local function type_name(x, aliases, cur)
   end
   for k,v in pairs(tmppats) do pats[k] = v end
 
-  local ret = apply_rules(t:name(), pats, false)
+  local ret = apply_rules(t:name(), pats, false --[[verbose]])
 
   return ret:gsub("std::__cxx11::", "std::"):gsub("std::__1::", "std::")
 end

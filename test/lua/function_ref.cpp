@@ -1,5 +1,4 @@
 #include <libshit/lua/function_ref.hpp>
-#include <catch.hpp>
 
 #include <libshit/lua/dynamic_object.hpp>
 #include <libshit/lua/type_traits.hpp>
@@ -9,99 +8,107 @@
 #include <algorithm>
 #include <vector>
 
-using namespace Libshit;
-using namespace Libshit::Lua;
+#include <libshit/doctest.hpp>
 
-TEST_CASE("Lua FunctionRefs", "[Lua::FunctionRef]")
+namespace Libshit::Lua::Test
 {
-  State vm;
-  vm.DoString("local i = 0 function f(j) i=i+1 return j or i end");
-  REQUIRE(lua_getglobal(vm, "f") == LUA_TFUNCTION);
+  TEST_SUITE_BEGIN("Libshit::Lua::FunctionRef");
 
-  SECTION("FunctionRef")
+  TEST_CASE("FunctionRefs")
   {
-    FunctionRef<> fr{lua_absindex(vm, -1)};
+    State vm;
+    vm.DoString("local i = 0 function f(j) i=i+1 return j or i end");
+    REQUIRE(lua_getglobal(vm, "f") == LUA_TFUNCTION);
 
-    CHECK(fr.Call<int>(vm) == 1);
-    CHECK(fr.Call<int>(vm, 22) == 22);
-    CHECK(fr.Call<int>(vm) == 3);
-    CHECK(fr.Call<int>(vm, "10") == 10); // lua converts string to int
+    SUBCASE("FunctionRef")
+    {
+      FunctionRef<> fr{lua_absindex(vm, -1)};
 
-    CHECK_THROWS(vm.Catch([&]() { fr.Call<int>(vm, "xx"); }));
+      CHECK(fr.Call<int>(vm) == 1);
+      CHECK(fr.Call<int>(vm, 22) == 22);
+      CHECK(fr.Call<int>(vm) == 3);
+      CHECK(fr.Call<int>(vm, "10") == 10); // lua converts string to int
+
+      CHECK_THROWS(vm.Catch([&]() { fr.Call<int>(vm, "xx"); }));
+    }
+
+    SUBCASE("FunctionWrapGen")
+    {
+      FunctionWrapGen<int> fr{vm, lua_absindex(vm, -1)};
+
+      CHECK(fr() == 1);
+      CHECK(fr(77) == 77);
+
+      CHECK_THROWS(vm.Catch([&]() { fr("Hello"); }));
+    }
+
+    SUBCASE("FunctionWrap")
+    {
+      FunctionWrap<int()> fr{vm, lua_absindex(vm, -1)};
+
+      CHECK(fr() == 1);
+      static_assert(std::is_same_v<
+                    decltype(&FunctionWrap<int()>::operator()),
+                    int (FunctionWrap<int()>::*)()>);
+    }
   }
 
-  SECTION("FunctionWrapGen")
+  TEST_CASE("FunctionWrap for stl algorithm")
   {
-    FunctionWrapGen<int> fr{vm, lua_absindex(vm, -1)};
+    State vm;
+    vm.DoString("function f(a, b) return math.abs(a) < math.abs(b) end");
+    REQUIRE(lua_getglobal(vm, "f") == LUA_TFUNCTION);
 
-    CHECK(fr() == 1);
-    CHECK(fr(77) == 77);
+    std::vector<int> v{3, 9, -2, 7, -99, 13, -11};
+    SUBCASE("FunctionWrap")
+    {
+      FunctionWrap<bool (int, int)> fr{vm, lua_absindex(vm, -1)};
+      std::sort(v.begin(), v.end(), fr);
+    }
+    SUBCASE("FunctionWrapGen")
+    {
+      FunctionWrapGen<bool> fr{vm, lua_absindex(vm, -1)};
+      std::sort(v.begin(), v.end(), fr);
+    }
 
-    CHECK_THROWS(vm.Catch([&]() { fr("Hello"); }));
+    std::vector<int> exp{-2, 3, 7, 9, -11, 13, -99};
+    CHECK(v == exp);
   }
 
-  SECTION("FunctionWrap")
+  namespace
   {
-    FunctionWrap<int()> fr{vm, lua_absindex(vm, -1)};
+    struct FunctionRefTest : public SmartObject
+    {
+      template <typename Fun>
+      LIBSHIT_LUAGEN(template_params={"::Libshit::Lua::FunctionWrapGen<int>"})
+      void Cb(Fun f) { x = f(23, "hello"); }
 
-    CHECK(fr() == 1);
-    static_assert(std::is_same_v<
-                  decltype(&FunctionWrap<int()>::operator()),
-                  int (FunctionWrap<int()>::*)()>);
-  }
-}
+      template <typename Fun>
+      LIBSHIT_LUAGEN(template_params={"::Libshit::Lua::FunctionWrap<double(double)>"})
+      void Cb2(Fun f) { y = f(3.1415); }
 
+      int x = 0;
+      double y = 0;
 
-TEST_CASE("Lua::FunctionWrap for stl algorithm", "[Lua::FunctionRef]")
-{
-  State vm;
-  vm.DoString("function f(a, b) return math.abs(a) < math.abs(b) end");
-  REQUIRE(lua_getglobal(vm, "f") == LUA_TFUNCTION);
-
-  std::vector<int> v{3, 9, -2, 7, -99, 13, -11};
-  SECTION("FunctionWrap")
-  {
-    FunctionWrap<bool (int, int)> fr{vm, lua_absindex(vm, -1)};
-    std::sort(v.begin(), v.end(), fr);
-  }
-  SECTION("FunctionWrapGen")
-  {
-    FunctionWrapGen<bool> fr{vm, lua_absindex(vm, -1)};
-    std::sort(v.begin(), v.end(), fr);
+      LIBSHIT_LUA_CLASS;
+    };
   }
 
-  std::vector<int> exp{-2, 3, 7, 9, -11, 13, -99};
-  CHECK(v == exp);
-}
+  TEST_CASE("FunctionWrap parameters")
+  {
+    State vm;
+    auto x = MakeSmart<FunctionRefTest>();
+    vm.Push(x);
+    lua_setglobal(vm, "foo");
 
-struct FunctionRefTest : public SmartObject
-{
-  template <typename Fun>
-  LIBSHIT_LUAGEN(template_params={"::Libshit::Lua::FunctionWrapGen<int>"})
-  void Cb(Fun f) { x = f(23, "hello"); }
+    vm.DoString("foo:cb(function(n, str) return n + #str end)");
+    CHECK(x->x == 23+5);
 
-  template <typename Fun>
-  LIBSHIT_LUAGEN(template_params={"::Libshit::Lua::FunctionWrap<double(double)>"})
-  void Cb2(Fun f) { y = f(3.1415); }
+    vm.DoString("foo:cb2(function(d) return d*2 end)");
+    CHECK(x->y == doctest::Approx(2*3.1415));
+  }
 
-  int x = 0;
-  double y = 0;
-
-  LIBSHIT_LUA_CLASS;
-};
-
-TEST_CASE("Lua::FunctionWrap parameters")
-{
-  State vm;
-  auto x = MakeSmart<FunctionRefTest>();
-  vm.Push(x);
-  lua_setglobal(vm, "foo");
-
-  vm.DoString("foo:cb(function(n, str) return n + #str end)");
-  CHECK(x->x == 23+5);
-
-  vm.DoString("foo:cb2(function(d) return d*2 end)");
-  CHECK(x->y == Approx(2*3.1415));
+  TEST_SUITE_END();
 }
 
 #include "function_ref.binding.hpp" // IWYU pragma: keep

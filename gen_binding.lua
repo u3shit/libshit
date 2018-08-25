@@ -20,7 +20,7 @@ local args = {
   "-Ilibshit/src",
   "-Ilibshit/ext/boost",
   "-Ilibshit/ext/ljx/src",
-  "-Ilibshit/ext/catch/include",
+  "-Ilibshit/ext/doctest/doctest",
   "-Ilibshit/ext/brigand/include",
   "-std=c++1z",
   "-stdlib=libc++", -- probably better c++1* support than random gcc headers

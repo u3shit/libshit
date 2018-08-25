@@ -8,7 +8,7 @@
 #include "libshit/except.hpp"
 
 #include <cstddef>
-#include <exception>
+#include <exception> // IWYU pragma: export
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -63,6 +63,23 @@ namespace Libshit::Lua
 #endif
     }
 
+    // for use with doctest
+#define LIBSHIT_CHECK_LUA_THROWS(vm, expr, substr)       \
+    do                                                   \
+      try                                                \
+      {                                                  \
+        vm.Catch([&]() { expr; });                       \
+        FAIL("Expected to throw an Error");              \
+      }                                                  \
+      catch (const Libshit::Lua::Error& e)               \
+      {                                                  \
+        auto ewhat = e.what();                           \
+        CAPTURE(ewhat); CAPTURE(substr);                 \
+        CHECK(std::strstr(e.what(), substr) != nullptr); \
+      }                                                  \
+    while (0)
+
+
     template <typename T> void Push(T&& t)
     {
       LIBSHIT_LUA_GETTOP(vm, top);
@@ -78,7 +95,7 @@ namespace Libshit::Lua
     void PushFunction(lua_CFunction fun) { lua_pushcfunction(vm, fun); }
 
     // pop table, set table[name] to val at idx; +0 -1
-    void SetRecTable(const char* name, int idx = -1);
+    void SetRecTable(const char* name, int idx);
 
     // use optional<T>::value_or to get default value
     // todo: no optional in vs
@@ -98,6 +115,7 @@ namespace Libshit::Lua
     { return TypeTraits<T>::Is(*this, idx); }
 
     const char* TypeName(int idx);
+    // throws normal C++ exception on error
     void DoString(const char* str);
 
     constexpr operator lua_State*() noexcept { return vm; }
@@ -107,7 +125,14 @@ namespace Libshit::Lua
     BOOST_NORETURN
     void GetError(bool arg, int idx, const char* msg);
 
-    struct RawLen01Ret { std::size_t len; bool one_based; };
+    struct RawLen01Ret
+    {
+      std::size_t len; bool one_based;
+      constexpr bool operator==(RawLen01Ret o) const noexcept
+      { return len == o.len && one_based == o.one_based; }
+      constexpr bool operator!=(RawLen01Ret o) const noexcept
+      { return !(*this == o); }
+    };
     RawLen01Ret RawLen01(int idx);
     template <typename Fun>
     void Ipairs01(int idx, Fun f)
