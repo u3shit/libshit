@@ -277,6 +277,26 @@ def build_ljx(ctx, minilua, host_env, pref, suf, offs):
         source   = src,
         target   = pref+'jit/vmdef.lua')
 
+    to_cp = [
+        'bc.lua',
+        'bcsave.lua',
+        'dis_arm.lua',
+        'dis_mipsel.lua',
+        'dis_mips.lua',
+        'dis_ppc.lua',
+        'dis_x64.lua',
+        'dis_x86.lua',
+        'dump.lua',
+        'p.lua',
+        'v.lua',
+        'zone.lua',
+    ]
+    ctx(rule        = 'cp ${SRC} ${TGT[0].parent.abspath()}',
+        cls_keyword = lambda x: 'cp',
+        source      = list(map(lambda x: 'ljx/src/jit/'+x, to_cp)),
+        target      = list(map(lambda x: pref+'jit/'+x, to_cp)),
+        shell       = False)
+
 
     ver = 'LJX_VERSION="%s"' % ctx.path.find_node('ljx/.version').read().strip()
     ctx(idx             = offs+6,
