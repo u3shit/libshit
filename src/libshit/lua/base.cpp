@@ -2,9 +2,11 @@
 
 #include "libshit/assert.hpp"
 #include "libshit/lua/base_funcs.lua.h"
+#include "libshit/utils.hpp"
 
 #include <climits>
 #include <cstring>
+#include <initializer_list>
 #include <new>
 #include <sstream>
 #include <string>
@@ -42,7 +44,7 @@ namespace Libshit::Lua
   // probably optional in ljx, but it won't hurt...
   static int panic(lua_State* vm)
   {
-    size_t len;
+    std::size_t len;
     auto msg = lua_tolstring(vm, -1, &len);
     if (msg) LIBSHIT_THROW(Error, std::string{msg, len});
     else LIBSHIT_THROW(Error, "Lua PANIC");
@@ -227,7 +229,7 @@ assert(typename(stuff_ud) == "userdata")
 
 #ifdef _MSC_VER
   int StateRef::SEHFilter(lua_State* vm, unsigned code,
-                          const char** error_msg, size_t* error_len)
+                          const char** error_msg, std::size_t* error_len)
   {
     if ((code & 0xffffff00) != 0xe24c4a00)
       return EXCEPTION_CONTINUE_SEARCH;
@@ -275,9 +277,9 @@ assert(typename(stuff_ud) == "userdata")
     return {len + !IsNoneOrNil(type), IsNoneOrNil(type)};
   }
 
-  std::pair<size_t, int> StateRef::Ipairs01Prep(int idx)
+  std::pair<std::size_t, int> StateRef::Ipairs01Prep(int idx)
   {
-    size_t i = 0;
+    std::size_t i = 0;
     int type;
     if (IsNoneOrNil(type = lua_rawgeti(vm, idx, i))) // +1
     {
@@ -287,7 +289,7 @@ assert(typename(stuff_ud) == "userdata")
     return {i, type};
   }
 
-  size_t StateRef::Unpack01(int idx)
+  std::size_t StateRef::Unpack01(int idx)
   {
     LIBSHIT_LUA_GETTOP(vm, top);
     LIBSHIT_ASSERT(idx > 0);
@@ -296,7 +298,7 @@ assert(typename(stuff_ud) == "userdata")
     if (len > INT_MAX || !lua_checkstack(vm, len))
       luaL_error(vm, "too many items to unpack");
 
-    for (size_t i = 0; i < len; ++i)
+    for (std::size_t i = 0; i < len; ++i)
       lua_rawgeti(vm, idx, i + one);
 
     LIBSHIT_LUA_CHECKTOP(vm, int(top+len));
@@ -310,7 +312,7 @@ assert(typename(stuff_ud) == "userdata")
     {
       bool zero_based = false;
       std::vector<int> ret;
-      vm.Ipairs01(1, [&](size_t i, int)
+      vm.Ipairs01(1, [&](std::size_t i, int)
       {
         if (i == 0) zero_based = true;
         ret.push_back(lua_tointeger(vm, -1));
@@ -465,7 +467,7 @@ assert(typename(stuff_ud) == "userdata")
 
 #ifndef _MSC_VER
   thread_local const char* StateRef::error_msg;
-  thread_local size_t StateRef::error_len;
+  thread_local std::size_t StateRef::error_len;
 #endif
 
   TEST_CASE("Catch lua error")

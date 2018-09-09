@@ -8,7 +8,7 @@ test/lua/user_type.cpp should remove these lines:
 
 The full include-list for test/lua/user_type.cpp:
 #include <libshit/lua/user_type.hpp>
-#include <libshit/doctest.hpp>             // for Subcase, ResultBuilder
+#include <libshit/doctest.hpp>             // for SUBCASE, CHECK, TEST_CASE
 #include <libshit/lua/dynamic_object.hpp>  // for LIBSHIT_DYNAMIC_OBJECT
 #include <libshit/meta.hpp>                // for LIBSHIT_LUAGEN
 #include <libshit/shared_ptr.hpp>          // for MakeSmart, RefCounted, Sha...

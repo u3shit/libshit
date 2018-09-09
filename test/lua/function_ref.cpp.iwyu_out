@@ -9,7 +9,7 @@ test/lua/function_ref.cpp should remove these lines:
 The full include-list for test/lua/function_ref.cpp:
 #include <libshit/lua/function_ref.hpp>
 #include <algorithm>                       // for sort
-#include <libshit/doctest.hpp>             // for ResultBuilder, CHECK, Subcase
+#include <libshit/doctest.hpp>             // for CHECK, SUBCASE, TEST_CASE
 #include <libshit/lua/dynamic_object.hpp>  // for SmartObject
 #include <libshit/lua/type_traits.hpp>     // for LIBSHIT_LUA_CLASS
 #include <libshit/meta.hpp>                // for LIBSHIT_LUAGEN

@@ -1,1 +1,49 @@
-/var/tmp/portage/dev-util/include-what-you-use-6.0/work/include-what-you-use-clang_6.0/iwyu.cc:3311: Assertion failed: class_decl && "TemplateSpecializationType is not a TplSpecDecl?"
+
+src/libshit/lua/base.hpp should add these lines:
+#include <lauxlib.h>             // for luaL_loadbuffer
+#include <lua.h>                 // for lua_gettop, lua_rawgeti, lua_State
+#include <cstring>               // for size_t, strstr
+#include "libshit/doctest.hpp"   // for CAPTURE, CCAPTURE, CHECK, FAIL
+#include "libshit/lua/base.hpp"  // for Error::Error
+
+src/libshit/lua/base.hpp should remove these lines:
+- #include <cstddef>  // lines 10-10
+
+The full include-list for src/libshit/lua/base.hpp:
+#include <lauxlib.h>             // for luaL_loadbuffer
+#include <lua.h>                 // for lua_gettop, lua_rawgeti, lua_State
+#include <boost/config.hpp>      // for BOOST_NORETURN
+#include <cstring>               // for size_t, strstr
+#include <exception>             // for exception
+#include <lua.hpp>
+#include <stdexcept>             // for runtime_error
+#include <type_traits>           // for decay_t
+#include <utility>               // for forward, pair
+#include <vector>                // for vector
+#include "libshit/assert.hpp"    // for LIBSHIT_ASSERT
+#include "libshit/doctest.hpp"   // for CAPTURE, CCAPTURE, CHECK, FAIL
+#include "libshit/except.hpp"    // for LIBSHIT_GEN_EXCEPTION_TYPE
+#include "libshit/lua/base.hpp"  // for Error::Error
+namespace Libshit { namespace Lua { template <typename T, typename Enable = void> struct TypeTraits; } }  // lines 35-36
+---
+
+src/libshit/lua/base.cpp should add these lines:
+#include <cstddef>                       // for size_t
+
+src/libshit/lua/base.cpp should remove these lines:
+
+The full include-list for src/libshit/lua/base.cpp:
+#include "libshit/lua/base.hpp"
+#include <climits>                       // for INT_MAX
+#include <cstddef>                       // for size_t
+#include <cstring>                       // for strcmp, strchr
+#include <initializer_list>              // for initializer_list
+#include <new>                           // for bad_alloc
+#include <sstream>                       // for operator<<, basic_ostream
+#include <string>                        // for operator==, operator""s, bas...
+#include <tuple>                         // for make_tuple
+#include "libshit/assert.hpp"            // for StringContainer, LIBSHIT_ASSERT
+#include "libshit/doctest.hpp"           // for CHECK, TEST_CASE, REQUIRE, FAIL
+#include "libshit/lua/base_funcs.lua.h"  // for luaJIT_BC_base_funcs, luaJIT...
+#include "libshit/utils.hpp"             // for Move
+---

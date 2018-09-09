@@ -20,6 +20,12 @@
 #  undef DOCTEST_REQUIRE
 #  define DOCTEST_REQUIRE(...) (true ? ((void) 0) : ((void) (__VA_ARGS__)))
 
+#  undef DOCTEST_CHECK_THROWS
+#  define DOCTEST_CHECK_THROWS(expr) ((void) expr)
+#  undef DOCTEST_CHECK_THROWS_AS
+#  define DOCTEST_CHECK_THROWS_AS(expr, ...) \
+  try { expr; } catch (const __VA_ARGS__&) {}
+
 #endif
 
 // like CAPTURE but not lazy (so it works with rvalues too)
