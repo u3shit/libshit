@@ -5,27 +5,29 @@ libshit_cross = getattr(Context.g_module, 'LIBSHIT_CROSS', False)
 
 def options(ctx):
     ctx.system_opt('brigand', cross=libshit_cross)
-    ctx.system_opt('doctest')
+    ctx.system_opt('doctest', cross=libshit_cross)
 
     ctx.recurse('.', name='options', wscript='wscript_boost', once=False)
     ctx.recurse('.', name='options', wscript='wscript_lua', once=False)
 
 def configure(ctx):
-    def system_doctest(ctx):
-        ctx.check_cxx(header_name='doctest.h', uselib_store='DOCTEST')
-        ctx.undefine('HAVE_DOCTEST_H') # why must u define it
     def system_brigand(ctx):
         ctx.check_cfg(package='libbrigand', args='--cflags',
                       global_define=True, uselib_store='BRIGAND')
         ctx.undefine('HAVE_LIBBRIGAND') # ...
-
-    ctx.system_chk('doctest', 'auto', system_doctest, 'doctest/doctest')
-    if ctx.env.WITH_TESTS:
-        ctx.env.append_value('DEFINES_DOCTEST', 'DOCTEST_CONFIG_SUPER_FAST_ASSERTS')
-    else:
-        ctx.env.append_value('DEFINES_DOCTEST', 'DOCTEST_CONFIG_DISABLE')
-
     ctx.system_chk('brigand', 'auto', system_brigand, 'brigand/include', libshit_cross)
+
+    def system_doctest(ctx):
+        ctx.check_cxx(header_name='doctest.h', uselib_store='DOCTEST')
+        ctx.undefine('HAVE_DOCTEST_H') # why must u define it
+    def doctest_post(ctx):
+        if ctx.env.WITH_TESTS: # will be false with host variant
+            ctx.env.append_value(
+                'DEFINES_DOCTEST', 'DOCTEST_CONFIG_SUPER_FAST_ASSERTS')
+        else:
+            ctx.env.append_value('DEFINES_DOCTEST', 'DOCTEST_CONFIG_DISABLE')
+    ctx.system_chk('doctest', 'auto', system_doctest, 'doctest/doctest',
+                   cross=libshit_cross, post_chk=doctest_post)
 
     ctx.recurse('.', name='configure', wscript='wscript_boost', once=False)
     ctx.recurse('.', name='configure', wscript='wscript_lua', once=False)

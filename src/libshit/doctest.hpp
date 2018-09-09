@@ -22,4 +22,9 @@
 
 #endif
 
+// like CAPTURE but not lazy (so it works with rvalues too)
+#define CCAPTURE(x)                         \
+  const auto& capture_tmp_##__LINE__ = (x); \
+  DOCTEST_INFO(#x " = " << capture_tmp_##__LINE__)
+
 #endif

@@ -514,7 +514,8 @@ from waflib.Errors import ConfigurationError
 from waflib import Utils
 @conf
 # bundle_chk: if string, header only lib's include path
-def system_chk(ctx, name, default, system_chk, bundle_chk, cross=False):
+def system_chk(ctx, name, default, system_chk, bundle_chk, cross=False,
+               post_chk=None):
     envname = 'BUILD_' + Utils.quote_define_name(name)
     hasname = 'HAS_'  + Utils.quote_define_name(name)
 
@@ -523,9 +524,12 @@ def system_chk(ctx, name, default, system_chk, bundle_chk, cross=False):
             pass
         bundle_chk = fun
     if isinstance(bundle_chk, str):
-        incl_dir = ctx.path.find_dir(bundle_chk).abspath()
+        incl_dir = ctx.path.find_dir(bundle_chk)
+        if not incl_dir:
+            ctx.fatal('%s/%s not found. Are git submodules missing?' %
+                      (ctx.path.abspath(), bundle_chk))
         def fun(ctx):
-            ctx.env['SYSTEM_INCLUDES_'+name.upper()] = incl_dir
+            ctx.env['SYSTEM_INCLUDES_'+name.upper()] = incl_dir.abspath()
         bundle_chk = fun
 
     def x(name):
@@ -535,6 +539,7 @@ def system_chk(ctx, name, default, system_chk, bundle_chk, cross=False):
                 system_chk(ctx)
                 ctx.env[envname] = False
                 ctx.env[hasname] = True
+                if post_chk: post_chk(ctx)
                 ctx.msg('Using '+name, 'system')
                 return
             except ConfigurationError:
@@ -543,9 +548,10 @@ def system_chk(ctx, name, default, system_chk, bundle_chk, cross=False):
         if opt == 'auto' or opt == 'bundle':
             try:
                 bundle_chk(ctx)
-                ctx.msg('Using '+name, 'bundled')
                 ctx.env[envname] = True
                 ctx.env[hasname] = True
+                if post_chk: post_chk(ctx)
+                ctx.msg('Using '+name, 'bundled')
                 return
             except ConfigurationError:
                 if opt == 'bundle': raise
