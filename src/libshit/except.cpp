@@ -7,7 +7,10 @@
 #include <atomic>
 #include <cstdlib>
 #include <map>
+#include <memory>
+#include <new>
 #include <typeinfo>
+#include <variant>
 
 #define LIBSHIT_LOG_NAME "except"
 #include "libshit/logger_helper.hpp"
@@ -97,15 +100,27 @@ namespace Libshit
     RETHROW(std::range_error)
     RETHROW(std::overflow_error)
     RETHROW(std::underflow_error)
-    //RETHROW(std::regex_error)
+    //RETHROW(std::regex_error) not used
+    RETHROW(std::ios_base::failure)
+    //RETRHOW(std::filesystem::filesystem_error) fs not supported in vc12
     RETHROW(std::system_error)
     RETHROW(std::runtime_error)
+
+    //RETHROW(std::bad_optional_access) no optional in vc12
 
     RETHROW(std::domain_error)
     RETHROW(std::invalid_argument)
     RETHROW(std::length_error)
     RETHROW(std::out_of_range)
     RETHROW(std::logic_error)
+
+    RETHROW(std::bad_typeid)
+    RETHROW(std::bad_cast)
+    RETHROW(std::bad_weak_ptr)
+    RETHROW(std::bad_function_call)
+    RETHROW(std::bad_alloc)
+    RETHROW(std::bad_exception)
+    RETHROW(std::bad_variant_access)
   }
 
   std::string ExceptionToString(const Exception& e)

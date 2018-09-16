@@ -171,9 +171,11 @@ namespace Libshit
     throw;                                         \
   }
 
-  LIBSHIT_GEN_EXCEPTION_TYPE(DecodeError, std::runtime_error);
-  LIBSHIT_GEN_EXCEPTION_TYPE(OutOfRange,  std::out_of_range);
-  LIBSHIT_GEN_EXCEPTION_TYPE(SystemError, std::system_error);
+  LIBSHIT_GEN_EXCEPTION_TYPE(DecodeError,    std::runtime_error);
+  LIBSHIT_GEN_EXCEPTION_TYPE(OutOfRange,     std::out_of_range);
+  LIBSHIT_GEN_EXCEPTION_TYPE(SystemError,    std::system_error);
+  /// Virtual method not implemented
+  LIBSHIT_GEN_EXCEPTION_TYPE(NotImplemented, std::logic_error);
 
 #define LIBSHIT_VALIDATE_FIELD(msg, x)                                    \
   while (!(x)) LIBSHIT_THROW(Libshit::DecodeError, msg ": invalid data",  \
