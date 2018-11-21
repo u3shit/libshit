@@ -26,6 +26,8 @@ namespace Libshit
 
     Function& operator=(Function&& o) noexcept = default;
 
+    void reset() noexcept { fun.reset(); }
+
     explicit operator bool() const noexcept { return static_cast<bool>(fun); }
     Ret operator()(Args... args) const
     {
