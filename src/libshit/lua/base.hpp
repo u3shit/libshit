@@ -59,7 +59,6 @@ namespace Libshit::Lua
       try { return f(std::forward<Args>(args)...); }
       catch (const std::exception&) { throw; }
       catch (...) { HandleDotdotdotCatch(); }
-      throw Error{{error_msg, error_len}};
 #endif
     }
 
@@ -171,9 +170,7 @@ namespace Libshit::Lua
     static int SEHFilter(lua_State* vm, unsigned code,
                          const char** error_msg, std::size_t* error_len);
 #else
-    void HandleDotdotdotCatch();
-    static thread_local const char* error_msg;
-    static thread_local std::size_t error_len;
+    BOOST_NORETURN void HandleDotdotdotCatch();
 #endif
   };
 

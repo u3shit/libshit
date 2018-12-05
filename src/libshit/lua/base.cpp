@@ -245,8 +245,10 @@ assert(typename(stuff_ud) == "userdata")
   {
     if (lua_gettop(vm) == 0 || !lua_isstring(vm, -1)) throw;
 
-    error_msg = lua_tolstring(vm, -1, &error_len);
-    if (strcmp(error_msg, "C++ exception") == 0) throw;
+    std::size_t len;
+    auto msg = lua_tolstring(vm, -1, &len);
+    if (strcmp(msg, "C++ exception") == 0) throw;
+    throw Error{{msg, len}};
   }
 #endif
 
@@ -464,11 +466,6 @@ assert(typename(stuff_ud) == "userdata")
 
     CHECK_THROWS_AS(vm.DoString("error('foo')"), Error);
   }
-
-#ifndef _MSC_VER
-  thread_local const char* StateRef::error_msg;
-  thread_local std::size_t StateRef::error_len;
-#endif
 
   TEST_CASE("Catch lua error")
   {
