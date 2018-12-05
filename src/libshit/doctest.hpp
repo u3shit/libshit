@@ -26,11 +26,14 @@
 #  define DOCTEST_CHECK_THROWS_AS(expr, ...) \
   try { expr; } catch (const __VA_ARGS__&) {}
 
-#endif
+#define CCAPTURE(x)
+
+#else
 
 // like CAPTURE but not lazy (so it works with rvalues too)
 #define CCAPTURE(x)                         \
   const auto& capture_tmp_##__LINE__ = (x); \
   DOCTEST_INFO(#x " = " << capture_tmp_##__LINE__)
 
+#endif
 #endif
