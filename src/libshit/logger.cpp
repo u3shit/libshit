@@ -128,22 +128,36 @@ namespace Libshit::Logger
         std::ios_base::sync_with_stdio(false);
 
 #ifdef WINDOWS
-        colors = _isatty(2);
+        win_colors = _isatty(2);
 #else
         const char* x;
-        colors = isatty(2) &&
+        ansi_colors = isatty(2) &&
           (x = getenv("TERM")) ? strcmp(x, "dummy") != 0 : false;
 #endif
       }
-      bool colors;
-    };
-    static Global global;
 
-    static size_t max_name = 8;
+      bool win_colors = false;
+      bool ansi_colors = false;
+    };
+  }
+  static Global global;
+
+  static Option ansi_colors_opt{
+    GetOptionGroup(), "ansi-colors", 0, nullptr,
+    "Force output colorization with ASCII escape sequences",
+    [](auto&&) { global.win_colors = false; global.ansi_colors = true; }};
+  static Option no_colors_opt{
+    GetOptionGroup(), "no-colors", 0, nullptr,
+    "Disable output colorization",
+    [](auto&&) { global.win_colors = false; global.ansi_colors = false; }};
+
+  static size_t max_name = 8;
 #ifndef NDEBUG
-    static size_t max_file = 20, max_fun = 20;
+  static size_t max_file = 20, max_fun = 20;
 #endif
 
+  namespace
+  {
     struct LogBuffer final : public std::streambuf
     {
       std::streamsize xsputn(const char* msg, std::streamsize n) override
@@ -200,10 +214,10 @@ namespace Libshit::Logger
 #ifdef WINDOWS
         HANDLE h;
         int color;
-#endif
-        if (global.colors)
+
+        if (global.win_colors)
         {
-#ifdef WINDOWS
+
           os.flush();
           h = GetStdHandle(STD_ERROR_HANDLE);
           switch (level)
@@ -216,7 +230,10 @@ namespace Libshit::Logger
             break;
           }
           SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | color);
-#else
+        }
+#endif
+        if (global.ansi_colors)
+        {
           switch (level)
           {
           case ERROR:   os << "\033[1;31m"; break;
@@ -224,8 +241,8 @@ namespace Libshit::Logger
           case INFO:    os << "\033[1;32m"; break;
           default:      os << "\033[1m";    break;
           }
-#endif
         }
+
         switch (level)
         {
         case ERROR:   os << "ERROR"; break;
@@ -236,15 +253,15 @@ namespace Libshit::Logger
 
         max_name = std::max(max_name, std::strlen(name));
         os << '[' << std::setw(max_name) << name << ']';
-        if (global.colors)
-        {
+
 #ifdef WINDOWS
+        if (global.win_colors)
+        {
           os.flush();
           SetConsoleTextAttribute(h, color);
-#else
-          os << "\033[22m";
-#endif
         }
+#endif
+        if (global.ansi_colors) os << "\033[22m";
 
 #ifndef NDEBUG
         if (file)
@@ -264,17 +281,17 @@ namespace Libshit::Logger
 
       void WriteEnd()
       {
-        if (global.colors)
-        {
 #ifdef WINDOWS
+        if (global.win_colors)
+        {
           os.flush();
           SetConsoleTextAttribute(
             GetStdHandle(STD_ERROR_HANDLE),
             FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-#else
-          os << "\033[0m";
-#endif
         }
+#endif
+        if (global.ansi_colors) os << "\033[0m";
+
         os << '\n';
       }
 
@@ -289,22 +306,15 @@ namespace Libshit::Logger
     };
   }
 
-#ifdef _MSC_VER
-  // crashes, at least with clang+msvc12
-#define THREAD_LOCAL
-#else
-#define THREAD_LOCAL thread_local
-#endif
-  static THREAD_LOCAL LogBuffer filter;
-  static THREAD_LOCAL std::ostream log_os{&filter};
-#undef THREAD_LOCAL
-
   bool CheckLog(const char* name, int level) noexcept
   {
     auto it = level_map.find(name);
     if (it != level_map.end()) return it->second >= level;
     else return global_level >= level;
   }
+
+  static thread_local LogBuffer filter;
+  static thread_local std::ostream log_os{&filter};
 
   std::ostream& Log(
     const char* name, int level, const char* file, unsigned line,
