@@ -1,6 +1,8 @@
 // -*- c++ -*-
 #pragma once
 
+#define __cpp_lib_integer_sequence
+
 #include "mpark_variant.hpp"
 
 namespace std

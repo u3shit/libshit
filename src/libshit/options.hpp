@@ -39,7 +39,7 @@ namespace Libshit
 
   struct Option final
   {
-    using Func = Function<void (std::vector<const char*>&&)>;
+    using Func = Function<void (std::vector<const char*>&&) const>;
     Option(OptionGroup& group, const char* name, char short_name,
            std::size_t args_count, const char* args_help, const char* help,
            Func func)
