@@ -5,8 +5,10 @@
 #include "libshit/assert.hpp"
 #include "libshit/utils.hpp"
 
+#include <cstddef>
 #include <functional>
-#include <memory>
+#include <new>
+#include <type_traits>
 #include <utility>
 
 namespace Libshit
@@ -52,7 +54,7 @@ namespace Libshit
     FunctionImpl(T t) : vptr{&static_vptr<T>}
     {
       LIBSHIT_STATIC_WARNING(!std::is_pointer_v<T>, use_FUNC_if_possible);
-      VptrImpl<T>::Construct(&buf, std::move(t));
+      VptrImpl<T>::Construct(&buf, Move(t));
     }
 
     template <typename T, typename... CArgs>
@@ -134,7 +136,7 @@ namespace Libshit
         },
         [](void* buf) noexcept { static_cast<T*>(buf)->~T(); },
         [](void* new_buf, void* old_buf) noexcept
-        { new (new_buf) T(std::move(*static_cast<T*>(old_buf))); }} {}
+        { new (new_buf) T(Move(*static_cast<T*>(old_buf))); }} {}
 
       template <typename... CArgs>
       static void Construct(void* buf, CArgs&&... args)

@@ -1,1 +1,0 @@
-/var/tmp/portage/dev-util/include-what-you-use-6.0/work/include-what-you-use-clang_6.0/iwyu.cc:3311: Assertion failed: class_decl && "TemplateSpecializationType is not a TplSpecDecl?"

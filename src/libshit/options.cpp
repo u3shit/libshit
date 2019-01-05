@@ -1,10 +1,15 @@
 #include "libshit/options.hpp"
 
+#include <algorithm>
 #include <array>
 #include <climits>
 #include <cstring>
+#include <functional>
 #include <iostream>
+#include <iterator>
 #include <map>
+#include <string>
+#include <type_traits>
 
 #include "libshit/doctest.hpp"
 
@@ -276,7 +281,7 @@ namespace Libshit
           short_opts[static_cast<unsigned char>(o->short_name)] = o;
         }
 
-        auto x = long_opts.insert(std::make_pair(o->name, o));
+        auto x = long_opts.emplace(o->name, o);
         if (!x.second)
           LIBSHIT_THROW(std::logic_error, "Duplicate long option");
       }

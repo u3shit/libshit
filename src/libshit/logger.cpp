@@ -17,9 +17,11 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
+#include <functional>
 #include <iomanip>
+#include <iostream>
 #include <map>
+#include <string>
 
 #ifndef WINDOWS
 #include <unistd.h>

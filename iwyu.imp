@@ -27,6 +27,10 @@
 - include: ['<boost/iterator/iterator_traits.hpp>', public,
             '<boost/algorithm/string/replace.hpp>', public]
 
+# token_functions errors if I directly include it
+- include: ['<boost/token_functions.hpp>', private,
+            '<boost/tokenizer.hpp>', public]
+
 # lua
 - include: ['<lua.h>', private, '<lua.hpp>', public]
 - include: ['<lauxlib.h>', private, '<lua.hpp>', public]

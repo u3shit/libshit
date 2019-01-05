@@ -4,6 +4,7 @@ src/libshit/lua/base.hpp should add these lines:
 #include <lua.h>               // for lua_gettop, lua_rawgeti, lua_State
 
 src/libshit/lua/base.hpp should remove these lines:
+- #include <cstring>  // lines 11-11
 
 The full include-list for src/libshit/lua/base.hpp:
 #include <lauxlib.h>           // for luaL_loadbuffer
@@ -18,5 +19,5 @@ The full include-list for src/libshit/lua/base.hpp:
 #include <vector>              // for vector
 #include "libshit/assert.hpp"  // for LIBSHIT_ASSERT
 #include "libshit/except.hpp"  // for LIBSHIT_GEN_EXCEPTION_TYPE
-namespace Libshit { namespace Lua { template <typename T, typename Enable = void> struct TypeTraits; } }  // lines 35-36
+namespace Libshit { namespace Lua { template <typename T, typename Enable = void> struct TypeTraits; } }  // lines 36-37
 ---

@@ -22,7 +22,6 @@ flags+=(
     -isystem "$dir/ext/lua-5.3.4/src"
     -isystem "$dir/ext/doctest/doctest"
     -Wno-parentheses -Wno-dangling-else
-    -DDOCTEST_CONFIG_DISABLE
 )
 
 accept=false

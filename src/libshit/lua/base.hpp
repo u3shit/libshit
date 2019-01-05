@@ -8,6 +8,7 @@
 #include "libshit/except.hpp"
 
 #include <cstddef>
+#include <cstring>
 #include <exception> // IWYU pragma: export
 #include <stdexcept>
 #include <type_traits>

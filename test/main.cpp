@@ -2,6 +2,7 @@
 #include <libshit/doctest.hpp>
 
 #include <libshit/except.hpp>
+#include <libshit/function.hpp>
 #include <libshit/options.hpp>
 #include <libshit/utils.hpp>
 
