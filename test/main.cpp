@@ -237,5 +237,5 @@ namespace Libshit
 
   static Option opt{grp, "test", std::size_t(-1), "ARGS...",
       "Run doctest tests (\"--test --help\" for details)\n\t"
-      "Remaining arguments will be passed to doctest", Fun};
+      "Remaining arguments will be passed to doctest", FUNC<Fun>};
 }

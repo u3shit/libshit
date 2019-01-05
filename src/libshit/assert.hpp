@@ -57,6 +57,21 @@ namespace Libshit
     const char* expr, const char* msg, const char* file, unsigned line,
     const char* fun);
 
+  /**
+   * Dummy type that does nothing but should not generate an unused variable
+   * warning because it has a non-default ctor.
+   */
+  struct UnusedVariable { UnusedVariable() noexcept {} };
+
+  /**
+   * Similar to `static_assert`, but only works in functions and should only
+   * produce a warning instead of an error.
+   * @param cond diagnose if this is false
+   * @param var a "message", which must be a valid C++ identifier.
+   */
+#define LIBSHIT_STATIC_WARNING(cond, var) \
+  std::conditional_t<(cond), ::Libshit::UnusedVariable, int> var
+
 }
 
 #endif

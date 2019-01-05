@@ -11,6 +11,19 @@
 
 namespace Libshit
 {
+  template <auto Fun>
+  struct Func
+  {
+    template <typename... Args>
+    decltype(auto) operator()(Args&&... args) const
+      noexcept(noexcept(std::invoke(Fun, std::forward<Args>(args)...)))
+    { return std::invoke(Fun, std::forward<Args>(args)...); }
+  };
+
+  /// Turn function ptr/member ptrs into stateless function objects
+  template <auto Fun>
+  constexpr const inline Func<Fun> FUNC;
+
   /**
    * Like std::function, but only movable. Implements const qualified signature
    * from P0045R1, e.g. `Function<void (int) const>`.
@@ -37,7 +50,10 @@ namespace Libshit
 
     template <typename T>
     FunctionImpl(T t) : vptr{&static_vptr<T>}
-    { VptrImpl<T>::Construct(&buf, std::move(t)); }
+    {
+      LIBSHIT_STATIC_WARNING(!std::is_pointer_v<T>, use_FUNC_if_possible);
+      VptrImpl<T>::Construct(&buf, std::move(t));
+    }
 
     template <typename T, typename... CArgs>
     FunctionImpl(std::in_place_type_t<T>, CArgs&&... args)
