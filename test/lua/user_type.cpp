@@ -207,10 +207,14 @@ assert(f.smart.x == 7)
     State vm;
     vm.DoString(R"(
 local m = libshit.lua.test.multi()
-m.ptr = m
+m.ptr = libshit.lua.test.multi()
+m.y = 7
+m.ptr.x = 5
 m.ptr.y = 13
 assert(m.x == 0, "m.x")
-assert(m.y == 13, "m.y")
+assert(m.y == 7, "m.y")
+assert(m.ptr.x == 5, "m.ptr.x")
+assert(m.ptr.y == 13, "m.ptr.y")
 )");
   }
 
