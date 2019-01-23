@@ -44,6 +44,12 @@ def configure_ljx(ctx, variant, host_variant, suf):
     if ctx.env.DEST_OS == 'linux':
         ctx.check_cc(lib='dl')
         ctx.check_cc(lib='readline')
+        # readline depends on ncurses, but this dep is only required when
+        # statically linking
+        # unfortunately readline.pc doesn't list ncurses as a (private) dep.
+        ctx.check_cfg(package='ncurses', args='--libs',
+                      global_define=True, uselib_store='NCURSES')
+        ctx.undefine('HAVE_NCURSES') # ...
     ctx.check_cc(lib='m', mandatory=False)
 
     # preprocess lj_arch.h
@@ -315,7 +321,7 @@ def build_ljx(ctx, minilua, host_env, pref, suf, offs):
     ctx.program(idx     = offs+7,
                 source  = 'ljx/src/luajit.c',
                 use     = pref+'lua',
-                uselib  = 'READLINE',
+                uselib  = 'READLINE NCURSES',
                 defines = [ ver, 'LUA_CREDITS=""' ],
                 target  = pref+'luajit-ljx')
 

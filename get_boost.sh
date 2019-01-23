@@ -1,15 +1,17 @@
 #! /bin/bash
 
-cd "$(dirname "${BASH_SOURCE[0]}")"
+set -ex
+cd "$(dirname "$0")"
 
+VER=1.69.0
+_VER=$(echo $VER | sed 's/\./_/g')
 TGT=ext/boost
-DL=https://sourceforge.net/projects/boost/files/boost/1.65.1/boost_1_65_1.tar.bz2
-BZ2_FILE=ext/boost.tar.bz2
-SHA256=9807a5d16566c57fd74fb522764e0b134a8bbe6b6e8967b83afefd30dcd3be81
+DL=https://dl.bintray.com/boostorg/release/$VER/source/boost_$_VER.tar.bz2
+BZ2_FILE=ext/boost_boost_$_VER.tar.bz2
+SHA256=8f32d4617390d1c2d16f26a27ab60d97807b35440d45891fa340fc2648b04406
 
-set -e
-if [[ -e $TGT ]]; then
-    echo "$TGT exists, refusing to continue" >&2
+if [ -e "$TGT" ]; then
+    echo "$(pwd)/$TGT exists, refusing to continue" >&2
     exit 1
 fi
 

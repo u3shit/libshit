@@ -79,8 +79,9 @@ local collect_template_v = cl.regCursorVisitor(function (c, par)
   if template_types[kind] then
     inst.collect_template_tbl[#inst.collect_template_tbl+1] = cl.Cursor(c)
   elseif kind ~= "ParmDecl" and kind ~= "TypeRef" and kind ~= "AnnotateAttr" and
-  kind ~= "NamespaceRef" then
+  kind ~= "NamespaceRef" and kind ~= "CompoundStmt" then
     utils.print_warning("Unhandled arg type "..c:kind(), c)
+    -- print(table.concat(c:_tokens(), " "))
   end
   return vr.Continue
 end)

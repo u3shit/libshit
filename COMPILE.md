@@ -7,15 +7,16 @@ cross-compiled on Linux. I avoid using that piece of shit as much as possible.
 
 Requirements:
 
-* Recent gcc or clang (gcc-7, clang-4 or later, unless I forget to update this
-  document)
+* Compiler: gcc-8 or clang-7 (might work with gcc-7/clang-6 but it's untested)
 * Python 3+ (for the compile script)
-* (optional) boost, lua 5.3
+* boost-1.69 (see notes below)
+* Optional: lua-5.3
 
 A note on boost: if you're using a system/your own compiled boost, make sure
-it's compiled with the c++11/14/17 (they should be compatible) ABI. It should be
-the case if you use gcc-6 or later, but needs manual flag otherwise. See the
-section below.
+it's compiled with the c++17 ABI. It might work in c++11/14 mode as boost
+doesn't really use noexcept, but it's better to be safe than sorry. If you don't
+want to deal with this problem, just use the `get_boost.sh` to download a recent
+boost tarball and let the build system handle it.
 
 Compiling
 ---------
@@ -27,6 +28,7 @@ Make sure submodules are checked out:
 If you're not going to use your own boost, make sure to get it too:
 
     $ libshit/get_boost.sh
+
 Alternatively just make sure a recent boost tarball is extracted/symlinked to
 `libshit/ext/boost`.
 
@@ -58,7 +60,7 @@ Boost with C++14/17
 -------------------
 
 **Note**: This is no longer needed, but you can still manually compile and use a
-standalone version of boost. Please note that you need boost compiled with c++14
+standalone version of boost. Please note that you need boost compiled with c++17
 support, which depending on your distribution may or may not be the default
 behavior. If you have a C++98 ABI version, it'll probably compile but crash
 randomly when run. Unless you want to avoid all this pain, use the bundled build
@@ -73,12 +75,12 @@ you have boost installed globally, that can cause problems. In this case edit
 ```
 before running `bootstrap.sh`.
 
-Continue until 5.2.4. You'll need to add `cxxflags=-std=c++1z` to the `b2`
+Continue until 5.2.4. You'll need to add `cxxflags=-std=c++17` to the `b2`
 command line. Adding `link=static` is also a good idea to avoid dynamic loader
 path problems. We currently only use the filesystem library, so you can add
 `--with-filesystem` to reduce build time. I used the following command line:
 ```
-b2 --with-filesystem toolset=gcc-7.1.0 variant=release link=static threading=single runtime-link=shared cxxflags=-std=c++1z stage
+b2 --with-filesystem toolset=gcc-8.2.0 variant=release link=static threading=single runtime-link=shared cxxflags=-std=c++17 stage
 ```
 
 To actually use it, if you unpacked boost into `$boost_dir`:
@@ -128,6 +130,8 @@ overflowing your terminal about how awful the microsoft headers are (we know
 that) and won't mess up your include order. For linking, you'll need
 `/libpath:$vc/lib /libpath:$winkit/lib/winv6.3/um/x86`.
 
+**TODO: this is probably completely outdated**
+
 To compile boost (no longer needed, just use the downloader script, unless you
 love when it hurts), look [here][boost-cross]. You'll need to create a
 `~/user-config.jam`. Mine looks like this (clang is installed into `$clangbin`):
@@ -157,17 +161,14 @@ CC=$clangbin/clang-cl CXX=$clangbin/clang-cl LINK_CXX=$clangbin/lld-link AR=$cla
 Some potential problems with the clang toolchain
 ------------------------------------------------
 
-When using LTO and llvm 5.0, it can still crash lld when creating a dll. See
-`llvm-5.0.patch` for a path that fixes it for the time being.
+Using lld 7.0.0 to link, the generated executable will crash when the first
+exception is thrown and it won't have icons. Use `lld-7.0.patch` to fix this.
 
-Using lld 5.0.0 to link, the generated executable will crash when the first
-exception is thrown. Use `lld-5.0.patch` to fix this or upgrade to 6.0.1.
-
-Third problem: llvm/clang doesn't support the `/EHsa` flag, only `/EHs`, but
-that won't catch LuaJIT/ljx exceptions. The `llvm.patch` (for llvm 5.0) and
-`llvm-6.0.patch` (for llvm 6.0.1) includes a quick hack that'll at least make
-sure destructors are called when unwinding lua exceptions (and exceptions are
-handled manually by `__try`/`__except`).
+Second problem: llvm/clang doesn't support the `/EHsa` flag, only `/EHs`, but
+that won't catch LuaJIT/ljx exceptions. The `llvm-6.0.patch` and
+`llvm-7.0.patch` includes a quick hack that'll at least make sure destructors
+are called when unwinding lua exceptions (and exceptions are handled manually by
+`__try`/`__except`).
 
 Lua
 ---
@@ -226,8 +227,8 @@ only want to compile.
 Requirements:
 
 * `luajit` (probably works with ljx too :p)
-* patched clang: apply `clang-5.0.patch` to clang 5.0 or `clang-6.0.patch` to
-  clang 6.0.1.
+* patched clang: apply `clang-6.0.patch` to clang 6.0.1 or `clang-7.0.patch` to
+  clang 7.0.1.
 
 Compile helper library:
 

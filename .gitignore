@@ -7,4 +7,4 @@ build
 .waf*
 
 ext/boost
-ext/boost.tar.bz2
+ext/boost*.tar.bz2
