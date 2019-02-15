@@ -1,5 +1,9 @@
 # -*- mode: python -*-
 
+from waflib.TaskGen import before_method, after_method, feature, extension, \
+    taskgen_method
+from waflib import Task
+
 def options(ctx):
     grp = ctx.get_option_group('configure options')
     grp.add_option('--host-lua', action='store', default=None,
@@ -17,7 +21,7 @@ def configure(ctx):
                          environ={'PATH': ctx.environ['PATH']})
     else:
         ctx.setenv(variant + '_host')
-        ctx.check_cc(lib='m', mandatory=False)
+        ctx.check_cc(lib='m', mandatory=False, msg='Checking for host library m')
         ctx.setenv(variant)
 
     if ctx.env.CROSS:
@@ -43,13 +47,14 @@ def configure_ljx(ctx, variant, host_variant, suf):
 
     if ctx.env.DEST_OS == 'linux':
         ctx.check_cc(lib='dl')
-        ctx.check_cc(lib='readline')
+        ctx.check_cfg(package='readline', args='--cflags --libs',
+                      define_name='', add_have_to_env=False)
         # readline depends on ncurses, but this dep is only required when
         # statically linking
         # unfortunately readline.pc doesn't list ncurses as a (private) dep.
         ctx.check_cfg(package='ncurses', args='--libs',
-                      global_define=True, uselib_store='NCURSES')
-        ctx.undefine('HAVE_NCURSES') # ...
+                      define_name='', add_have_to_env=False)
+
     ctx.check_cc(lib='m', mandatory=False)
 
     # preprocess lj_arch.h
@@ -140,7 +145,6 @@ def configure_ljx(ctx, variant, host_variant, suf):
 
 def build(ctx):
     # tasks
-    @Task.update_outputs
     class dynasm(Task.Task):
         run_str = '${LUA} ${SRC[0].abspath()} ${DASM_DEFINE_ST:DASM_DEFINES} -o ${TGT} ${SRC[1].abspath()}'
         color = 'BLUE'
@@ -149,7 +153,6 @@ def build(ctx):
             return self.inputs[1].relpath()
     ctx.rule_like('dynasm')
 
-    @Task.update_outputs
     class buildvm(Task.Task):
         run_str = '${tsk.executable} -m ${gen.mode} -o ${TGT} ${SRC}'
         color = 'BLUE'
@@ -205,8 +208,6 @@ def build(ctx):
     build_ljx(ctx, minilua, host_env, '', '', 51150,)
 
 def build_ljx(ctx, minilua, host_env, pref, suf, offs):
-    from waflib import Task
-
     src = ['ljx/dynasm/dynasm.lua', 'ljx/src/vm_%s.dasc' % ctx.env.DASM_ARCH]
     if minilua: src += ['minilua']
     ctx(idx      = offs+0,
@@ -271,8 +272,8 @@ def build_ljx(ctx, minilua, host_env, pref, suf, offs):
             target   = '%slj_%s.h' % (pref, mode))
     ctx(idx      = offs+4,
         features = 'buildvm',
-        mode     = 'folddef',
         buildvm  = pref+'buildvm',
+        mode     = 'folddef',
         source   = 'ljx/src/lj_opt_fold.c',
         target   = pref+'lj_folddef.h')
     # only needed by luajit-ljx?
@@ -325,10 +326,6 @@ def build_ljx(ctx, minilua, host_env, pref, suf, offs):
                 defines = [ ver, 'LUA_CREDITS=""' ],
                 target  = pref+'luajit-ljx')
 
-from waflib.TaskGen import before_method, after_method, feature, extension, \
-    taskgen_method
-from waflib import Task
-
 @extension('.o', '.obj')
 def add_those_o_files(self, node):
     try:
@@ -344,7 +341,6 @@ def add_o(self):
 
 
 # task .lua->.h
-@Task.update_outputs
 class ljx(Task.Task):
     run_str = '${tsk.executable} -bt h ${LUACFLAGS} ${SRC} ${TGT}'
     color = 'BLUE'

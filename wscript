@@ -191,6 +191,8 @@ def configure_variant(ctx, clang_hack):
         c_compiler[plat] = ['msvc']
 
         ctx.env.WINRCFLAGS = rcflags_save
+        ctx.env.WINRC_SRC_F = ''
+        ctx.env.WINRC_TGT_F = '-o'
 
     ctx.load('compiler_c compiler_cxx')
 
@@ -204,13 +206,15 @@ def configure_variant(ctx, clang_hack):
         '-Werror=unknown-warning-option',
         '-Werror=ignored-optimization-argument',
         '-Werror=unknown-argument',
-
+    ], seq=False)
+    ctx.filter_flags(['CFLAGS', 'CXXFLAGS'], [
         '-fdiagnostics-color', '-fdiagnostics-show-option',
     ])
+    app_flags = []
     if ctx.env['COMPILER_CXX'] != 'msvc':
         # since clang-6 clang-cl -Wall maps to -Weverything..........
-        ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], ['-Wall'])
-    ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], [
+        app_flags += ['-Wall']
+    app_flags += [
         '-Wextra', '-pedantic',
         '-Wno-parentheses', '-Wno-assume', '-Wno-attributes',
         '-Wold-style-cast', '-Woverloaded-virtual', '-Wimplicit-fallthrough',
@@ -222,7 +226,8 @@ def configure_variant(ctx, clang_hack):
         # unfortunately pragma disabling this warning in the binding files does
         # not work. see also https://gcc.gnu.org/bugzilla/show_bug.cgi?id=51440
         '-Wno-subobject-linkage',
-    ])
+    ]
+    ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], app_flags)
     ctx.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], [
         '-Wno-parentheses-equality', # boost fs, windows build
         '-Wno-microsoft-enum-value', '-Wno-shift-count-overflow', # ljx
@@ -265,11 +270,16 @@ def configure_variant(ctx, clang_hack):
         ctx.env.append_value('LINKFLAGS', '-rdynamic')
 
     m = ctx.get_defs('destination OS', '')
-    if '_WIN64' in m:
+    ok = True
+    if '__linux' in m:
+        ctx.env.DEST_OS = 'linux'
+    elif '_WIN64' in m:
         ctx.env.DEST_OS = 'win64'
     elif '_WIN32' in m:
         ctx.env.DEST_OS = 'win32'
-    ctx.end_msg(ctx.env.DEST_OS)
+    else:
+        ok = False
+    ctx.end_msg(ctx.env.DEST_OS, color=ok and 'GREEN' or 'YELLOW')
 
     if ctx.env.DEST_OS == 'win32' or ctx.env.DEST_OS == 'win64':
         ctx.define('WINDOWS', 1)
@@ -397,49 +407,46 @@ def fixup_fail_cxx():
 
 
 from waflib.Configure import conf
-@conf
-def filter_flags(cfg, vars, flags):
+def filter_single_flag(ctx, vars, flag, feat, ret, **kw):
+    testflag=flag
+    if flag[0:5] == '-Wno-':
+        testflag = '-W'+flag[5:]
+    ctx.check_cxx(cflags=[testflag], cxxflags=[testflag], features=feat,
+                  msg='Checking for compiler flag '+flag, **kw)
+
+    ret.append(flag)
+
+def generic_filter_flags(ctx, vars, flags, feat, seq=False):
     ret = []
 
-    for flag in flags:
-        try:
-            # gcc ignores unknown -Wno-foo flags but not -Wfoo, but warns if
-            # there are other warnings. with clang, just depend on
-            # -Werror=ignored-*-option, -Werror=unknown-*-option
-            testflag = flag
-            if flag[0:5] == '-Wno-':
-                testflag = '-W'+flag[5:]
-            cfg.check_cxx(cxxflags=[testflag], features='cxx',
-                          msg='Checking for compiler flags '+testflag)
-            ret.append(flag)
-            for var in vars:
-                cfg.env.append_value(var, flag)
-        except:
-            pass
+    if len(flags) == 1:
+        filter_single_flag(ctx, vars, flags[0], feat, ret, mandatory=False)
+    elif seq:
+        for flag in flags:
+            filter_single_flag(ctx, vars, flag, feat, ret, mandatory=False)
+    elif len(flags) > 1:
+        args = []
+        for flag in flags:
+            def x(ctx, flag=flag):
+                ctx.in_msg = True
+                return filter_single_flag(ctx, vars, flag, feat, ret)
+            args.append({'func': x, 'msg': 'Checking for compiler flag '+flag,
+                         'mandatory': False})
+        ctx.multicheck(*args)
 
+    for flag in flags:
+        if flag in ret:
+            for var in vars:
+                ctx.env.append_value(var, flag)
     return ret
 
 @conf
-def filter_flags_c(cfg, vars, flags):
-    ret = []
+def filter_flags(ctx, vars, flags, **kw):
+    return generic_filter_flags(ctx, vars, flags, 'cxx', **kw)
 
-    for flag in flags:
-        try:
-            # gcc ignores unknown -Wno-foo flags but not -Wfoo, but warns if
-            # there are other warnings. with clang, just depend on
-            # -Werror=ignored-*-option, -Werror=unknown-*-option
-            testflag = flag
-            if flag[0:5] == '-Wno-':
-                testflag = '-W'+flag[5:]
-            cfg.check_cc(cflags=[testflag],
-                         msg='Checking for compiler flags '+testflag)
-            ret.append(flag)
-            for var in vars:
-                cfg.env.append_value(var, flag)
-        except:
-            pass
-
-    return ret
+@conf
+def filter_flags_c(ctx, vars, flags):
+    return generic_filter_flags(ctx, vars, flags, 'c', **kw)
 
 def change_var(ctx, to):
     if getattr(ctx, 'setenv', False):

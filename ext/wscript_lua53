@@ -40,7 +40,6 @@ def build(ctx):
 
 from waflib import Task
 # task .lua->.h
-@Task.update_outputs
 class luac(Task.Task):
     run_str = '${tsk.executable} ${LUACFLAGS} -o ${TGT} ${SRC}'
     color = 'BLUE'

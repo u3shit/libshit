@@ -93,38 +93,57 @@ def build(ctx):
             target = '../../lua53.dll')
 
 
-from waflib import Task
-@Task.update_outputs
+from waflib import Task, Utils
+from hashlib import sha256
 class bin2c(Task.Task):
     color = 'BLUE'
-    name_prefix = 'luaJIT_BC_'
+    map = {
+        39: "'",
+        92: "\\",
+        7:  "a",
+        8:  "b",
+        9:  "t",
+        10: "n",
+        11: "v",
+        12: "f",
+        13: "r",
+    }
+
+    def __init__(self):
+        if True:
+            self.name_prefix = 'luaJIT_BC_'
+            self.quote_name = lambda x: x
+        else:
+            self.name_prefix = 'BIN2C'
+            self.quote_name = Utils.quote_define_name
 
     def run(self):
         inp = self.inputs[0]
-        data = inp.read()
+        data = inp.read('rb')
+        hash = sha256(data).hexdigest()
 
-        name = str(inp.change_ext(''))
+        name = self.name_prefix + self.quote_name(inp.change_ext('').name)
         out = """
-static constexpr const size_t %s%s_SIZE = %d;
-static const char %s%s[] = {
-""" % (self.name_prefix, name, len(data), self.name_prefix, name)
+#ifndef %s_H_INCLUDED_%s
+#define %s_H_INCLUDED_%s
+#pragma once
+
+static constexpr const size_t %s_SIZE = %d;
+static const char %s[] = {
+""" % (name, hash, name, hash, name, len(data), name)
         i = 0
         for c in data:
             if i > 16:
                 out += "\n"
                 i = 0
             i += 1
-            if c == "'" or c == "\\":
-                out += "'\\%s'," % c
-            elif ord(c) >= 32 and ord(c) < 127:
-                out += "'%s'," % c
-            elif c == "\r":
-                out += "'\\r',"
-            elif c == "\n":
-                out += "'\\n',"
+            if c in self.map:
+                out += "'\\%s'," % self.map[c]
+            elif c >= 32 and c < 127:
+                out += "'%s'," % chr(c)
             else:
-                out += "'\%o'," % ord(c)
-        out += "\n};\n"
+                out += "'\%o'," % int(c)
+        out += "\n};\n\n#endif\n"
         self.outputs[0].write(out)
 
 from waflib.TaskGen import extension
