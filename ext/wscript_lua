@@ -54,7 +54,7 @@ def configure(ctx):
         return
 
 
-    if ctx.env.DEST_OS == 'win32' or ctx.env.DEST_OS == 'win64':
+    if ctx.env.DEST_OS == 'win32':
         ctx.env.LUA_DLL = ctx.options.lua_dll
 
     if ctx.env['COMPILER_CXX'] != 'msvc':
@@ -109,7 +109,8 @@ class bin2c(Task.Task):
         13: "r",
     }
 
-    def __init__(self):
+    def __init__(self, *k, **kw):
+        Task.Task.__init__(self, *k, **kw)
         if True:
             self.name_prefix = 'luaJIT_BC_'
             self.quote_name = lambda x: x

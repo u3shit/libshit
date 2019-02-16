@@ -101,6 +101,11 @@ you'll need to copy directories named `include` and `lib` to your Linux box from
 `Program Files (x86)/Microsoft Visual Studio 12.0/VC` and `Program Files
 (x86)/Windows Kits/8.1` too (assuming default install location).
 
+Pro tip #0: Open `include/stdarg.h`, and replace it with an `#error`. If this
+file gets included, that means you fucked up the include order (since clang has
+its own `stdarg.h`). In this case the program will compile, but vararg functions
+will crash.
+
 Problem #1: Linux filesystems are usually case-sensitive, but MSVC headers
 pretty much expect a case-insensitive file lookup.
 Solution 1: store the files on a case-insensitive fs (fat, ntfs, etc, or just
@@ -122,40 +127,19 @@ use the bundled one) and replace `Advapi32.lib` with `advapi32.lib` in
 the other two solutions may or may not work.
 
 
-Problem #2: clang won't know where are your files, so you'll need some compiler
-flags. For compiling you'll need: `-m32 -imsvc $vc/include -imsvc
-$winkit/include/um -imsvc $winkit/include/shared` where `$vc` and `$winkit`
-refers to the folders you previously copied. Using `-imsvc` prevent clang from
-overflowing your terminal about how awful the microsoft headers are (we know
-that) and won't mess up your include order. For linking, you'll need
-`/libpath:$vc/lib /libpath:$winkit/lib/winv6.3/um/x86`.
+Problem #2: clang will default to compile for the host (we're using `clang` and
+not `clang-cl`!) and it won't know where are your files, so you'll need some
+compiler flags. For compiling you'll need: `-target i386-pc-windows-msvc18
+-Xclang -internal-system -Xclang $vc/include -Xclang -internal-system -Xclang
+$winkit/include/um -Xclang -internal-system -Xclang $winkit/include/shared`
+where `$vc` and `$winkit` refers to the folders you previously copied. Using
+`-internal-system` will make sure your include paths are correct (this is whan
+`-imsvc` uses under the hood, but that only works with `clang-cl`, not `clang`).
+For linking, you'll need `-fuse-ld=lld -L$vc/lib -L$winkit/lib/winv6.3/um/x86`.
 
-**TODO: this is probably completely outdated**
-
-To compile boost (no longer needed, just use the downloader script, unless you
-love when it hurts), look [here][boost-cross]. You'll need to create a
-`~/user-config.jam`. Mine looks like this (clang is installed into `$clangbin`):
-
+In the end, you'll end up with something like this:
 ```
-using msvc : clang : "$clangbin/clang-cl" :
-  <compileflags>"-m32 -fms-compatibility-version=18 -imsvc $vc/include -imsvc $winkit/include/um -imsvc $winkit/include/shared -Xclang -emit-llvm-bc"
-  <linkflags>"/libpath:$vc/lib /libpath:$winkit/lib/winv6.3/um/x86"
-  <compiler>"$clangbin/clang-cl"
-  <linker>"$clangbin/lld-link"
-  <setup>
-  ;
-```
-
-`-Xclang -emit-llvm-bc` is used to enable LTO-ing boost. You can remove it if
-you do not want it. Then use `b2 toolset=msvc-clang ...` to compile boost. You
-can also create a 64-bit version, in this case remove `-m32` from cflags and
-adjust the libpaths (but it's not really required if you only build static
-libs).
-
-
-Now you can compile this project. Use something like that:
-```
-CC=$clangbin/clang-cl CXX=$clangbin/clang-cl LINK_CXX=$clangbin/lld-link AR=$clangbin/llvm-lib CXXFLAGS="your cflags"  LINKFLAGS="your linkflags" ./waf configure --clang-hack [--system-boost --boost-includes ...]
+CC=$clangbin/clang CXX=$clangbin/clang AR=$clangbin/llvm-ar CFLAGS="-target i386-pc-windows-msvc18 -Xclang -internal-system -Xclang $vc/include -Xclang -internal-system -Xclang $winkit/include/um -Xclang -internal-system -Xclang $winkit/include/shared" CXXFLAGS="$CFLAGS" LINKFLAGS="-fuse-ld=lld -L$vc/lib -L$winkit/lib/winv6.3/um/x86" ./waf configure [--release] [--with-tests]
 ```
 
 Some potential problems with the clang toolchain
@@ -251,7 +235,6 @@ TODO: write much more documentation
 
 [boost-dl]: http://www.boost.org/users/download/
 [boost-getting-started]: http://www.boost.org/doc/libs/1_60_0/more/getting_started/unix-variants.html
-[boost-cross]: http://www.boost.org/build/doc/html/bbv2/tasks/crosscompile.html
 [lld]: http://lld.llvm.org/
 [ciopfs]: http://www.brain-dump.org/projects/ciopfs/
 [icasefile]: http://wnd.katei.fi/icasefile/

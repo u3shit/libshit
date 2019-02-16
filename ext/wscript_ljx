@@ -42,13 +42,13 @@ def configure(ctx):
 def configure_ljx(ctx, variant, host_variant, suf):
     ctx.setenv(variant)
 
-    if ctx.env['COMPILER_CXX'] != 'msvc':
+    if ctx.env.DEST_OS != 'win32':
         ctx.load('gas')
 
     if ctx.env.DEST_OS == 'linux':
         ctx.check_cc(lib='dl')
-        ctx.check_cfg(package='readline', args='--cflags --libs',
-                      define_name='', add_have_to_env=False)
+        # do not change to check_cfg, .pc file only exists from version 8.0
+        ctx.check_cc(lib='readline')
         # readline depends on ncurses, but this dep is only required when
         # statically linking
         # unfortunately readline.pc doesn't list ncurses as a (private) dep.
@@ -76,8 +76,7 @@ def configure_ljx(ctx, variant, host_variant, suf):
     if macros.get('LJ_ARCH_SQRT', 0) == '1':      dasm_defs += ['SQRT']
     if macros.get('LJ_ARCH_ROUND', 0) == '1':     dasm_defs += ['ROUND']
     if macros.get('LJ_ARCH_PPC32ON64', 0) == '1': dasm_defs += ['GPR64']
-    if ctx.env.DEST_OS == 'win32' or ctx.env.DEST_OS == 'win64':
-        dasm_defs += ['WIN']
+    if ctx.env.DEST_OS == 'win32':                dasm_defs += ['WIN']
     # ios, ps3 checks removed
 
     dasm_arch = None
@@ -107,7 +106,7 @@ def configure_ljx(ctx, variant, host_variant, suf):
     ctx.env.append_value('LINKFLAGS_BUILDVM'+suf, '-m' + macros['LJ_ARCH_BITS'])
 
     # os
-    if dest_os == 'win32' or dest_os == 'win64':
+    if dest_os == 'win32':
         ctx.env.append_value('CFLAGS_BUILDVM'+suf, '-malign-double')
         ctx.env.append_value('DEFINES_BUILDVM'+suf, 'LUAJIT_OS=LUAJIT_OS_WINDOWS')
     elif dest_os == 'linux':
@@ -138,7 +137,7 @@ def configure_ljx(ctx, variant, host_variant, suf):
 
     ctx.env.append_value('DEFINES_LUA',
                          ['LJ_ABIVER=53', 'LUAJIT_ENABLE_LUA53COMPAT'])
-    if dest_os != 'win32' and dest_os != 'win64':
+    if dest_os != 'win32':
         ctx.env.append_value(
             'DEFINES_LUA',
             ['LUA_API=extern __attribute((visibility("default")))'])
@@ -233,7 +232,7 @@ def build_ljx(ctx, minilua, host_env, pref, suf, offs):
     buildvm = tg.link_task.outputs[0].abspath()
 
     tgt = pref+'lj_vm.s'
-    if ctx.env.DEST_OS == 'win32' or ctx.env.DEST_OS == 'win64':
+    if ctx.env.DEST_OS == 'win32':
         mode = 'peobj'
         tgt  = pref+'lj_vm.obj'
     elif ctx.env.DEST_OS == 'darwin':

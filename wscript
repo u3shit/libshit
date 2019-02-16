@@ -17,12 +17,7 @@ except:
         VERSION = f.readline().strip('\n')
 
 from waflib.TaskGen import before_method, after_method, feature, extension
-def fixup_msvc():
-    @after_method('apply_link')
-    @feature('c', 'cxx')
-    def apply_flags_msvc(self):
-        pass
-
+def fixup_rc():
     # ignore .rc files when not on windows/no resource compiler
     @extension('.rc')
     def rc_override(self, node):
@@ -56,13 +51,7 @@ all_optional = set()
 def options(opt):
     opt.load('compiler_c compiler_cxx')
     grp = opt.get_option_group('configure options')
-    grp.add_option('--clang-hack', action='store_true', default=False,
-                   help='Read COMPILE.md...')
-    grp.add_option('--clang-hack-host', action='store_true', default=False,
-                   help='Read COMPILE.md...')
 
-    grp.add_option('--debug', action='store_true', default=False,
-                   help='Enable some extra debugging')
     grp.add_option('--optimize', action='store_true', default=False,
                    help='Enable some default optimizations')
     grp.add_option('--optimize-ext', action='store_true', default=False,
@@ -109,14 +98,11 @@ def configure(cfg):
             del cfg.environ[k]
 
     if cross:
-        configure_variant(cfg, cfg.options.clang_hack_host)
+        configure_variant(cfg)
 
         if cfg.options.optimize or cfg.options.optimize_ext:
-            if cfg.env['COMPILER_CXX'] == 'msvc':
-                cfg.filter_flags(['CFLAGS', 'CXXFLAGS'], ['-O1'])
-            else:
-                cfg.filter_flags(
-                    ['CFLAGS', 'CXXFLAGS'], ['-O1', '-march=native'])
+            # host executables on cross compile, so -march=native is ok
+            cfg.filter_flags(['CFLAGS', 'CXXFLAGS'], ['-O1', '-march=native'])
 
     # ----------------------------------------------------------------------
     # setup target
@@ -126,31 +112,26 @@ def configure(cfg):
     cfg.environ = environ
 
     cfg.load('clang_compilation_database')
-    configure_variant(cfg, cfg.options.clang_hack)
+    configure_variant(cfg)
 
-    if cfg.env['COMPILER_CXX'] == 'msvc':
-        if cfg.options.debug:
-            cfg.filter_flags(['CFLAGS', 'CXXFLAGS'], ['/Z7'])
-            cfg.env.prepend_value('LINKFLAGS', ['/debug'])
-
-        if cfg.options.optimize:
-            for f in ['CFLAGS', 'CXXFLAGS']:
-                cfg.env.prepend_value(f, ['-O2', '-flto'])
-            cfg.env.prepend_value('LINKFLAGS', ['/OPT:REF', '/OPT:ICF'])
-        elif cfg.options.optimize_ext:
-            cfg.env.prepend_value('CXXFLAGS_EXT', '-O2')
+    if cfg.env.DEST_OS == 'win32':
+        cfg.env.append_value('CFLAGS', '-gcodeview')
+        cfg.env.append_value('CXXFLAGS', '-gcodeview')
+        cfg.env.append_value('LINKFLAGS', '-g')
     else:
-        if cfg.options.debug:
-            cfg.filter_flags(['CFLAGS', 'CXXFLAGS', 'LINKFLAGS'], ['-ggdb3'])
+        cfg.filter_flags(['CFLAGS', 'CXXFLAGS', 'LINKFLAGS'], ['-ggdb3'])
 
-        if cfg.options.optimize:
-            cfg.filter_flags(['CFLAGS', 'CXXFLAGS', 'LINKFLAGS'], [
-                '-Ofast', '-flto', '-fno-fat-lto-objects',
-                 '-fomit-frame-pointer'])
+    if cfg.options.optimize:
+        cfg.filter_flags(['CFLAGS', 'CXXFLAGS', 'LINKFLAGS'], [
+            '-Ofast', '-flto', '-fno-fat-lto-objects',
+             '-fomit-frame-pointer'])
 
+        if cfg.env.DEST_OS == 'win32':
+            cfg.env.append_value('LINKFLAGS', '-Wl,-opt:ref,-opt:icf')
+        else:
             cfg.env.append_value('LINKFLAGS', '-Wl,-O1')
-        elif cfg.options.optimize_ext:
-            cfg.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], ['-Ofast'])
+    elif cfg.options.optimize_ext:
+        cfg.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], ['-Ofast'])
 
     if cfg.options.release:
         cfg.define('NDEBUG', 1)
@@ -159,7 +140,7 @@ def configure(cfg):
     Logs.pprint('NORMAL', 'Configuring ext '+variant)
     cfg.recurse('ext', name='configure', once=False)
 
-def configure_variant(ctx, clang_hack):
+def configure_variant(ctx):
     # override flags specific to app/bundled libraries
     for v in [app, 'EXT']:
         ctx.add_os_flags('CPPFLAGS_'+v, dup=False)
@@ -168,37 +149,7 @@ def configure_variant(ctx, clang_hack):
         ctx.add_os_flags('LINKFLAGS_'+v, dup=False)
         ctx.add_os_flags('LDFLAGS_'+v, dup=False)
 
-    if clang_hack:
-        ctx.find_program('clang-cl', var='CC')
-        ctx.find_program('clang-cl', var='CXX')
-        ctx.find_program('lld-link', var='LINK_CXX')
-        ctx.find_program('llvm-lib', var='AR')
-        ctx.find_program(ctx.path.abspath()+'/rc.sh', var='WINRC')
-
-        ctx.add_os_flags('WINRCFLAGS', dup=False)
-        rcflags_save = ctx.env.WINRCFLAGS
-
-        ctx.load('msvc', funs='no_autodetect')
-        fixup_msvc()
-        from waflib.Tools.compiler_cxx import cxx_compiler
-        from waflib.Tools.compiler_c import c_compiler
-        from waflib import Utils
-
-        plat = Utils.unversioned_sys_platform()
-        cxx_save = cxx_compiler[plat]
-        c_save = c_compiler[plat]
-        cxx_compiler[plat] = ['msvc']
-        c_compiler[plat] = ['msvc']
-
-        ctx.env.WINRCFLAGS = rcflags_save
-        ctx.env.WINRC_SRC_F = ''
-        ctx.env.WINRC_TGT_F = '-o'
-
     ctx.load('compiler_c compiler_cxx')
-
-    if clang_hack:
-        cxx_compiler[plat] = cxx_save
-        c_compiler[plat] = c_save
 
     ctx.filter_flags(['CFLAGS', 'CXXFLAGS'], [
         # error on unknown arguments, including unknown options that turns
@@ -210,12 +161,8 @@ def configure_variant(ctx, clang_hack):
     ctx.filter_flags(['CFLAGS', 'CXXFLAGS'], [
         '-fdiagnostics-color', '-fdiagnostics-show-option',
     ])
-    app_flags = []
-    if ctx.env['COMPILER_CXX'] != 'msvc':
-        # since clang-6 clang-cl -Wall maps to -Weverything..........
-        app_flags += ['-Wall']
-    app_flags += [
-        '-Wextra', '-pedantic',
+    ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], [
+        '-Wall', '-Wextra', '-pedantic',
         '-Wno-parentheses', '-Wno-assume', '-Wno-attributes',
         '-Wold-style-cast', '-Woverloaded-virtual', '-Wimplicit-fallthrough',
         '-Wno-undefined-var-template', # TYPE_NAME usage
@@ -226,8 +173,9 @@ def configure_variant(ctx, clang_hack):
         # unfortunately pragma disabling this warning in the binding files does
         # not work. see also https://gcc.gnu.org/bugzilla/show_bug.cgi?id=51440
         '-Wno-subobject-linkage',
-    ]
-    ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], app_flags)
+        # __try in lua exception handler
+        '-Wno-language-extension-token',
+    ])
     ctx.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], [
         '-Wno-parentheses-equality', # boost fs, windows build
         '-Wno-microsoft-enum-value', '-Wno-shift-count-overflow', # ljx
@@ -238,50 +186,37 @@ def configure_variant(ctx, clang_hack):
                      features='cxx', mandatory=False,
                      msg='Checking for compiler flag -isystem'):
         ctx.env.CPPSYSPATH_ST = ['-isystem']
-    elif ctx.check_cxx(cxxflags=['-imsvc', '.'],
-                       features='cxx', mandatory=False,
-                       msg='Checking for compiler flag -imsvc'):
-        ctx.env.CPPSYSPATH_ST = ['-imsvc']
     else:
         ctx.env.CPPSYSPATH_ST = ctx.env.CPPPATH_ST
 
-    if ctx.env['COMPILER_CXX'] == 'msvc':
+    ctx.check_cxx(cxxflags='-std=c++17')
+    ctx.env.append_value('CXXFLAGS', ['-std=c++17'])
+
+    ctx.filter_flags(['CFLAGS', 'CXXFLAGS'], ['-fvisibility=hidden'])
+
+    if ctx.env.DEST_OS == 'win32':
+        # fixup: waf expects mingw, not clang in half-msvc-emulation-mode
+        while '-Wl,--enable-auto-import' in ctx.env.LINKFLAGS:
+            ctx.env.LINKFLAGS.remove('-Wl,--enable-auto-import')
+        ctx.env.IMPLIB_ST = '-Wl,-implib:%s'
+        ctx.env.implib_PATTERN = '%s.lib'
+        ctx.env.cstlib_PATTERN = ctx.env.cxxstlib_PATTERN = '%s.lib'
+        ctx.env.def_PATTERN = '-Wl,-def:%s'
+        ctx.env.STLIB_MARKER = ''
+        ctx.env.SHLIB_MARKER = ''
+
+        for x in ['CXXFLAGS', 'CFLAGS_EXT']:
+            ctx.env.append_value(x, ['-fexceptions']) # -EHsa
+        ctx.env.append_value('LINKFLAGS', [
+            '-nostdlib', '-Wl,-defaultlib:msvcrt', # -MD cont
+            '-Wl,-defaultlib:oldnames', # lua isatty
+        ])
+        ctx.define('_MT', 1)
+        ctx.define('_DLL', 1)
+
+        ctx.load('winres')
+        ctx.add_os_flags('WINRCFLAGS')
         ctx.define('_CRT_SECURE_NO_WARNINGS', 1)
-        ctx.env.append_value('CXXFLAGS', [
-            '-Xclang', '-std=c++17',
-            '-Xclang', '-fdiagnostics-format', '-Xclang', 'clang',
-            '-EHsa', '-MD'])
-        ctx.env.append_value('CFLAGS_EXT', ['-EHsa', '-MD'])
-
-        m = ctx.get_defs('msvc lib version', '#include <yvals.h>', cxx=True)
-        cpp_ver = m['_CPPLIB_VER']
-        if cpp_ver == '610':
-            ctx.end_msg('610, activating include patching', color='YELLOW')
-            inc = ['-imsvc', ctx.path.find_node('msvc_include').abspath()]
-            ctx.env.prepend_value('CFLAGS', inc)
-            ctx.env.prepend_value('CXXFLAGS', inc)
-        else:
-            ctx.end_msg(cpp_ver)
-    else:
-        ctx.check_cxx(cxxflags='-std=c++17')
-        ctx.env.append_value('CXXFLAGS', ['-std=c++17'])
-
-        ctx.filter_flags(['CFLAGS', 'CXXFLAGS'], ['-fvisibility=hidden'])
-        ctx.env.append_value('LINKFLAGS', '-rdynamic')
-
-    m = ctx.get_defs('destination OS', '')
-    ok = True
-    if '__linux' in m:
-        ctx.env.DEST_OS = 'linux'
-    elif '_WIN64' in m:
-        ctx.env.DEST_OS = 'win64'
-    elif '_WIN32' in m:
-        ctx.env.DEST_OS = 'win32'
-    else:
-        ok = False
-    ctx.end_msg(ctx.env.DEST_OS, color=ok and 'GREEN' or 'YELLOW')
-
-    if ctx.env.DEST_OS == 'win32' or ctx.env.DEST_OS == 'win64':
         ctx.define('WINDOWS', 1)
         ctx.define('UNICODE', 1)
         ctx.define('_UNICODE', 1)
@@ -290,8 +225,20 @@ def configure_variant(ctx, clang_hack):
         ctx.check_cxx(lib='shell32')
         ctx.check_cxx(lib='user32')
 
+        m = ctx.get_defs('msvc lib version', '#include <yvals.h>', cxx=True)
+        cpp_ver = m['_CPPLIB_VER']
+        if cpp_ver == '610':
+            ctx.end_msg('610, activating include patching', color='YELLOW')
+            inc = ['-isystem', ctx.path.find_node('msvc_include').abspath()]
+            ctx.env.prepend_value('CFLAGS', inc)
+            ctx.env.prepend_value('CXXFLAGS', inc)
+        else:
+            ctx.end_msg(cpp_ver)
+    else:
+        ctx.env.append_value('LINKFLAGS', '-rdynamic')
+
 def build(bld):
-    fixup_msvc()
+    fixup_rc()
     fixup_fail_cxx()
     bld.recurse('ext', name='build', once=False)
 
@@ -635,9 +582,7 @@ def get_defs(ctx, msg, file, cxx=False):
         node.write(file)
         file = node
 
-    cmd += ['-E', file.abspath() ]
-    if ctx.env['COMPILER_CXX'] == 'msvc': cmd += ['-Xclang', '-dM']
-    else: cmd += ['-dM']
+    cmd += ['-E', file.abspath(), '-dM' ]
     try:
         out = ctx.cmd_and_log(cmd)
     except Exception:
