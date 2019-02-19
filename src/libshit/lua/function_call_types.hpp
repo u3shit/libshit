@@ -2,7 +2,7 @@
 #define UUID_D230EBCE_94C2_4E8F_B2FD_99237D511676
 #pragma once
 
-#ifndef LIBSHIT_WITHOUT_LUA
+#if LIBSHIT_WITH_LUA
 #  pragma GCC diagnostic push
 #  pragma GCC diagnostic ignored "-Wundef"
 #  include <lua.hpp> // IWYU pragma: export
@@ -41,7 +41,7 @@ namespace Libshit::Lua
     int idx;
   };
 
-#ifndef LIBSHIT_WITHOUT_LUA
+#if LIBSHIT_WITH_LUA
   // ensure type but do not parse
   template <int Type>
   class Raw : public Any

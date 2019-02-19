@@ -2,7 +2,7 @@
 #define UUID_0863E64B_09C6_449B_A18D_EFD42D57C604
 #pragma once
 
-#ifdef LIBSHIT_WITHOUT_LUA
+#if !LIBSHIT_WITH_LUA
 
 namespace Libshit::Lua
 {

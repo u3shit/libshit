@@ -2,7 +2,7 @@
 #define UUID_C721F2E1_C293_4D82_8244_2AA0F1B26774
 #pragma once
 
-#ifndef LIBSHIT_WITHOUT_LUA
+#if LIBSHIT_WITH_LUA
 
 #include "libshit/lua/function_call_types.hpp" // IWYU pragma: export
 #include "libshit/lua/type_traits.hpp"

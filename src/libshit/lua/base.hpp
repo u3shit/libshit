@@ -2,7 +2,7 @@
 #define UUID_04CE9898_AACA_4B50_AC3F_FED6669C33C6
 #pragma once
 
-#ifndef LIBSHIT_WITHOUT_LUA
+#if LIBSHIT_WITH_LUA
 
 #include "libshit/assert.hpp"
 #include "libshit/except.hpp"

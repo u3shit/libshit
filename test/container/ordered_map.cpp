@@ -215,7 +215,7 @@ namespace Libshit::Test
     CHECK(X::count == 0);
   }
 
-#ifndef LIBSHIT_WITHOUT_LUA
+#if LIBSHIT_WITH_LUA
   TEST_CASE("lua binding")
   {
     Lua::State vm;

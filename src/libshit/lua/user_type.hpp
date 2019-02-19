@@ -4,7 +4,7 @@
 
 #include "libshit/lua/user_type_fwd.hpp" // IWYU pragma: export
 
-#ifndef LIBSHIT_WITHOUT_LUA
+#if LIBSHIT_WITH_LUA
 
 #include "libshit/lua/function_call.hpp"
 #include "libshit/lua/type_traits.hpp"

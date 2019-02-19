@@ -37,7 +37,7 @@ namespace Libshit::Lua
     T t;
   };
 
-#ifndef LIBSHIT_WITHOUT_LUA
+#if LIBSHIT_WITH_LUA
 
   template <typename T>
   using TableCtorPtr = T (*)(StateRef, RawTable);

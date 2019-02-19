@@ -47,7 +47,7 @@ end
 local template_str = [=[
 //$ local function strip(s) return string.gsub(s, "[ \t]+$", "") end
 // Auto generated code, do not edit. See gen_binding in project root.
-#ifndef LIBSHIT_WITHOUT_LUA
+#if LIBSHIT_WITH_LUA
 #include <libshit/lua/user_type.hpp>
 
 //$ for i,cls in ipairs(classes) do

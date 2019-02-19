@@ -11,7 +11,7 @@
 #include "libshit/options.hpp"
 #include "libshit/lua/function_call.hpp"
 
-#ifndef LIBSHIT_WITHOUT_LUA
+#if LIBSHIT_WITH_LUA
 #  include "libshit/logger.lua.h"
 #endif
 
@@ -323,7 +323,7 @@ namespace Libshit::Logger
     return log_os;
   }
 
-#ifndef LIBSHIT_WITHOUT_LUA
+#if LIBSHIT_WITH_LUA
   static void LuaLog(
     Lua::StateRef vm, const char* name, int level, Lua::Skip msg)
   {

@@ -625,7 +625,7 @@ namespace Libshit::Test
       XList lst0(xs, xs+5) COMMA lst1(xs+5, xs+10);,
       CHECK(lst0.size() + lst1.size() == 10);)
 
-#ifndef LIBSHIT_WITHOUT_LUA
+#if LIBSHIT_WITH_LUA
   TEST_CASE("lua binding")
   {
     SmartPtr<X> xs[5];

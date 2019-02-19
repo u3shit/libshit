@@ -2,7 +2,7 @@
 #define UUID_4412E558_283B_48F5_9CC2_8CF95EDFC6E5
 #pragma once
 
-#ifndef LIBSHIT_WITHOUT_LUA
+#if LIBSHIT_WITH_LUA
 
 #include "libshit/lua/type_traits.hpp"
 

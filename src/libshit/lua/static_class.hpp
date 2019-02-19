@@ -16,7 +16,7 @@ namespace Libshit::Lua
 
   struct LIBSHIT_LUAGEN(no_inherit=true) StaticClass {};
 
-#ifndef LIBSHIT_WITHOUT_LUA
+#if LIBSHIT_WITH_LUA
 
   template<typename T>
   struct TypeTraits<T, std::enable_if_t<std::is_base_of_v<StaticClass, T>>>

@@ -16,13 +16,18 @@ local vr = cl.ChildVisitResult
 -- add general options
 local args = {
   "-DLIBSHIT_BINDING_GENERATOR",
+  "-DLIBSHIT_WITH_LUA=1",
   "-Isrc",
+  "-Iext/boost",
+  "-Iext/ljx/src",
+  "-Iext/doctest/doctest",
+  "-Iext/brigand/include",
   "-Ilibshit/src",
   "-Ilibshit/ext/boost",
   "-Ilibshit/ext/ljx/src",
   "-Ilibshit/ext/doctest/doctest",
   "-Ilibshit/ext/brigand/include",
-  "-std=c++1z",
+  "-std=c++17",
   "-stdlib=libc++", -- probably better c++1* support than random gcc headers
   "-Wno-undefined-inline", "-Wno-undefined-internal", -- skip function bodies
   "-Wno-assume"

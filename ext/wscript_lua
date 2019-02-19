@@ -35,19 +35,20 @@ def configure(ctx):
     ctx.add_os_flags('LUAC')
 
     def no_lua(ctx, _):
-        ctx.define('LIBSHIT_WITHOUT_LUA', 1)
-        ctx.env.WITHOUT_LUA = True
+        ctx.define('LIBSHIT_WITH_LUA', 0)
+        ctx.env.WITH_LUA = False
     ctx.only_host_env(no_lua)
 
     wlua = ctx.options.with_lua
     ctx.env.WITH_LUA = wlua
     ctx.env.LUAC_MODE = ctx.options.luac_mode
     if wlua == 'none':
-        ctx.define('LIBSHIT_WITHOUT_LUA', 1)
-        ctx.env.WITHOUT_LUA = True
+        no_lua(ctx, 0)
         chk_luac(ctx, [[]])
         return
-    elif wlua == 'system':
+
+    ctx.define('LIBSHIT_WITH_LUA', 1)
+    if wlua == 'system':
         ctx.check_cfg(package=ctx.option.lua_pc_name, uselib_store='LUA')
         if not ctx.env.LUAC_MODE: ctx.env.LUAC_MODE = 'copy'
         chk_luac(ctx, ['copy', 'system-luajit', 'system-luac'])
@@ -150,7 +151,7 @@ static const char %s[] = {
 from waflib.TaskGen import extension
 @extension('.lua')
 def lua_to_h(self, node):
-    if self.env.WITHOUT_LUA:
+    if not self.env.WITH_LUA:
         self.fatal('Trying to compile .lua in build with no lua')
 
     out = node.change_ext('.lua.h')

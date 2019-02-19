@@ -2,7 +2,7 @@
 #define UUID_B8B05EAA_92F1_4605_AE60_0067F9F66406
 #pragma once
 
-#ifndef LIBSHIT_WITHOUT_LUA
+#if LIBSHIT_WITH_LUA
 
 #include "libshit/meta_utils.hpp"
 #include "libshit/shared_ptr.hpp"

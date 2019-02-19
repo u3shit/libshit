@@ -266,7 +266,7 @@ def build_libshit(ctx, pref):
         'src/libshit/except.cpp',
         'src/libshit/logger.cpp',
     ]
-    if not ctx.env.WITHOUT_LUA:
+    if ctx.env.WITH_LUA:
         src += [
             'src/libshit/logger.lua',
             'src/libshit/lua/base.cpp',
@@ -281,7 +281,7 @@ def build_libshit(ctx, pref):
             'test/container/ordered_map.cpp',
             'test/container/parent_list.cpp',
         ]
-        if not ctx.env.WITHOUT_LUA:
+        if ctx.env.WITH_LUA:
             src += [
                 'test/lua/function_call.cpp',
                 'test/lua/function_ref.cpp',

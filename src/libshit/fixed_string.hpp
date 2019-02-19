@@ -84,7 +84,7 @@ namespace Libshit
   // inline std::istream& operator>>(std::istream& is, FixedString<N>& str)
   // { is.width(N-1); return is >> &str[0]; }
 
-#ifndef LIBSHIT_WITHOUT_LUA
+#if LIBSHIT_WITH_LUA
   template <size_t N>
   struct Lua::TypeTraits<FixedString<N>>
   {

@@ -2,7 +2,7 @@
 #define UUID_2BA17F45_80C0_4F6E_A84A_1BEAC95A48DC
 #pragma once
 
-#ifndef LIBSHIT_WITHOUT_LUA
+#if LIBSHIT_WITH_LUA
 
 #include "libshit/lua/base.hpp"
 #include "libshit/lua/function_call_types.hpp"
