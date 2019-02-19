@@ -176,6 +176,9 @@ def configure_variant(ctx):
         # __try in lua exception handler
         '-Wno-language-extension-token',
     ])
+    # gcc is a piece of crap: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431
+    if ctx.env.COMPILER_CXX == 'clang++':
+        ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], ['-Werror=undef'])
     ctx.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], [
         '-Wno-parentheses-equality', # boost fs, windows build
         '-Wno-microsoft-enum-value', '-Wno-shift-count-overflow', # ljx
@@ -193,6 +196,8 @@ def configure_variant(ctx):
     ctx.env.append_value('CXXFLAGS', ['-std=c++17'])
 
     ctx.filter_flags(['CFLAGS', 'CXXFLAGS'], ['-fvisibility=hidden'])
+
+    ctx.define('LIBSHIT_IS_WINDOWS', ctx.env.DEST_OS == 'win32')
 
     if ctx.env.DEST_OS == 'win32':
         # fixup: waf expects mingw, not clang in half-msvc-emulation-mode
@@ -217,7 +222,6 @@ def configure_variant(ctx):
         ctx.load('winres')
         ctx.add_os_flags('WINRCFLAGS')
         ctx.define('_CRT_SECURE_NO_WARNINGS', 1)
-        ctx.define('WINDOWS', 1)
         ctx.define('UNICODE', 1)
         ctx.define('_UNICODE', 1)
 

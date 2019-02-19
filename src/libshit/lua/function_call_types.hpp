@@ -3,7 +3,10 @@
 #pragma once
 
 #ifndef LIBSHIT_WITHOUT_LUA
-#  include <lua.hpp>
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wundef"
+#  include <lua.hpp> // IWYU pragma: export
+#  pragma GCC diagnostic pop
 #endif
 
 #include "libshit/assert.hpp"

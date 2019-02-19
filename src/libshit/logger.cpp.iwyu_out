@@ -1,0 +1,30 @@
+
+src/libshit/logger.cpp should add these lines:
+#include <mutex>                          // for unique_lock, defer_lock
+#include "libshit/lua/base.hpp"           // for StateRef, LIBSHIT_LUA_RUNBC
+#include "libshit/meta_utils.hpp"         // for StringContainer
+
+src/libshit/logger.cpp should remove these lines:
+
+The full include-list for src/libshit/logger.cpp:
+#include <strings.h>                      // for strncasecmp, strcasecmp
+#include <unistd.h>                       // for isatty
+#include <algorithm>                      // for max, find
+#include <boost/tokenizer.hpp>            // for char_separator, tokenizer
+#include <cstdio>                         // for size_t, setvbuf, _IOFBF
+#include <cstdlib>                        // for getenv, strtol
+#include <cstring>                        // for strlen, strcmp
+#include <functional>                     // for less
+#include <iomanip>                        // for operator<<, setw
+#include <iostream>                       // for operator<<, basic_ostream
+#include <map>                            // for map, operator!=, __map_iter...
+#include <mutex>                          // for unique_lock, defer_lock
+#include <string>                         // for string, operator<, char_traits
+#include "libshit/logger.hpp"             // for Level, ERROR, INFO, WARNING
+#include "libshit/logger.lua.h"           // for luaJIT_BC_logger, luaJIT_BC...
+#include "libshit/lua/base.hpp"           // for StateRef, LIBSHIT_LUA_RUNBC
+#include "libshit/lua/function_call.hpp"  // for lua_setfield, lua_Debug
+#include "libshit/meta_utils.hpp"         // for StringContainer
+#include "libshit/options.hpp"            // for Option, Option::Func, Inval...
+#include "libshit/platform.hpp"           // for LIBSHIT_OS_IS_WINDOWS, LIBS...
+---

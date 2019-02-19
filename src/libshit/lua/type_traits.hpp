@@ -19,6 +19,7 @@ namespace Libshit::Lua
 #include "libshit/lua/base.hpp" // IWYU pragma: export
 #include "libshit/nonowning_string.hpp"
 #include "libshit/nullable.hpp"
+#include "libshit/platform.hpp"
 #include "libshit/utils.hpp"
 
 #include <array>
@@ -236,12 +237,13 @@ namespace Libshit::Lua
                           // fwd declared at the moment...
     static void Push(StateRef vm, const T& pth)
     {
-#ifdef WINDOWS
-      auto str = pth.string();
-      lua_pushlstring(vm, str.c_str(), str.size());
-#else
-      lua_pushlstring(vm, pth.c_str(), pth.size());
-#endif
+      if constexpr (LIBSHIT_OS_IS_WINDOWS)
+      {
+        auto str = pth.string();
+        lua_pushlstring(vm, str.c_str(), str.size());
+      }
+      else
+        lua_pushlstring(vm, pth.c_str(), pth.size());
     }
   };
 

@@ -4,14 +4,15 @@
 
 #include "libshit/assert.hpp"
 #include "libshit/except.hpp"
+#include "libshit/platform.hpp"
 
 #include <boost/config.hpp>
 
-#ifdef NDEBUG
-#  define LIBSHIT_CHECK_ARGS nullptr, 0, nullptr
-#else
+#if LIBSHIT_IS_DEBUG
 #  include "libshit/file.hpp" // IWYU pragma: export
 #  define LIBSHIT_CHECK_ARGS LIBSHIT_FILE, __LINE__, LIBSHIT_FUNCTION
+#else
+#  define LIBSHIT_CHECK_ARGS nullptr, 0, nullptr
 #endif
 
 #define LIBSHIT_CHECK(except_type, x, msg) \
@@ -50,12 +51,7 @@ namespace Libshit::Check
     static constexpr bool IS_NOEXCEPT = true;
   };
 
-#ifndef NDEBUG
-  using Assert = DoAssert;
-#else
-  using Assert = No;
-#endif
-
+  using Assert = std::conditional_t<LIBSHIT_IS_DEBUG, DoAssert, No>;
 
   struct Throw
   {

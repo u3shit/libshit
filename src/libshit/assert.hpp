@@ -2,6 +2,8 @@
 #define UUID_1846E497_4817_47F8_8588_147E6B9962C9
 #pragma once
 
+#include "libshit/platform.hpp"
+
 #include <boost/config.hpp>
 
 #ifndef __has_builtin
@@ -20,13 +22,7 @@
 #  define LIBSHIT_ASSUME(expr) (true ? ((void) 0) : ((void) (expr)))
 #endif
 
-#ifdef NDEBUG
-#  define LIBSHIT_ASSERT(expr) LIBSHIT_ASSUME(expr)
-#  define LIBSHIT_ASSERT_MSG(expr, msg) LIBSHIT_ASSUME(expr)
-#  define LIBSHIT_UNREACHABLE(x) LIBSHIT_BUILTIN_UNREACHABLE()
-
-#else
-
+#if LIBSHIT_IS_DEBUG
 #  include "libshit/file.hpp" // IWYU pragma: export
 
 #  define LIBSHIT_ASSERT(expr) \
@@ -43,16 +39,16 @@
   do                                         \
   {                                          \
     LIBSHIT_ASSERT_FAILED("unreachable", x); \
-    /* click on ignore -> you're toasted */  \
-    LIBSHIT_BUILTIN_UNREACHABLE();           \
+    std::abort();                            \
   } while (false)
+#else
+#  define LIBSHIT_ASSERT(expr) LIBSHIT_ASSUME(expr)
+#  define LIBSHIT_ASSERT_MSG(expr, msg) LIBSHIT_ASSUME(expr)
+#  define LIBSHIT_UNREACHABLE(x) LIBSHIT_BUILTIN_UNREACHABLE()
 #endif
 
 namespace Libshit
 {
-#ifndef WINDOWS
-  BOOST_NORETURN
-#endif
   void AssertFailed(
     const char* expr, const char* msg, const char* file, unsigned line,
     const char* fun);

@@ -6,9 +6,9 @@
 
 #include "libshit/assert.hpp"
 #include "libshit/except.hpp"
+#include "libshit/platform.hpp"
 
-#include <cstddef>
-#include <cstring>
+#include <cstring> /* strstr */ // IWYU pragma: keep
 #include <exception> // IWYU pragma: export
 #include <stdexcept>
 #include <type_traits>
@@ -16,18 +16,22 @@
 #include <vector>
 
 #include <boost/config.hpp>
-#include <lua.hpp> // IWYU pragma: export
 
-#ifdef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wundef"
+#include <lua.hpp> // IWYU pragma: export
+#pragma GCC diagnostic pop
+
+#if LIBSHIT_OS_IS_WINDOWS
 #  include <excpt.h> // needed for SEHFilter under clang
 #endif
 
-#ifdef NDEBUG
-#  define LIBSHIT_LUA_GETTOP(vm, name) ((void) 0)
-#  define LIBSHIT_LUA_CHECKTOP(vm, val) ((void) 0)
-#else
+#if LIBSHIT_IS_DEBUG
 #  define LIBSHIT_LUA_GETTOP(vm, name) auto name = lua_gettop(vm)
 #  define LIBSHIT_LUA_CHECKTOP(vm, val) LIBSHIT_ASSERT(lua_gettop(vm) == val)
+#else
+#  define LIBSHIT_LUA_GETTOP(vm, name) ((void) 0)
+#  define LIBSHIT_LUA_CHECKTOP(vm, val) ((void) 0)
 #endif
 
 namespace Libshit::Lua
@@ -49,7 +53,7 @@ namespace Libshit::Lua
     template <typename Fun, typename... Args>
     auto Catch(Fun f, Args&&... args)
     {
-#ifdef _MSC_VER
+#if LIBSHIT_OS_IS_WINDOWS
       auto vm_ = vm;
       const char* error_msg;
       std::size_t error_len;
@@ -167,7 +171,7 @@ namespace Libshit::Lua
   private:
     std::pair<std::size_t, int> Ipairs01Prep(int idx);
 
-#ifdef _MSC_VER
+#if LIBSHIT_OS_IS_WINDOWS
     static int SEHFilter(lua_State* vm, unsigned code,
                          const char** error_msg, std::size_t* error_len);
 #else

@@ -4,6 +4,8 @@
 
 #include "libshit/utils.hpp"
 
+#include "libshit/platform.hpp"
+
 #include <boost/config.hpp>
 #include <boost/smart_ptr/intrusive_ptr.hpp>
 
@@ -16,7 +18,7 @@
 #include <type_traits>
 #include <utility>
 
-#ifndef NDEBUG
+#if LIBSHIT_IS_DEBUG
 #  include "libshit/file.hpp" // IWYU pragma: export
 #endif
 
@@ -121,13 +123,13 @@ namespace Libshit
     return ret;
   }
 
-#ifdef NDEBUG
-#  define LIBSHIT_THROW(type, ...) \
-  (throw ::Libshit::GetException<type>(nullptr, 0, nullptr, __VA_ARGS__))
-#else
+#if LIBSHIT_IS_DEBUG
 #  define LIBSHIT_THROW(type, ...) \
   (throw ::Libshit::GetException<type>(  \
     LIBSHIT_FILE, __LINE__, LIBSHIT_FUNCTION, __VA_ARGS__))
+#else
+#  define LIBSHIT_THROW(type, ...) \
+  (throw ::Libshit::GetException<type>(nullptr, 0, nullptr, __VA_ARGS__))
 #endif
 
   BOOST_NORETURN void RethrowException();

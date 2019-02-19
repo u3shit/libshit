@@ -1,4 +1,6 @@
-#ifdef WINDOWS
+#include "libshit/platform.hpp"
+
+#if LIBSHIT_OS_IS_WINDOWS
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <windows.h>
@@ -23,13 +25,13 @@
 #include <map>
 #include <string>
 
-#ifndef WINDOWS
-#include <unistd.h>
+#if !LIBSHIT_OS_IS_WINDOWS
+#  include <unistd.h>
 #endif
 
 #include <boost/tokenizer.hpp>
 
-#ifdef _MSC_VER
+#if LIBSHIT_STDLIB_IS_MSVC
 #  define strncasecmp _strnicmp
 #  define strcasecmp _stricmp
 #else
@@ -48,7 +50,7 @@ namespace Libshit::Logger
   int global_level = -1;
   bool show_fun = false;
   std::recursive_mutex log_mutex;
-#ifdef NDEBUG
+#if !LIBSHIT_IS_DEBUG
   std::ostream* nullptr_ostream;
 #endif
 
@@ -56,11 +58,8 @@ namespace Libshit::Logger
 
   static Option show_fun_opt{
     GetOptionGroup(), "show-functions", 0, nullptr,
-#ifdef NDEBUG
-    "Ignored for compatibility with debug builds",
-#else
-    "Show function signatures in log",
-#endif
+    LIBSHIT_IS_DEBUG ? "Show function signatures in log"
+      : "Ignored for compatibility with debug builds",
     [](auto&&) { show_fun = true; }};
 
   static int ParseLevel(const char* str)
@@ -92,7 +91,7 @@ namespace Libshit::Logger
     "[MODULE=LEVEL,[...]][DEFAULT_LEVEL]",
     "Sets logging level for the specified modules, or the global default\n\t"
     "Valid levels: none, err, warn, info"
-#ifndef NDEBUG
+#if LIBSHIT_IS_DEBUG
     ", 0..4 (debug levels)"
 #endif
     "\n\tDefault level: info",
@@ -129,7 +128,7 @@ namespace Libshit::Logger
         setvbuf(stderr, buf, _IOFBF, 4096);
         std::ios_base::sync_with_stdio(false);
 
-#ifdef WINDOWS
+#if LIBSHIT_OS_IS_WINDOWS
         win_colors = _isatty(2);
 #else
         const char* x;
@@ -154,9 +153,7 @@ namespace Libshit::Logger
     [](auto&&) { global.win_colors = false; global.ansi_colors = false; }};
 
   static size_t max_name = 8;
-#ifndef NDEBUG
   static size_t max_file = 20, max_fun = 20;
-#endif
 
   namespace
   {
@@ -213,7 +210,7 @@ namespace Libshit::Logger
 
       void WriteBegin()
       {
-#ifdef WINDOWS
+#if LIBSHIT_OS_IS_WINDOWS
         HANDLE h;
         int color;
 
@@ -256,7 +253,7 @@ namespace Libshit::Logger
         max_name = std::max(max_name, std::strlen(name));
         os << '[' << std::setw(max_name) << name << ']';
 
-#ifdef WINDOWS
+#if LIBSHIT_OS_IS_WINDOWS
         if (global.win_colors)
         {
           os.flush();
@@ -265,7 +262,6 @@ namespace Libshit::Logger
 #endif
         if (global.ansi_colors) os << "\033[22m";
 
-#ifndef NDEBUG
         if (file)
         {
           max_file = std::max(max_file, std::strlen(file));
@@ -277,13 +273,12 @@ namespace Libshit::Logger
           max_fun = std::max(max_fun, std::strlen(fun));
           os << ' ' << std::setw(max_fun) << fun;
         }
-#endif
         os << ": ";
       }
 
       void WriteEnd()
       {
-#ifdef WINDOWS
+#if LIBSHIT_OS_IS_WINDOWS
         if (global.win_colors)
         {
           os.flush();
@@ -300,11 +295,9 @@ namespace Libshit::Logger
       std::string buf;
       const char* name;
       int level;
-#ifndef NDEBUG
       const char* file;
       unsigned line;
       const char* fun;
-#endif
     };
   }
 
@@ -324,16 +317,9 @@ namespace Libshit::Logger
   {
     filter.name = name;
     filter.level = level;
-#ifndef NDEBUG
     filter.file = file;
     filter.line = line;
     filter.fun = fun;
-#else
-    // silence argument unused warnings
-    (void) file;
-    (void) line;
-    (void) fun;
-#endif
     return log_os;
   }
 
@@ -346,15 +332,16 @@ namespace Libshit::Logger
     unsigned line = 0;
     const char* fun = nullptr;
 
-#  ifndef NDEBUG
-    lua_Debug dbg;
-    if (lua_getstack(vm, 1, &dbg) && lua_getinfo(vm, "Sln", &dbg))
+    if constexpr (LIBSHIT_IS_DEBUG)
     {
-      file = dbg.short_src;
-      line = dbg.currentline;
-      fun = dbg.name;
+      lua_Debug dbg;
+      if (lua_getstack(vm, 1, &dbg) && lua_getinfo(vm, "Sln", &dbg))
+      {
+        file = dbg.short_src;
+        line = dbg.currentline;
+        fun = dbg.name;
+      }
     }
-#  endif
     auto& os = Log(name, level, file, line, fun);
 
     size_t len;

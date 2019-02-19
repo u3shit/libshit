@@ -3,6 +3,7 @@
 #pragma once
 
 #include "libshit/except.hpp"
+#include "libshit/platform.hpp"
 
 #include <stdexcept>
 
@@ -12,11 +13,8 @@
 namespace Libshit
 {
 
-#ifdef NDEBUG
-  using LinkMode = boost::intrusive::link_mode<boost::intrusive::normal_link>;
-#else
-  using LinkMode = boost::intrusive::link_mode<boost::intrusive::safe_link>;
-#endif
+  using LinkMode = boost::intrusive::link_mode<
+    LIBSHIT_IS_DEBUG ? boost::intrusive::safe_link : boost::intrusive::normal_link>;
 
   LIBSHIT_GEN_EXCEPTION_TYPE(ContainerConsistency, std::logic_error);
   // trying to add an already linked item to an intrusive container

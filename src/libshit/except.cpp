@@ -1,6 +1,7 @@
 #include "libshit/except.hpp"
 
 #include "libshit/assert.hpp"
+#include "libshit/platform.hpp"
 
 #include <boost/core/demangle.hpp>
 
@@ -15,9 +16,8 @@
 #define LIBSHIT_LOG_NAME "except"
 #include "libshit/logger_helper.hpp"
 
-#ifdef WINDOWS
+// windows only
 extern "C" void _assert(const char* msg, const char* file, unsigned line);
-#endif
 
 namespace Libshit
 {
@@ -154,32 +154,30 @@ namespace Libshit
     const char* expr, const char* msg, const char* file, unsigned line,
     const char* fun)
   {
-#ifdef WINDOWS
-    std::string fake_expr = expr;
-    if (fun)
+    if constexpr (LIBSHIT_OS_IS_WINDOWS)
     {
-      fake_expr += "\nFunction: ";
-      fake_expr += fun;
+      std::string fake_expr = expr;
+      if (fun)
+      {
+        fake_expr += "\nFunction: ";
+        fake_expr += fun;
+      }
+      if (msg)
+      {
+        fake_expr += "\nMessage: ";
+        fake_expr += msg;
+      }
+      _assert(fake_expr.c_str(), file ? file : "", line);
     }
-    if (msg)
+    else
     {
-      fake_expr += "\nMessage: ";
-      fake_expr += msg;
+      auto& log = Logger::Log("assert", Logger::ERROR, file, line, fun);
+      log << "Assertion failed!\n";
+      if (!Logger::show_fun && fun) log << "in function " << fun << '\n';
+      log << "Expression: " << expr << '\n';
+      if (msg) log << "Message: " << msg << '\n';
+      log << std::flush;
+      std::abort();
     }
-    _assert(fake_expr.c_str(), file ? file : "", line);
-#else
-    auto& log = Logger::Log("assert", Logger::ERROR, file, line, fun);
-    log << "Assertion failed!\n";
-#  ifdef NDEBUG
-    log << file << ':' << line << ": in function " << fun << "\n";
-#  else
-    if (!Logger::show_fun && fun) log << "in function " << fun << "\n";
-#  endif
-    log << "Expression: " << expr << '\n';
-    if (msg)
-      log << "Message: " << msg << '\n';
-    log << std::flush;
-    std::abort();
-#endif
   }
 }

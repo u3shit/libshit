@@ -3,11 +3,12 @@
 #pragma once
 
 #include "libshit/lua/type_traits.hpp"
+#include "libshit/platform.hpp"
 
 #include <iosfwd>
 #include <mutex>
 
-#ifndef NDEBUG
+#if LIBSHIT_IS_DEBUG
 #  include "libshit/file.hpp" /* IWYU pragma: export */ // IWYU pragma: keep
 #endif
 
@@ -35,10 +36,10 @@ namespace Libshit::Logger
     const char* name, int level, const char* file, unsigned line,
     const char* fun);
 
-#ifdef NDEBUG
-#  define LIBSHIT_LOG_ARGS nullptr, 0, nullptr
-#else
+#if LIBSHIT_IS_DEBUG
 #  define LIBSHIT_LOG_ARGS LIBSHIT_FILE, __LINE__, LIBSHIT_FUNCTION
+#else
+#  define LIBSHIT_LOG_ARGS nullptr, 0, nullptr
 #endif
 
   // you can lock manually it if you want to make sure consecutive lines end up
@@ -58,7 +59,7 @@ namespace Libshit::Logger
 #define LIBSHIT_INF(name)        LIBSHIT_LOG(name, ::Libshit::Logger::INFO)
 #define LIBSHIT_CHECK_INF(name)  LIBSHIT_CHECK_LOG(name, ::Libshit::Logger::INFO)
 
-#ifndef NDEBUG
+#if LIBSHIT_IS_DEBUG
 #  define LIBSHIT_DBG(name, level)                                              \
   ([]{static_assert(0 <= (level) && (level) < 5, "invalid debug level");},1) && \
   LIBSHIT_LOG(name, level)

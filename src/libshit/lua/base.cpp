@@ -5,6 +5,7 @@
 #include "libshit/utils.hpp"
 
 #include <climits>
+#include <cstddef>
 #include <cstring>
 #include <initializer_list>
 #include <new>
@@ -227,7 +228,7 @@ assert(typename(stuff_ud) == "userdata")
     if (vm) lua_close(vm);
   }
 
-#ifdef _MSC_VER
+#if LIBSHIT_OS_IS_WINDOWS
   int StateRef::SEHFilter(lua_State* vm, unsigned code,
                           const char** error_msg, std::size_t* error_len)
   {

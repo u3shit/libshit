@@ -1,23 +1,23 @@
 
 src/libshit/lua/base.hpp should add these lines:
-#include <lauxlib.h>           // for luaL_loadbuffer
-#include <lua.h>               // for lua_gettop, lua_rawgeti, lua_State
+#include <lauxlib.h>             // for luaL_loadbuffer
+#include <lua.h>                 // for lua_gettop, lua_rawgeti, lua_State
 
 src/libshit/lua/base.hpp should remove these lines:
-- #include <cstring>  // lines 11-11
 
 The full include-list for src/libshit/lua/base.hpp:
-#include <lauxlib.h>           // for luaL_loadbuffer
-#include <lua.h>               // for lua_gettop, lua_rawgeti, lua_State
-#include <boost/config.hpp>    // for BOOST_NORETURN
-#include <cstddef>             // for size_t
-#include <exception>           // for exception
+#include <lauxlib.h>             // for luaL_loadbuffer
+#include <lua.h>                 // for lua_gettop, lua_rawgeti, lua_State
+#include <boost/config.hpp>      // for BOOST_NORETURN
+#include <cstring>               // for size_t
+#include <exception>             // for exception
 #include <lua.hpp>
-#include <stdexcept>           // for runtime_error
-#include <type_traits>         // for decay_t
-#include <utility>             // for forward, pair
-#include <vector>              // for vector
-#include "libshit/assert.hpp"  // for LIBSHIT_ASSERT
-#include "libshit/except.hpp"  // for LIBSHIT_GEN_EXCEPTION_TYPE
-namespace Libshit { namespace Lua { template <typename T, typename Enable = void> struct TypeTraits; } }  // lines 36-37
+#include <stdexcept>             // for runtime_error
+#include <type_traits>           // for decay_t
+#include <utility>               // for forward, pair
+#include <vector>                // for vector
+#include "libshit/assert.hpp"    // for LIBSHIT_ASSERT
+#include "libshit/except.hpp"    // for LIBSHIT_GEN_EXCEPTION_TYPE
+#include "libshit/platform.hpp"  // for LIBSHIT_OS_IS_WINDOWS, LIBSHIT_IS_DEBUG
+namespace Libshit { namespace Lua { template <typename T, typename Enable = void> struct TypeTraits; } }  // lines 40-41
 ---
