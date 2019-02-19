@@ -10,7 +10,7 @@ The full include-list for src/libshit/lua/function_call.hpp:
 #include <lua.h>                                // for lua_gettop, lua_typename
 #include <boost/config.hpp>                     // for BOOST_FORCEINLINE
 #include <brigand/sequences/list.hpp>           // for list
-#include <cstddef>                              // for size_t, _LIBCPP_VERSION
+#include <cstddef>                              // for size_t
 #include <functional>                           // for invoke
 #include <limits>                               // for numeric_limits, numer...
 #include <ostream>                              // for operator<<, ostream
@@ -23,13 +23,13 @@ The full include-list for src/libshit/lua/function_call.hpp:
 #include "libshit/lua/function_call_types.hpp"  // for TupleLike, RetNum, Any
 #include "libshit/lua/type_traits.hpp"          // for StateRef, TypeTraits
 #include "libshit/meta_utils.hpp"               // for FunctionArguments
-namespace Libshit { namespace Lua { namespace Detail { template <auto ...args> struct AutoList; } } }  // lines 313-313
-namespace Libshit { namespace Lua { namespace Detail { template <auto Fun, bool Unsafe, typename Ret, typename Args> struct WrapFunGen; } } }  // lines 274-275
-namespace Libshit { namespace Lua { namespace Detail { template <std::size_t Len, typename Args> struct ArgSeq; } } }  // lines 187-187
-namespace Libshit { namespace Lua { namespace Detail { template <std::size_t N, typename Seq, typename Args> struct GenArgSequence; } } }  // lines 189-190
-namespace Libshit { namespace Lua { namespace Detail { template <typename Args> struct OverloadCheck; } } }  // lines 315-315
-namespace Libshit { namespace Lua { namespace Detail { template <typename Args> struct PrintOverload; } } }  // lines 343-343
-namespace Libshit { namespace Lua { namespace Detail { template <typename Funs, typename Orig = Funs> struct OverloadWrap; } } }  // lines 329-329
-namespace Libshit { namespace Lua { namespace Detail { template <typename Tuple, typename Index> struct TupleGet; } } }  // lines 152-152
-namespace Libshit { namespace Lua { namespace Detail { template <typename Tuple, typename Index> struct TuplePush; } } }  // lines 227-227
+namespace Libshit { namespace Lua { namespace Detail { template <auto ...args> struct AutoList; } } }  // lines 299-299
+namespace Libshit { namespace Lua { namespace Detail { template <auto Fun, bool Unsafe, typename Ret, typename Args> struct WrapFunGen; } } }  // lines 260-261
+namespace Libshit { namespace Lua { namespace Detail { template <std::size_t Len, typename Args> struct ArgSeq; } } }  // lines 173-173
+namespace Libshit { namespace Lua { namespace Detail { template <std::size_t N, typename Seq, typename Args> struct GenArgSequence; } } }  // lines 175-176
+namespace Libshit { namespace Lua { namespace Detail { template <typename Args> struct OverloadCheck; } } }  // lines 301-301
+namespace Libshit { namespace Lua { namespace Detail { template <typename Args> struct PrintOverload; } } }  // lines 329-329
+namespace Libshit { namespace Lua { namespace Detail { template <typename Funs, typename Orig = Funs> struct OverloadWrap; } } }  // lines 315-315
+namespace Libshit { namespace Lua { namespace Detail { template <typename Tuple, typename Index> struct TupleGet; } } }  // lines 138-138
+namespace Libshit { namespace Lua { namespace Detail { template <typename Tuple, typename Index> struct TuplePush; } } }  // lines 213-213
 ---

@@ -24,20 +24,6 @@
 
 // IWYU pragma: no_forward_declare Libshit::Lua::TupleLike
 
-#if defined(_LIBCPP_VERSION) && _LIBCPP_VERSION <= 5000
-namespace std
-{
-  // welcome to 2017... oh wait
-  template <typename F, typename... Args>
-  inline constexpr bool is_nothrow_invocable_v =
-    noexcept(invoke(declval<F>(), declval<Args>()...));
-
-  template <typename F, typename... Args>
-  using invoke_result_t =
-    decltype(invoke(declval<F>(), declval<Args>()...));
-}
-#endif
-
 namespace Libshit::Lua
 {
   // sanity check
@@ -391,7 +377,7 @@ namespace Libshit::Lua
   inline void StateRef::PushFunction()
   {
     if constexpr (sizeof...(Funs) == 1)
-                   lua_pushcfunction(vm, (Detail::WrapFunc<Funs..., false>::Func));
+      lua_pushcfunction(vm, (Detail::WrapFunc<Funs..., false>::Func));
     else
       lua_pushcfunction(vm, Detail::Overload<Funs...>::Func);
   }
