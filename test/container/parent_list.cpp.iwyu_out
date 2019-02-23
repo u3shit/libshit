@@ -2,20 +2,20 @@
 (src/libshit/container/parent_list.hpp has correct #includes/fwd-decls)
 
 test/container/parent_list.cpp should add these lines:
-#include "libshit/not_null.hpp"                   // for NotNull
+#include "libshit/not_null.hpp"
 
 test/container/parent_list.cpp should remove these lines:
 
 The full include-list for test/container/parent_list.cpp:
 #include <libshit/container/parent_list.hpp>
-#include <algorithm>                              // for equal
-#include <initializer_list>                       // for initializer_list
-#include <libshit/container/parent_list.lua.hpp>  // for ParentListIterator
-#include <libshit/doctest.hpp>                    // for ResultBuilder, Subcase
-#include <libshit/shared_ptr.hpp>                 // for SharedPtrBase, Make...
-#include <libshit/utils.hpp>                      // for Move
-#include <ostream>                                // for operator<<, ostream
-#include <stdexcept>                              // for out_of_range
-#include "libshit/not_null.hpp"                   // for NotNull
+#include <algorithm>
+#include <initializer_list>
+#include <libshit/container/parent_list.lua.hpp>
+#include <libshit/doctest.hpp>
+#include <libshit/shared_ptr.hpp>
+#include <libshit/utils.hpp>
+#include <ostream>
+#include <stdexcept>
+#include "libshit/not_null.hpp"
 #include "parent_list.binding.hpp"
 ---

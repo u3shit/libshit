@@ -1,22 +1,22 @@
 
 src/libshit/lua/type_traits.hpp should add these lines:
-#include <lua.h>                         // for lua_type, lua_tonumberx, lua...
+#include <lua.h>
 
 src/libshit/lua/type_traits.hpp should remove these lines:
 
 The full include-list for src/libshit/lua/type_traits.hpp:
-#include <lua.h>                         // for lua_type, lua_tonumberx, lua...
-#include <array>                         // for array
-#include <boost/config.hpp>              // for BOOST_LIKELY, BOOST_UNLIKELY
-#include <cstring>                       // for memcpy, size_t
-#include <ostream>                       // for operator<<, ostream, basic_o...
-#include <string>                        // for string, basic_string, char_t...
-#include <type_traits>                   // for enable_if_t, false_type, rem...
-#include "libshit/lua/base.hpp"          // for StateRef, TypeTraits
-#include "libshit/nonowning_string.hpp"  // for NonowningString, StringView
-#include "libshit/nullable.hpp"          // for ToNotNullable, ToNullable
-#include "libshit/platform.hpp"          // for LIBSHIT_OS_IS_WINDOWS
-#include "libshit/utils.hpp"             // for Move
-namespace Libshit { namespace Lua { template <typename T, typename Enable = void> struct UserTypeTraits; } }  // lines 285-285
-namespace boost { namespace filesystem { class path; } }  // lines 34-34
+#include <lua.h>
+#include <array>
+#include <boost/config.hpp>
+#include <cstring>
+#include <ostream>
+#include <string>
+#include <type_traits>
+#include "libshit/lua/base.hpp"
+#include "libshit/nonowning_string.hpp"
+#include "libshit/nullable.hpp"
+#include "libshit/platform.hpp"
+#include "libshit/utils.hpp"
+namespace Libshit { namespace Lua { template <typename T, typename Enable = void> struct UserTypeTraits; } }
+namespace boost { namespace filesystem { class path; } }
 ---

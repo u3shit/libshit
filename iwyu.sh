@@ -27,21 +27,31 @@ flags+=(
 
 accept=false
 verbose=false
-if [[ $1 == --accept ]]; then
-    accept=true
-    shift
-fi
-if [[ $1 == -v || $1 == --verbose ]]; then
-    verbose=true
-    shift
-fi
+comments=false
 
-file="$1"
+while [[ $1 == -* ]]; do
+    if [[ $1 == -a || $1 == --accept ]]; then
+        accept=true
+    elif [[ $1 == -v || $1 == --verbose ]]; then
+        verbose=true
+    elif [[ $1 == --comments ]]; then
+        comments=true
+    else
+        echo "Unknown argument $1" >&2
+        exit 1
+    fi
+    shift
+done
+
+$comments || flags+=(-Xiwyu --no_comments)
+
+file="${1%.iwyu_out}"
+shift
 
 [[ $file == *.binding.hpp ]] && exit 0
 
 succ=false
-out="$($verbose && set -x; include-what-you-use "${flags[@]}" "$@" 2>&1)"
+out="$($verbose && set -x; include-what-you-use "${flags[@]}" "$file" "$@" 2>&1)"
 $verbose && cat <<<"$out"
 
 [[ $? -eq 2 ]] && succ=true
@@ -62,7 +72,7 @@ elif $succ; then
     exit 0
 fi
 
-echo -e '\033[33m'"$1"' output\033[0m'
+echo -e '\033[33m'"$file"' output\033[0m'
 cat <<<"$out"
-echo -e '\033[31;1m'"$1"' failed\033[0m'
+echo -e '\033[31;1m'"$file"' failed\033[0m'
 exit 1

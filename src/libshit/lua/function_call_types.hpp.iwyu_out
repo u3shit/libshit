@@ -1,12 +1,12 @@
 
 src/libshit/lua/function_call_types.hpp should add these lines:
-#include <lua.h>               // for LUA_TSTRING, LUA_TTABLE, LUA_TBOOLEAN
+#include <lua.h>
 
 src/libshit/lua/function_call_types.hpp should remove these lines:
 
 The full include-list for src/libshit/lua/function_call_types.hpp:
-#include <lua.h>               // for LUA_TSTRING, LUA_TTABLE, LUA_TBOOLEAN
+#include <lua.h>
 #include <lua.hpp>
-#include "libshit/assert.hpp"  // for StringContainer, LIBSHIT_ASSERT_MSG
-namespace Libshit { namespace Lua { template <typename T, typename Enable = void> struct TupleLike; } }  // lines 64-65
+#include "libshit/assert.hpp"
+namespace Libshit { namespace Lua { template <typename T, typename Enable = void> struct TupleLike; } }
 ---

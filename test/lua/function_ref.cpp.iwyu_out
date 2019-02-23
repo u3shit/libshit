@@ -2,19 +2,19 @@
 (src/libshit/lua/function_ref.hpp has correct #includes/fwd-decls)
 
 test/lua/function_ref.cpp should add these lines:
-#include "libshit/not_null.hpp"            // for NotNull
+#include "libshit/not_null.hpp"
 
 test/lua/function_ref.cpp should remove these lines:
 
 The full include-list for test/lua/function_ref.cpp:
 #include <libshit/lua/function_ref.hpp>
-#include <algorithm>                       // for sort
-#include <libshit/doctest.hpp>             // for ResultBuilder, CHECK, Subcase
-#include <libshit/lua/dynamic_object.hpp>  // for SmartObject
-#include <libshit/lua/type_traits.hpp>     // for LIBSHIT_LUA_CLASS
-#include <libshit/meta.hpp>                // for LIBSHIT_LUAGEN
-#include <libshit/shared_ptr.hpp>          // for MakeSmart
-#include <vector>                          // for vector, operator==
+#include <algorithm>
+#include <libshit/doctest.hpp>
+#include <libshit/lua/dynamic_object.hpp>
+#include <libshit/lua/type_traits.hpp>
+#include <libshit/meta.hpp>
+#include <libshit/shared_ptr.hpp>
+#include <vector>
 #include "function_ref.binding.hpp"
-#include "libshit/not_null.hpp"            // for NotNull
+#include "libshit/not_null.hpp"
 ---
