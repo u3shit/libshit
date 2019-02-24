@@ -13,6 +13,7 @@ base_dir_escaped="$(sed 's/[[*?\]/\\\0/g' <<<"$base_dir")"
 flags+=(
     -std=c++17 -stdlib=libc++
     -Xiwyu --mapping_file="$dir/iwyu.imp"
+    -Xiwyu --max_line_length=200
     -I"$dir/src"
     -I"$dir/build/src"
     -I"$dir/../build/clang-debug/libshit/src"
@@ -44,6 +45,7 @@ while [[ $1 == -* ]]; do
 done
 
 $comments || flags+=(-Xiwyu --no_comments)
+$verbose && flags+=(-Xiwyu --verbose=3)
 
 file="${1%.iwyu_out}"
 shift
