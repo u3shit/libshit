@@ -33,9 +33,10 @@ def configure(ctx):
     Logs.pprint('NORMAL', 'Configuring lua')
     ctx.add_os_flags('LUACFLAGS')
     ctx.add_os_flags('LUAC')
+    defines = 'DEFINES_' + Context.g_module.APPNAME.upper()
 
     def no_lua(ctx, _):
-        ctx.define('LIBSHIT_WITH_LUA', 0)
+        ctx.env.append_value(defines, 'LIBSHIT_WITH_LUA=0')
         ctx.env.WITH_LUA = False
     ctx.only_host_env(no_lua)
 
@@ -47,7 +48,7 @@ def configure(ctx):
         chk_luac(ctx, [[]])
         return
 
-    ctx.define('LIBSHIT_WITH_LUA', 1)
+    ctx.env.append_value(defines, 'LIBSHIT_WITH_LUA=1')
     if wlua == 'system':
         ctx.check_cfg(package=ctx.option.lua_pc_name, uselib_store='LUA')
         if not ctx.env.LUAC_MODE: ctx.env.LUAC_MODE = 'copy'
