@@ -197,8 +197,6 @@ def configure_variant(ctx):
 
     ctx.filter_flags(['CFLAGS', 'CXXFLAGS'], ['-fvisibility=hidden'])
 
-    ctx.define('LIBSHIT_IS_WINDOWS', ctx.env.DEST_OS == 'win32')
-
     if ctx.env.DEST_OS == 'win32':
         # fixup: waf expects mingw, not clang in half-msvc-emulation-mode
         while '-Wl,--enable-auto-import' in ctx.env.LINKFLAGS:
