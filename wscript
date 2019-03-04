@@ -473,9 +473,14 @@ from waflib import Utils
 @conf
 # bundle_chk: if string, header only lib's include path
 def system_chk(ctx, name, default, system_chk, bundle_chk, cross=False,
-               post_chk=None):
+               post_chk=None, define=None):
     envname = 'BUILD_' + Utils.quote_define_name(name)
     hasname = 'HAS_'  + Utils.quote_define_name(name)
+    defines = 'DEFINES_' + Utils.quote_define_name(name)
+
+    global all_optional
+    if define == None and name in all_optional:
+        define = app + '_WITH_' + Utils.quote_define_name(name)
 
     if bundle_chk == None:
         def fun(ctx):
@@ -497,6 +502,7 @@ def system_chk(ctx, name, default, system_chk, bundle_chk, cross=False,
                 system_chk(ctx)
                 ctx.env[envname] = False
                 ctx.env[hasname] = True
+                if define: ctx.env.append_value(defines, define + '=1')
                 if post_chk: post_chk(ctx)
                 ctx.msg('Using '+name, 'system')
                 return
@@ -508,6 +514,7 @@ def system_chk(ctx, name, default, system_chk, bundle_chk, cross=False,
                 bundle_chk(ctx)
                 ctx.env[envname] = True
                 ctx.env[hasname] = True
+                if define: ctx.env.append_value(defines, define + '=1')
                 if post_chk: post_chk(ctx)
                 ctx.msg('Using '+name, 'bundled')
                 return
@@ -515,6 +522,7 @@ def system_chk(ctx, name, default, system_chk, bundle_chk, cross=False,
                 if opt == 'bundle': raise
 
         ctx.msg('Using '+name, False)
+        if define: ctx.env.append_value(defines, define + '=0')
         global all_optional
         if opt == 'disable' or name in all_optional: return
         ctx.fatal('Module '+name+' not found')
