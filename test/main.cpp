@@ -22,10 +22,10 @@ using namespace std::string_literals;
 
 namespace Libshit
 {
-  static OptionGroup grp{OptionParser::GetGlobal(), "Testing options"};
+
   static std::string xml_file;
   static Option xml_file_opt{
-    grp, "xml-output", 1, "FILE",
+    OptionParser::GetTestingOptions(), "xml-output", 1, "FILE",
     "Save xml output to this file\n"
     "\t(run as \"--xml-output <filename> --test --reporters=junit\")",
     [](auto&& args) { xml_file = Move(args.front()); }};
@@ -236,7 +236,8 @@ namespace Libshit
     if (ctx.shouldExit()) throw Exit{!ret};
   }
 
-  static Option opt{grp, "test", std::size_t(-1), "ARGS...",
-      "Run doctest tests (\"--test --help\" for details)\n\t"
-      "Remaining arguments will be passed to doctest", FUNC<Fun>};
+  static Option opt{
+    OptionParser::GetTestingOptions(), "test", std::size_t(-1), "ARGS...",
+    "Run doctest tests (\"--test --help\" for details)\n\t"
+    "Remaining arguments will be passed to doctest", FUNC<Fun>};
 }

@@ -97,6 +97,12 @@ namespace Libshit
       return inst;
     }
 
+    static inline OptionGroup& GetTestingOptions()
+    {
+      static OptionGroup inst{OptionParser::GetGlobal(), "Testing options"};
+      return inst;
+    }
+
   private:
     void ShowHelp();
     void Run_(int& argc, const char** argv);
