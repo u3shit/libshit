@@ -13,13 +13,13 @@ def options(ctx):
 def configure(ctx):
     def system_brigand(ctx):
         ctx.check_cfg(package='libbrigand', args='--cflags',
-                      global_define=True, uselib_store='BRIGAND')
-        ctx.undefine('HAVE_LIBBRIGAND') # ...
+                      uselib_store='BRIGAND',
+                      define_name='', add_have_to_env=False)
     ctx.system_chk('brigand', 'auto', system_brigand, 'brigand/include', libshit_cross)
 
     def system_doctest(ctx):
-        ctx.check_cxx(header_name='doctest.h', uselib_store='DOCTEST')
-        ctx.undefine('HAVE_DOCTEST_H') # why must u define it
+        ctx.check_cxx(header_name='doctest.h', uselib_store='DOCTEST',
+                      define_name='')
     def doctest_post(ctx):
         if ctx.env.WITH_TESTS: # will be false with host variant
             ctx.env.append_value(

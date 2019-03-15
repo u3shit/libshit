@@ -6,6 +6,8 @@
 
 #ifdef DOCTEST_CONFIG_DISABLE
 
+#  define LIBSHIT_WITH_TESTS 0
+
 // doctest is braindead and removes checks in disabled mode, leading to warnings
 // about unused variables. author is retarded too
 // https://github.com/onqtam/doctest/issues/61
@@ -29,6 +31,8 @@
 #define CCAPTURE(x)
 
 #else
+
+#  define LIBSHIT_WITH_TESTS 1
 
 // like CAPTURE but not lazy (so it works with rvalues too)
 #define CCAPTURE(x)                         \
