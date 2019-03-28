@@ -22,18 +22,21 @@
 #  define LIBSHIT_ASSUME(expr) (true ? ((void) 0) : ((void) (expr)))
 #endif
 
-#if LIBSHIT_IS_DEBUG
-#  include "libshit/file.hpp" // IWYU pragma: export
-
-#  define LIBSHIT_ASSERT(expr) \
+#  define LIBSHIT_RASSERT(expr) \
   (BOOST_LIKELY(!!(expr)) ? ((void)0) : LIBSHIT_ASSERT_FAILED(#expr, nullptr))
 
-#  define LIBSHIT_ASSERT_MSG(expr, msg) \
+#  define LIBSHIT_RASSERT_MSG(expr, msg) \
   (BOOST_LIKELY(!!(expr)) ? ((void)0) : LIBSHIT_ASSERT_FAILED(#expr, msg))
+
+#if LIBSHIT_IS_DEBUG
+#  include "libshit/file.hpp" // IWYU pragma: export
 
 #  define LIBSHIT_ASSERT_FAILED(expr, msg)                   \
   ::Libshit::AssertFailed(expr, msg, LIBSHIT_FILE, __LINE__, \
                           LIBSHIT_FUNCTION)
+
+#  define LIBSHIT_ASSERT LIBSHIT_RASSERT
+#  define LIBSHIT_ASSERT_MSG LIBSHIT_RASSERT_MSG
 
 #  define LIBSHIT_UNREACHABLE(x)             \
   do                                         \
@@ -41,7 +44,11 @@
     LIBSHIT_ASSERT_FAILED("unreachable", x); \
     std::abort();                            \
   } while (false)
+
 #else
+
+#  define LIBSHIT_ASSERT_FAILED(expr, msg) \
+  ::Libshit::AssertFailed(expr, msg, nullptr, 0, nullptr)
 #  define LIBSHIT_ASSERT(expr) LIBSHIT_ASSUME(expr)
 #  define LIBSHIT_ASSERT_MSG(expr, msg) LIBSHIT_ASSUME(expr)
 #  define LIBSHIT_UNREACHABLE(x) LIBSHIT_BUILTIN_UNREACHABLE()
