@@ -75,21 +75,34 @@ namespace Libshit
     void SetUsage(const char* usage) { this->usage = usage; }
     const char* GetUsage() const noexcept { return usage; }
 
-    using NoArgFun = Function<void (const char*)>;
-    void SetNoArgHandler(NoArgFun fun) { no_arg_fun = Move(fun); }
-    void FailOnNoArg();
-    const NoArgFun& GetNoArgHandler() const { return no_arg_fun; }
+    using NonArgFun = Function<void (const char*)>;
+    /// Called on non-arguments (doesn't start with `-` or after `--`)
+    void SetNonArgHandler(NonArgFun fun) { non_arg_fun = Move(fun); }
+    void FailOnNonArg();
+    const NonArgFun& GetNonArgHandler() const noexcept { return non_arg_fun; }
+
+    using ValidateNonArgsFun = Function<bool (int, const char**)>;
+    /**
+     * Called after parsing all arguments and non-arguments, can be used for
+     * arbitrary validation. Return `false` to fail parse and print help.
+     */
+    void SetValidateNonArgsFun(ValidateNonArgsFun fun)
+    { validate_fun = Move(fun); }
+    const ValidateNonArgsFun& GetValidateNonArgsFun() const noexcept
+    { return validate_fun; }
 
     void SetShowHelpOnNoOptions(bool show = true) noexcept
     { no_opts_help = show; }
     bool GetShowHelpOnNoOptions() const noexcept { return no_opts_help; }
 
     void SetOstream(std::ostream& os) { this->os = &os; }
-    std::ostream& GetOstream() { return *os; }
+    std::ostream& GetOstream() noexcept { return *os; }
 
     void Run(int& argc, char** argv)
     { Run(argc, const_cast<const char**>(argv)); }
     void Run(int& argc, const char** argv);
+
+    void ShowHelp() const;
 
     static inline OptionParser& GetGlobal()
     {
@@ -104,7 +117,6 @@ namespace Libshit
     }
 
   private:
-    void ShowHelp();
     void Run_(int& argc, const char** argv);
 
     friend class OptionGroup;
@@ -114,7 +126,8 @@ namespace Libshit
     const char* usage = nullptr;
     OptionGroup help_version;
     Option help_option, version_option;
-    NoArgFun no_arg_fun;
+    NonArgFun non_arg_fun;
+    ValidateNonArgsFun validate_fun;
     bool no_opts_help = false;
 
     std::ostream* os;

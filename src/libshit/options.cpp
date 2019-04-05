@@ -124,9 +124,9 @@ namespace Libshit
   }
 
 
-  void OptionParser::FailOnNoArg()
+  void OptionParser::FailOnNonArg()
   {
-    no_arg_fun = [](auto) { throw InvalidParam{"Invalid option"}; };
+    non_arg_fun = [](auto) { throw InvalidParam{"Invalid option"}; };
   }
 
   namespace
@@ -258,10 +258,10 @@ namespace Libshit
     int endp = 1;
     if (argc == 1)
     {
-      if (no_opts_help)
+      if (no_opts_help || (validate_fun && !validate_fun(argc, argv)))
       {
         ShowHelp();
-        throw Exit{true};
+        throw Exit{false};
       }
       else return;
     }
@@ -295,7 +295,7 @@ namespace Libshit
       // non option
       if (argv[i][0] != '-' || (argv[i][0] == '-' && argv[i][1] == '\0'))
       {
-        if (no_arg_fun) no_arg_fun(argv[i]);
+        if (non_arg_fun) non_arg_fun(argv[i]);
         else argv[endp++] = argv[i];
       }
       else
@@ -308,9 +308,9 @@ namespace Libshit
             [=](auto& e) { AddInfos(e, "Processed option", argv[i]); });
         else // --: end of args
         {
-          if (no_arg_fun)
+          if (non_arg_fun)
             for (++i; i < argc; ++i)
-              no_arg_fun(argv[i]);
+              non_arg_fun(argv[i]);
           else
             for (++i; i < argc; ++i)
               argv[endp++] = argv[i];
@@ -321,6 +321,12 @@ namespace Libshit
 
     argc = endp;
     argv[argc] = nullptr;
+
+    if (validate_fun && !validate_fun(argc, argv))
+    {
+      ShowHelp();
+      throw Exit{false};
+    }
   }
 
   void OptionParser::Run(int& argc, const char** argv)
@@ -333,7 +339,7 @@ namespace Libshit
     }
   }
 
-  void OptionParser::ShowHelp()
+  void OptionParser::ShowHelp() const
   {
     if (version) *os << version << "\n\n";
     if (usage) *os << "Usage:\n\t" << argv0 << " " << usage << "\n\n";
@@ -519,7 +525,7 @@ namespace Libshit
       argv[5] = "--help";
 
       std::vector<const char*> vec;
-      parser.SetNoArgHandler([&](auto x) { vec.push_back(x); });
+      parser.SetNonArgHandler([&](auto x) { vec.push_back(x); });
       parser.Run(argc, argv);
       e1 = e2 = true;
 
@@ -527,6 +533,42 @@ namespace Libshit
       REQUIRE(argc == 1);
       CHECK_STREQ(argv[0], "foo");
       CHECK_STREQ(argv[1], nullptr);
+    }
+
+    SUBCASE("validator")
+    {
+      argc = 6;
+      argv[1] = "foo";
+      argv[2] = "-t";
+      argv[3] = "bar";
+      argv[4] = "--";
+      argv[5] = "-t";
+      e1 = true;
+
+      bool valid;
+      SUBCASE("valid") { valid = true; }
+      SUBCASE("invalid") { valid = false; }
+
+      parser.SetValidateNonArgsFun(
+        [valid](int argc, const char** argv)
+        {
+          REQUIRE(argc == 4);
+          CHECK_STREQ(argv[0], "foo");
+          CHECK_STREQ(argv[1], "foo");
+          CHECK_STREQ(argv[2], "bar");
+          CHECK_STREQ(argv[3], "-t");
+          return valid;
+        });
+      if (valid)
+      {
+        parser.Run(argc, argv);
+        CHECK(ss.str() == "");
+      }
+      else
+      {
+        Run(argc, argv, false);
+        CHECK(ss.str() == help_text);
+      }
     }
 
     SUBCASE("empty args")
@@ -542,7 +584,7 @@ namespace Libshit
     {
       argc = 1;
       parser.SetShowHelpOnNoOptions();
-      Run(argc, argv, true);
+      Run(argc, argv, false);
       CHECK(ss.str() == help_text);
     }
 
