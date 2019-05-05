@@ -1,12 +1,12 @@
-#ifndef UUID_1472EFCC_6110_4A95_BDB7_2EE28E2207E4
-#define UUID_1472EFCC_6110_4A95_BDB7_2EE28E2207E4
+#ifndef GUARD_TO_WIT_GROPEY_PINCER_PHONES_IN_7930
+#define GUARD_TO_WIT_GROPEY_PINCER_PHONES_IN_7930
 #pragma once
 
 #include "libshit/assert.hpp"
+#include "libshit/ref_counted.hpp" // IWYU pragma: export
 #include "libshit/except.hpp"
 #include "libshit/not_null.hpp" // IWYU pragma: export
 
-#include <atomic>
 #include <cstddef>
 #include <memory>
 #include <new>
@@ -15,67 +15,6 @@
 
 namespace Libshit
 {
-
-  class RefCounted
-  {
-  public:
-    RefCounted() = default;
-    RefCounted(const RefCounted&) = delete;
-    void operator=(const RefCounted&) = delete;
-    virtual ~RefCounted() = default;
-
-    virtual void Dispose() noexcept {}
-
-    unsigned use_count() const // emulate boost refcount
-    { return strong_count.load(std::memory_order_relaxed); }
-    unsigned weak_use_count() const
-    { return weak_count.load(std::memory_order_relaxed); }
-
-    void AddRef()
-    {
-      LIBSHIT_ASSERT(use_count() >= 1);
-      strong_count.fetch_add(1, std::memory_order_relaxed);
-    }
-    void RemoveRef()
-    {
-      if (strong_count.fetch_sub(1, std::memory_order_acq_rel) == 1)
-      {
-        LIBSHIT_ASSERT(weak_use_count() > 0);
-        Dispose();
-        LIBSHIT_ASSERT(weak_use_count() > 0);
-        RemoveWeakRef();
-      }
-    }
-
-    void AddWeakRef()
-    {
-      LIBSHIT_ASSERT(weak_use_count() >= 1);
-      weak_count.fetch_add(1, std::memory_order_relaxed);
-    }
-    void RemoveWeakRef()
-    {
-      if (weak_count.fetch_sub(1, std::memory_order_acq_rel) == 1)
-        delete this;
-    }
-    bool LockWeak()
-    {
-      auto count = strong_count.load(std::memory_order_relaxed);
-      do
-        if (count == 0) return false;
-      while (!strong_count.compare_exchange_weak(
-               count, count+1,
-               std::memory_order_acq_rel, std::memory_order_relaxed));
-      return true;
-    }
-
-  private:
-    // every object has an implicit weak_count, removed when removing last
-    // strong ref
-    std::atomic<unsigned> weak_count{1}, strong_count{1};
-  };
-
-  template <typename T>
-  constexpr bool IS_REFCOUNTED = std::is_base_of<RefCounted, T>::value;
 
   namespace Detail
   {

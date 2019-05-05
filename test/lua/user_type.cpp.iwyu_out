@@ -2,7 +2,7 @@
 (src/libshit/lua/user_type.hpp has correct #includes/fwd-decls)
 
 test/lua/user_type.cpp should add these lines:
-#include "libshit/not_null.hpp"
+#include "libshit/shared_ptr.hpp"
 
 test/lua/user_type.cpp should remove these lines:
 
@@ -12,6 +12,6 @@ The full include-list for test/lua/user_type.cpp:
 #include <libshit/lua/dynamic_object.hpp>
 #include <libshit/meta.hpp>
 #include <libshit/shared_ptr.hpp>
-#include "libshit/not_null.hpp"
+#include "libshit/shared_ptr.hpp"
 #include "user_type.binding.hpp"
 ---

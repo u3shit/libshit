@@ -2,7 +2,7 @@
 (src/libshit/container/parent_list.hpp has correct #includes/fwd-decls)
 
 test/container/parent_list.cpp should add these lines:
-#include "libshit/not_null.hpp"
+#include "libshit/shared_ptr.hpp"
 
 test/container/parent_list.cpp should remove these lines:
 
@@ -16,6 +16,6 @@ The full include-list for test/container/parent_list.cpp:
 #include <libshit/utils.hpp>
 #include <ostream>
 #include <stdexcept>
-#include "libshit/not_null.hpp"
+#include "libshit/shared_ptr.hpp"
 #include "parent_list.binding.hpp"
 ---
