@@ -8,6 +8,7 @@ def options(ctx):
     ctx.system_opt('doctest', cross=libshit_cross)
 
     ctx.recurse('.', name='options', wscript='wscript_boost', once=False)
+    ctx.recurse('.', name='options', wscript='wscript_libcxx', once=False)
     ctx.recurse('.', name='options', wscript='wscript_lua', once=False)
 
 def configure(ctx):
@@ -30,8 +31,10 @@ def configure(ctx):
                    cross=libshit_cross, post_chk=doctest_post)
 
     ctx.recurse('.', name='configure', wscript='wscript_boost', once=False)
+    ctx.recurse('.', name='configure', wscript='wscript_libcxx', once=False)
     ctx.recurse('.', name='configure', wscript='wscript_lua', once=False)
 
 def build(ctx):
     ctx.recurse('.', name='build', wscript='wscript_boost', once=False)
+    ctx.recurse('.', name='build', wscript='wscript_libcxx', once=False)
     ctx.recurse('.', name='build', wscript='wscript_lua', once=False)

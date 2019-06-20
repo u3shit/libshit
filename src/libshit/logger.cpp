@@ -130,7 +130,7 @@ namespace Libshit::Logger
 
 #if LIBSHIT_OS_IS_WINDOWS
         win_colors = _isatty(2);
-#else
+#elif !LIBSHIT_OS_IS_VITA
         const char* x;
         ansi_colors = isatty(2) &&
           (x = getenv("TERM")) ? strcmp(x, "dummy") != 0 : false;
