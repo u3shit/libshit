@@ -3,12 +3,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/errno.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/utime.h>
 
 #include <psp2/io/fcntl.h>
 #include <psp2/io/stat.h>
+#include <psp2/kernel/processmgr.h>
 #include <psp2/kernel/threadmgr.h>
+#include <psp2/rtc.h>
 
 #define ERRNO_MASK 0xff
 
@@ -27,6 +30,11 @@ GEN_CONVERT(0, 0);
 #undef GEN_CONVERT
 
 // random io functions
+// fcntl.h patched so O_* equals to SCE_O_* defines
+int open(const char* fname, int flags, mode_t mode)
+{ return ConvertErrno(sceIoOpen(fname, flags, mode)); }
+int close(int fd) { return ConvertErrno0(sceIoClose(fd)); }
+
 ssize_t read(int fd, void* buf, size_t c)
 { return ConvertErrno(sceIoRead(fd, buf, c)); }
 ssize_t write(int fd, void* buf, size_t c)
@@ -44,6 +52,44 @@ int fseeko(FILE* f, off_t off, int whence)
 }
 off_t ftello(FILE* f)
 { return ConvertErrno(sceIoLseek(fileno(f), 0, SCE_SEEK_SET)); }
+
+int ftruncate(int fd, off_t len)
+{
+  SceIoStat buf;
+  buf.st_size = len;
+  return ConvertErrno0(sceIoChstatByFd(fd, &buf, SCE_CST_SIZE));
+}
+
+static int ConvertStat(int ret, struct stat* buf, SceIoStat* sce_buf)
+{
+  if (ret < 0)
+  {
+    errno = ret & ERRNO_MASK;
+    return -1;
+  }
+
+  memset(buf, 0, sizeof(*buf));
+  buf->st_mode = sce_buf->st_mode;
+  buf->st_size = sce_buf->st_size;
+  sceRtcGetTime_t(&sce_buf->st_atime, &buf->st_atime);
+  sceRtcGetTime_t(&sce_buf->st_ctime, &buf->st_ctime);
+  sceRtcGetTime_t(&sce_buf->st_mtime, &buf->st_mtime);
+  return 0;
+}
+
+int stat(const char* fname, struct stat* buf)
+{
+  SceIoStat sce_buf;
+  int ret = sceIoGetstat(fname, &sce_buf);
+  return ConvertStat(ret, buf, &sce_buf);
+}
+
+int fstat(int fd, struct stat* buf)
+{
+  SceIoStat sce_buf;
+  int ret = sceIoGetstatByFd(fd, &sce_buf);
+  return ConvertStat(ret, buf, &sce_buf);
+}
 
 int mkdir(const char* name, mode_t mode)
 { return ConvertErrno0(sceIoMkdir(name, mode)); }
@@ -69,13 +115,35 @@ int nanosleep(const struct timespec* req, struct timespec* rem)
     sceKernelDelayThread(req->tv_sec * 100000 + req->tv_nsec / 1000));
 }
 
+// override abort,_exit: the sceLibc versions locks up the whole console,
+// forcing you to reboot it
+// todo: what about exit?
+void _exit(int status)
+{
+  printf("_exit(%d)\n", status);
+  fflush(stdout);
+  sceKernelExitProcess(status);
+  __builtin_unreachable();
+}
+void abort() { printf("abort\n");  _exit(1); }
+
 
 // fix binary pthread
 int* __errno() { return &errno; }
+
+#define MAGIC 0x36 // doesn't work if it's too big
 void* vitasdk_get_tls_data(SceUID thid)
-{ return sceKernelGetThreadTLSAddr(thid, 0x361b79e4); }
+{
+  return thid ? sceKernelGetThreadTLSAddr(thid, MAGIC) :
+    sceKernelGetTLSAddr(MAGIC);
+}
+
 void* vitasdk_get_pthread_data(SceUID thid)
-{ return sceKernelGetThreadTLSAddr(thid, 0x361b79e5); }
+{
+  return thid ? sceKernelGetThreadTLSAddr(thid, MAGIC + 1) :
+    sceKernelGetTLSAddr(MAGIC + 1);
+}
+
 int vitasdk_delete_thread_reent(int thid) { return 0; }
 
 int sceKernelLibcGettimeofday(struct timeval* tv, void* tz);
@@ -85,11 +153,11 @@ int gettimeofday(struct timeval* tv, void* tz)
 // fix binary libsupc++
 void* __dso_handle __attribute__((__visibility__("hidden"))) = &__dso_handle;
 // http://infocenter.arm.com/help/topic/com.arm.doc.ihi0041e/IHI0041E_cppabi.pdf
-int __aeabi_atexit(void*, void (*)(void), void*) __attribute__((noreturn));
+int __aeabi_atexit(void*, void (*)(void), void*);
 int atexit(void (*f)(void)) { return __aeabi_atexit(NULL, f, __dso_handle); }
 // __gnu_cxx::__verbose_terminate_handler: override, because binary uses
 // reentrant shit
-void _ZN9__gnu_cxx27__verbose_terminate_handlerEv(void) { abort(); }
+void _ZN9__gnu_cxx27__verbose_terminate_handlerEv(void) { printf("verbtermh\n"); abort(); }
 
 
 // from libc++

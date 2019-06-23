@@ -13,7 +13,6 @@ off_t ftello(FILE* f);
 int fileno(FILE*);
 FILE* fdopen(int, const char*);
 
-// wild guesses
 #undef stdin
 FILE* _Stdin(void);
 #define stdin (_Stdin())

@@ -51,8 +51,10 @@ def build(ctx):
         ctx.stlib(idx     = 51001,
                   source  = fs_src,
                   defines = defines,
+                  # hack: use our assert even here
+                  includes = '../src',
                   target  = 'boost_filesystem',
-                  uselib  = 'BOOST EXT') # get proper includes
+                  uselib  = 'BOOST EXT BRIGAND') # get proper includes
 
     if boost_libs: # empty set is false
         ctx.fatal("Unhandled boost libs: %s" % boost_libs)
