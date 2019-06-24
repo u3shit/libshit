@@ -10,6 +10,8 @@
 
 #undef _SC_THREAD_SAFE_FUNCTIONS
 
-static inline long pathconf(const char* path, int name) { return -1; }
+static inline long __attribute__((const, leaf, nothrow))
+pathconf(const char* path, int name)
+{ return -1; }
 
 #endif

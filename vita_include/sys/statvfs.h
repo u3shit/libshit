@@ -10,7 +10,8 @@ struct statvfs
 {
   unsigned long f_bsize, f_frsize, f_blocks, f_bfree, f_bavail;
 };
-static inline int statvfs(const char* path, struct statvfs* buf)
+static inline int __attribute__((nothrow))
+statvfs(const char* path, struct statvfs* buf)
 { errno = ENOSYS; return -1; }
 
 #endif

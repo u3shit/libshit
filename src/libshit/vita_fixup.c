@@ -1,3 +1,4 @@
+#include <dirent.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,6 +10,7 @@
 
 #include <psp2/io/fcntl.h>
 #include <psp2/io/stat.h>
+#include <psp2/io/dirent.h>
 #include <psp2/kernel/processmgr.h>
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/rtc.h>
@@ -91,8 +93,56 @@ int fstat(int fd, struct stat* buf)
   return ConvertStat(ret, buf, &sce_buf);
 }
 
+int unlink(const char* fname)
+{ return ConvertErrno0(sceIoRemove(fname)); }
+
 int mkdir(const char* name, mode_t mode)
 { return ConvertErrno0(sceIoMkdir(name, mode)); }
+
+int rmdir(const char* name)
+{ return ConvertErrno0(sceIoRmdir(name)); }
+
+// dir funs
+struct DIR_
+{
+  SceUID uid;
+  dirent de;
+};
+
+DIR* opendir(const char* name)
+{
+  DIR* dir = malloc(sizeof(DIR));
+  if (!dir)
+  {
+    errno = ENOMEM;
+    return NULL;
+  }
+
+  int id = sceIoDopen(name);
+  if (id < 0)
+  {
+    free(dir);
+    errno = id & ERRNO_MASK;
+    return NULL;
+  }
+
+  dir->uid = id;
+  return dir;
+}
+
+int closedir(DIR* dir)
+{
+  int ret = ConvertErrno0(sceIoDclose(dir->uid));
+  free(dir);
+  return ret;
+}
+
+struct dirent* readdir(DIR* dir)
+{
+  int res = sceIoDread(dir->uid, &dir->de);
+  if (res < 0) errno = res & ERRNO_MASK;
+  return res > 0 ? &dir->de : NULL;
+}
 
 int utime(const char* fname, const struct utimbuf* times)
 {
@@ -120,12 +170,12 @@ int nanosleep(const struct timespec* req, struct timespec* rem)
 // todo: what about exit?
 void _exit(int status)
 {
-  printf("_exit(%d)\n", status);
   fflush(stdout);
+  fflush(stderr);
   sceKernelExitProcess(status);
   __builtin_unreachable();
 }
-void abort() { printf("abort\n");  _exit(1); }
+void abort() { _exit(1); }
 
 
 // fix binary pthread

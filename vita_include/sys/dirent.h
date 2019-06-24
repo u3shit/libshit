@@ -1,7 +1,9 @@
 #pragma once
 
-#define closedir closedir_temp
-#include_next <sys/dirent.h>
-#undef closedir
+#include <psp2/io/dirent.h>
 
-static inline int closedir(DIR* dir) { return 0; }
+#define dirent SceIoDirent
+#pragma push_macro("dirent")
+#define dirent dirernt_temp _Pragma("pop_macro(\"dirent\")")
+
+#include_next <sys/dirent.h>

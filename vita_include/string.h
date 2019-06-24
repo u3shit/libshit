@@ -12,7 +12,7 @@ extern "C"
 #define strnlen sceClibStrnlen
 
 typedef int errno_t;
-errno_t strerror_s(char*, size_t, errno_t);
+errno_t strerror_s(char*, size_t, errno_t) __attribute__((nothrow));
 
 #ifdef __cplusplus
 }
