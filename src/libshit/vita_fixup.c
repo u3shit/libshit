@@ -1,4 +1,5 @@
 #include <dirent.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -236,4 +237,34 @@ int vasprintf(char **strp, const char *fmt, va_list ap)
     str_size = vsnprintf(*strp, str_size + 1, fmt,  ap);
   }
   return str_size;
+}
+
+// init/deinit c++ stuff
+typedef void (**InitPtr)(void);
+extern void (*__preinit_array_start []) (void) __attribute__((weak));
+extern void (*__preinit_array_end []) (void) __attribute__((weak));
+extern void (*__init_array_start []) (void) __attribute__((weak));
+extern void (*__init_array_end []) (void) __attribute__((weak));
+extern void (*__fini_array_start [])(void) __attribute__((weak));
+extern void (*__fini_array_end [])(void) __attribute__((weak));
+
+static void cleanup(void)
+{
+  for (InitPtr ptr = __fini_array_end; ptr > __fini_array_start; )
+    (*--ptr)();
+  pthread_terminate();
+
+  fflush(stdout);
+  fflush(stderr);
+}
+
+void LibshitInitVita(void)
+{
+  atexit(cleanup);
+
+  pthread_init();
+  for (InitPtr ptr = __preinit_array_start; ptr != __preinit_array_end; ++ptr)
+    (*ptr)();
+  for (InitPtr ptr = __init_array_start; ptr != __init_array_end; ++ptr)
+    (*ptr)();
 }
