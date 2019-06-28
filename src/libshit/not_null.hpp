@@ -47,6 +47,9 @@ namespace Libshit
     { LIBSHIT_ASSERT(t); return *t; }
     decltype(auto) operator->() const noexcept
     { LIBSHIT_ASSERT(t); return &*t; }
+    template <typename U>
+    decltype(auto) operator[](U&& u) const noexcept
+    { LIBSHIT_ASSERT(t); return t[std::forward<U>(u)]; }
 
     bool operator==(const NotNull& o) const noexcept { return t == o.t; }
     bool operator!=(const NotNull& o) const noexcept { return t != o.t; }
