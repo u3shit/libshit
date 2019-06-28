@@ -166,7 +166,8 @@ def configure_variant(ctx):
         '-fdiagnostics-color', '-fdiagnostics-show-option',
         '-fdata-sections', '-ffunction-sections',
     ])
-    if ctx.check_cxx(linkflags='-Wl,--gc-sections', mandatory=False):
+    if ctx.env.DEST_OS != 'win32' and \
+       ctx.check_cxx(linkflags='-Wl,--gc-sections', mandatory=False):
         ctx.env.append_value('LINKFLAGS', ['-Wl,--gc-sections'])
 
     ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], [
@@ -196,6 +197,7 @@ def configure_variant(ctx):
         ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], ['-Wno-pedantic'])
     ctx.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], [
         '-Wno-parentheses-equality', # boost fs, windows build
+        '-Wno-assume', # boost fs
         '-Wno-microsoft-enum-value', '-Wno-shift-count-overflow', # ljx
         '-Wno-varargs',
     ])
