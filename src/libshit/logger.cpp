@@ -247,7 +247,7 @@ namespace Libshit::Logger
         case ERROR:   os << "ERROR"; break;
         case WARNING: os << "WARN "; break;
         case INFO:    os << "info "; break;
-        default:      os << "dbg" << std::left << std::setw(2) << level; break;
+        default:      os << "dbg" << level << ' '; break;
         }
 
         max_name = std::max(max_name, std::strlen(name));
