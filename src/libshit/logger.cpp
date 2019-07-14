@@ -1,13 +1,13 @@
-#include "libshit/platform.hpp"
+#include "libshit/logger.hpp"
 
 #if LIBSHIT_OS_IS_WINDOWS
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <windows.h>
 #  include <io.h>
+#  undef ERROR
 #endif
 
-#include "libshit/logger.hpp"
 #include "libshit/options.hpp"
 #include "libshit/lua/function_call.hpp"
 
