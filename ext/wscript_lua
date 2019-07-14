@@ -74,12 +74,12 @@ def configure(ctx):
         ctx.recurse('.', name='configure', wscript='wscript_lua53', once=False)
         chk_luac(ctx, ['copy', 'luac', 'system-luac', 'luac-wrapper'])
     else:
-        ctx.fatal('Invalid --use-lua value: %q' % ctx.options.with_lua)
+        ctx.fatal('Invalid --use-lua value: %s' % ctx.options.with_lua)
 
     if ctx.env.DEBUG and ctx.env.LUAC_MODE in ['system-luajit', 'ljx']:
         cfg.env.append_value('LUACFLAGS', '-g')
     elif not ctx.env.DEBUG and \
-         ctx.env.LUAC_MONDE in ['luac', 'system-luac', 'luac-wrapper']:
+         ctx.env.LUAC_MODE in ['luac', 'system-luac', 'luac-wrapper']:
         cfg.env.append_value('LUACFLAGS', '-s')
 
 def build(ctx):

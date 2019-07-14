@@ -5,6 +5,7 @@
 # 510xx boost
 # 511xx ljx (host)
 # 513xx lua53
+# 514xx libc++
 
 import subprocess
 try:
@@ -42,6 +43,9 @@ if not Context.g_module:
                 self.__dict__ = self
         import sys
         Context.g_module = AttributeDict(sys.exc_info()[2].tb_frame.f_globals)
+
+from waflib.Tools import c_config
+c_config.MACRO_TO_DESTOS['__vita__'] = 'vita'
 
 app = Context.g_module.APPNAME.upper()
 libshit_cross = getattr(Context.g_module, 'LIBSHIT_CROSS', False)
@@ -160,27 +164,40 @@ def configure_variant(ctx):
     ], seq=False)
     ctx.filter_flags(['CFLAGS', 'CXXFLAGS'], [
         '-fdiagnostics-color', '-fdiagnostics-show-option',
+        '-fdata-sections', '-ffunction-sections',
     ])
+    if ctx.env.DEST_OS != 'win32' and \
+       ctx.check_cxx(linkflags='-Wl,--gc-sections', mandatory=False):
+        ctx.env.append_value('LINKFLAGS', ['-Wl,--gc-sections'])
+
     ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], [
         '-Wall', '-Wextra', '-pedantic',
         '-Wno-parentheses', '-Wno-assume', '-Wno-attributes',
-        '-Wold-style-cast', '-Woverloaded-virtual', '-Wimplicit-fallthrough',
+        '-Wimplicit-fallthrough', '-Wno-dangling-else', '-Wno-unused-parameter',
+        # __try in lua exception handler
+        '-Wno-language-extension-token',
+    ])
+    # c++ only warnings, shut up gcc
+    ctx.filter_flags(['CXXFLAGS_'+app], [
+        '-Wold-style-cast', '-Woverloaded-virtual',
         '-Wno-undefined-var-template', # TYPE_NAME usage
-        '-Wno-dangling-else',
         # -Wsubobject-linkage: warning message is criminally bad, basically it
         # complains about defining/using something from anonymous namespace in a
         # header which normally makes sense, except in "*.binding.hpp"s.
         # unfortunately pragma disabling this warning in the binding files does
         # not work. see also https://gcc.gnu.org/bugzilla/show_bug.cgi?id=51440
-        '-Wno-subobject-linkage',
-        # __try in lua exception handler
-        '-Wno-language-extension-token',
+        '-Wno-subobject-linkage', '-Wno-sign-compare',
     ])
+
     # gcc is a piece of crap: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431
     if ctx.env.COMPILER_CXX == 'clang++':
         ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], ['-Werror=undef'])
+    elif ctx.env.COMPILER_CXX == 'g++':
+        # no pedantic: empty semicolons outside functions are valid since 2011...
+        ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], ['-Wno-pedantic'])
     ctx.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], [
         '-Wno-parentheses-equality', # boost fs, windows build
+        '-Wno-assume', # boost fs
         '-Wno-microsoft-enum-value', '-Wno-shift-count-overflow', # ljx
         '-Wno-varargs',
     ])
@@ -231,11 +248,31 @@ def configure_variant(ctx):
         cpp_ver = m['_CPPLIB_VER']
         if cpp_ver == '610':
             ctx.end_msg('610, activating include patching', color='YELLOW')
-            inc = ['-isystem', ctx.path.find_node('msvc_include').abspath()]
-            ctx.env.prepend_value('CFLAGS', inc)
-            ctx.env.prepend_value('CXXFLAGS', inc)
+            inc = [ctx.path.find_node('msvc_include').abspath()]
+            ctx.env.prepend_value('SYSTEM_INCLUDES', inc)
         else:
             ctx.end_msg(cpp_ver)
+    elif ctx.env.DEST_OS == 'vita':
+        inc = [
+            ctx.path.find_node('vita_include').abspath(),
+            ctx.path.find_node('ext/libcxx/include').abspath(),
+        ]
+        # type-limits: char is unsigned, thank you very much
+        ctx.env.prepend_value('CXXFLAGS', ['-Wno-type-limits', '-nostdinc++'])
+        ctx.env.prepend_value('SYSTEM_INCLUDES', inc)
+        ctx.env.append_value('DEFINES_BOOST', ['BOOST_HAS_STDINT_H'])
+        ldflags = [
+            '-Wl,-q,-z,nocopyreloc','-nostdlib', '-lsupc++',
+            '-Wl,--start-group', '-lgcc', '-lSceLibc_stub', '-lpthread',
+            # linked automatically by vitasdk gcc when not using -nostdlib
+            # we don't need some of them, but unused libraries don't end
+            # up in the final executable, so it doesn't hurt
+            '-lSceRtc_stub', '-lSceSysmem_stub', '-lSceKernelThreadMgr_stub',
+            '-lSceKernelModulemgr_stub', '-lSceIofilemgr_stub',
+            '-lSceProcessmgr_stub', '-lSceLibKernel_stub', '-lSceNet_stub',
+            '-Wl,--end-group'
+        ]
+        ctx.env.append_value('LDFLAGS', ldflags)
     else:
         ctx.env.append_value('LINKFLAGS', '-rdynamic')
 
@@ -264,6 +301,8 @@ def build_libshit(ctx, pref):
         'src/libshit/except.cpp',
         'src/libshit/logger.cpp',
     ]
+    if ctx.env.DEST_OS == 'vita':
+        src += ['src/libshit/vita_fixup.c']
     if ctx.env.WITH_LUA:
         src += [
             'src/libshit/logger.lua',
@@ -291,7 +330,7 @@ def build_libshit(ctx, pref):
     ctx.objects(idx      = 50000 + (len(pref)>0),
                 source   = src,
                 uselib   = app,
-                use      = 'BOOST BRIGAND DOCTEST lua',
+                use      = 'BOOST BRIGAND DOCTEST lua libcxx',
                 includes = 'src',
                 export_includes = 'src',
                 target   = pref+'libshit')

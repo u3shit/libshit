@@ -1,0 +1,58 @@
+# -*- mode: python -*-
+
+from waflib import Context
+libshit_cross = getattr(Context.g_module, 'LIBSHIT_CROSS', False)
+
+def options(ctx):
+    # todo: make this user selectable at least on linux
+    # ctx.system_opt('libc++', cross=libshit_cross)
+    pass
+
+def configure(ctx):
+    # ctx.system_chk('libc++', 'system', None, None, cross=libshit_cross)
+    pass
+
+def build(ctx):
+    if ctx.env.DEST_OS != 'vita': return
+
+    src = [
+        'libcxx/src/algorithm.cpp',
+        'libcxx/src/any.cpp',
+        'libcxx/src/bind.cpp',
+        'libcxx/src/charconv.cpp',
+        # 'libcxx/src/chrono.cpp',
+        'libcxx/src/condition_variable.cpp',
+        'libcxx/src/debug.cpp',
+        'libcxx/src/exception.cpp',
+        'libcxx/src/functional.cpp',
+        'libcxx/src/future.cpp',
+        'libcxx/src/hash.cpp',
+        'libcxx/src/ios.cpp',
+        'libcxx/src/iostream.cpp',
+        'libcxx/src/locale.cpp',
+        'libcxx/src/memory.cpp',
+        'libcxx/src/mutex.cpp',
+        'libcxx/src/new.cpp',
+        'libcxx/src/optional.cpp',
+        'libcxx/src/random.cpp',
+        'libcxx/src/regex.cpp',
+        'libcxx/src/shared_mutex.cpp',
+        'libcxx/src/stdexcept.cpp',
+        'libcxx/src/string.cpp',
+        'libcxx/src/strstream.cpp',
+        'libcxx/src/system_error.cpp',
+        'libcxx/src/thread.cpp',
+        'libcxx/src/typeinfo.cpp',
+        'libcxx/src/utility.cpp',
+        'libcxx/src/valarray.cpp',
+        'libcxx/src/variant.cpp',
+        'libcxx/src/vector.cpp',
+    ]
+    ctx.stlib(idx     = 54100,
+              source  = src,
+              defines = ['NDEBUG', '_LIBCPP_BUILDING_LIBRARY',
+                         '_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER',
+                         '__STDC_CONSTANT_MACROS', '__STDC_FORMAT_MACROS',
+                         '__STDC_LIMIT_MACROS'],
+              target  = 'libcxx',
+              uselib  = 'EXT')

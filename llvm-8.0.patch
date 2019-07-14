@@ -1,0 +1,13 @@
+diff --git a/llvm/lib/CodeGen/AsmPrinter/WinException.cpp b/llvm/lib/CodeGen/AsmPrinter/WinException.cpp
+index 92df09b7d6a..049e35eeceb 100644
+--- a/llvm/lib/CodeGen/AsmPrinter/WinException.cpp
++++ b/llvm/lib/CodeGen/AsmPrinter/WinException.cpp
+@@ -734,7 +734,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
+   OS.EmitIntValue(0, 4);
+ 
+   AddComment("EHFlags");
+-  OS.EmitIntValue(1, 4);
++  OS.EmitIntValue(0, 4);
+ 
+   // UnwindMapEntry {
+   //   int32_t ToState;

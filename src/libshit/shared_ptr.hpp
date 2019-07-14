@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <memory>
 #include <new>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -340,7 +341,7 @@ namespace Libshit
     {
       auto ctrl = s.GetCtrl();
       if (ctrl && ctrl->LockWeak()) return {ctrl, s.GetPtr(), false};
-      else LIBSHIT_THROW(std::bad_weak_ptr, std::tuple{});
+      else LIBSHIT_THROW(std::bad_weak_ptr, std::tuple<>{});
     }
 
     // not in weak_ptr

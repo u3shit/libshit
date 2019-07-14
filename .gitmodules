@@ -10,3 +10,6 @@
 [submodule "ext/doctest"]
 	path = ext/doctest
 	url = git://github.com/onqtam/doctest.git
+[submodule "ext/libcxx"]
+	path = ext/libcxx
+	url = ../libcxx.git

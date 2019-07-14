@@ -1,13 +1,13 @@
-#include "libshit/platform.hpp"
+#include "libshit/logger.hpp"
 
 #if LIBSHIT_OS_IS_WINDOWS
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <windows.h>
 #  include <io.h>
+#  undef ERROR
 #endif
 
-#include "libshit/logger.hpp"
 #include "libshit/options.hpp"
 #include "libshit/lua/function_call.hpp"
 
@@ -130,7 +130,7 @@ namespace Libshit::Logger
 
 #if LIBSHIT_OS_IS_WINDOWS
         win_colors = _isatty(2);
-#else
+#elif !LIBSHIT_OS_IS_VITA
         const char* x;
         ansi_colors = isatty(2) &&
           (x = getenv("TERM")) ? strcmp(x, "dummy") != 0 : false;
@@ -247,7 +247,7 @@ namespace Libshit::Logger
         case ERROR:   os << "ERROR"; break;
         case WARNING: os << "WARN "; break;
         case INFO:    os << "info "; break;
-        default:      os << "dbg" << std::left << std::setw(2) << level; break;
+        default:      os << "dbg" << level << ' '; break;
         }
 
         max_name = std::max(max_name, std::strlen(name));

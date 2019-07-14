@@ -22,12 +22,16 @@ def build(ctx):
     if not ctx.env.BUILD_BOOST: return
 
     boost_libs = set(getattr(Context.g_module, 'BOOST_LIBS', []))
+    defines = ['BOOST_SYSTEM_STATIC_LINK=1']
+    if ctx.env.DEST_OS == 'vita':
+        defines += ['BOOST_HAS_UNISTD_H']
+
     if 'system' in boost_libs:
         boost_libs.remove('system')
 
         ctx.stlib(idx     = 51000,
                   source  = 'boost/libs/system/src/error_code.cpp',
-                  defines = 'BOOST_SYSTEM_STATIC_LINK=1',
+                  defines = defines,
                   target  = 'boost_system',
                   uselib  = 'BOOST EXT') # get proper includes
 
@@ -46,9 +50,11 @@ def build(ctx):
         ]
         ctx.stlib(idx     = 51001,
                   source  = fs_src,
-                  defines = 'BOOST_FILESYSTEM_STATIC_LINK=1',
+                  defines = defines,
+                  # hack: use our assert even here
+                  includes = '../src',
                   target  = 'boost_filesystem',
-                  uselib  = 'BOOST EXT') # get proper includes
+                  uselib  = 'BOOST EXT BRIGAND') # get proper includes
 
     if boost_libs: # empty set is false
         ctx.fatal("Unhandled boost libs: %s" % boost_libs)
