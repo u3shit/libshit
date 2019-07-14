@@ -115,7 +115,9 @@ local function collect_ns(tbl, t)
   if not t then return end
 
   local p = t:pointee()
-  if p then collect_ns(tbl, p) end
+  -- note: since clang 8.0, t can end up as `auto` and pointee is `auto` in that
+  -- case, avoid infinite recursion
+  if p and t ~= p then collect_ns(tbl, p) end
 
   local cur = t:declaration()
   if cur:kind() == "NoDeclFound" then return end

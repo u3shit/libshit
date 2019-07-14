@@ -56,10 +56,10 @@ namespace Libshit::Lua
     >("empty");
     bld.AddFunction<
       static_cast<::om_item_test::size_type (::om_item_test::*)() const noexcept>(&::om_item_test::size)
-    >("__len");
+    >("size");
     bld.AddFunction<
       static_cast<::om_item_test::size_type (::om_item_test::*)() const noexcept>(&::om_item_test::size)
-    >("size");
+    >("__len");
     bld.AddFunction<
       static_cast<::om_item_test::size_type (::om_item_test::*)() const noexcept>(&::om_item_test::max_size)
     >("max_size");
