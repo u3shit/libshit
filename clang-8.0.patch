@@ -1,10 +1,10 @@
-diff --git a/include/clang-c/Index.h b/include/clang-c/Index.h
-index 587008a7210..3852d45762a 100644
---- a/include/clang-c/Index.h
-+++ b/include/clang-c/Index.h
-@@ -3615,6 +3615,22 @@ CINDEX_LINKAGE int clang_getCursorExceptionSpecificationType(CXCursor C);
+diff --git a/clang/include/clang-c/Index.h b/clang/include/clang-c/Index.h
+index c51dfb1598b..e99ffcbaabb 100644
+--- a/clang/include/clang-c/Index.h
++++ b/clang/include/clang-c/Index.h
+@@ -3665,6 +3665,22 @@ CINDEX_LINKAGE int clang_getExceptionSpecificationType(CXType T);
   */
- CINDEX_LINKAGE unsigned clang_isPODType(CXType T);
+ CINDEX_LINKAGE int clang_getNumArgTypes(CXType T);
  
 +/**
 + * \brief Return 1 if the CXType is a final class type, and 0 otherwise.
@@ -23,11 +23,11 @@ index 587008a7210..3852d45762a 100644
 +CINDEX_LINKAGE unsigned clang_isNoexcept(CXType C);
 +
  /**
-  * \brief Return the element type of an array, complex, or vector type.
+  * Retrieve the type of a parameter of a function type.
   *
-@@ -4417,6 +4433,12 @@ CXFile clang_Module_getTopLevelHeader(CXTranslationUnit,
-  * @{
+@@ -4547,6 +4563,12 @@ CINDEX_LINKAGE CXString clang_Cursor_getRawCommentText(CXCursor C);
   */
+ CINDEX_LINKAGE CXString clang_Cursor_getBriefCommentText(CXCursor C);
  
 +/**
 + * \brief Determine if a C++ function or method has been deleted with
@@ -36,11 +36,11 @@ index 587008a7210..3852d45762a 100644
 +CINDEX_LINKAGE unsigned clang_CXX_isDeleted(CXCursor C);
 +
  /**
-  * \brief Determine if a C++ constructor is a converting constructor.
+  * @}
   */
-@@ -4477,6 +4499,12 @@ CINDEX_LINKAGE unsigned clang_CXXRecord_isAbstract(CXCursor C);
+@@ -4605,6 +4627,12 @@ CINDEX_LINKAGE CXModule clang_getModuleForFile(CXTranslationUnit, CXFile);
   */
- CINDEX_LINKAGE unsigned clang_EnumDecl_isScoped(CXCursor C);
+ CINDEX_LINKAGE CXFile clang_Module_getASTFile(CXModule Module);
  
 +/**
 + * \brief Determine if a C++ member function or member function template method
@@ -49,25 +49,40 @@ index 587008a7210..3852d45762a 100644
 +CINDEX_LINKAGE unsigned clang_CXXMethod_isOverride(CXCursor C);
 +
  /**
-  * \brief Determine if a C++ member function or member function template is
-  * declared 'const'.
-diff --git a/include/clang/Basic/Attr.td b/include/clang/Basic/Attr.td
-index 59f595e03c3..a392e821cff 100644
---- a/include/clang/Basic/Attr.td
-+++ b/include/clang/Basic/Attr.td
-@@ -625,6 +625,7 @@ def Annotate : InheritableParamAttr {
+  * \param Module a module object.
+  *
+diff --git a/clang/include/clang/Basic/Attr.td b/clang/include/clang/Basic/Attr.td
+index b792db2852a..96a0a88060d 100644
+--- a/clang/include/clang/Basic/Attr.td
++++ b/clang/include/clang/Basic/Attr.td
+@@ -669,6 +669,7 @@ def Annotate : InheritableParamAttr {
    // '#pragma clang attribute' even though it has no subject list.
-   let ForcePragmaAttributeSupport = 1;
+   let PragmaAttributeSupport = 1;
    let Documentation = [Undocumented];
-+  let DuplicatesAllowedWhileMerging = 1;
++  let InheritEvenIfAlreadyPresent = 1;
  }
  
  def ARMInterrupt : InheritableAttr, TargetSpecificAttr<TargetARM> {
-diff --git a/tools/libclang/CIndex.cpp b/tools/libclang/CIndex.cpp
-index 66b6edc8b11..2b0864f9122 100644
---- a/tools/libclang/CIndex.cpp
-+++ b/tools/libclang/CIndex.cpp
-@@ -707,12 +707,12 @@ bool CursorVisitor::VisitClassTemplateSpecializationDecl(
+diff --git a/clang/lib/CodeGen/CGCall.cpp b/clang/lib/CodeGen/CGCall.cpp
+index 7d494bb1f1c..01984f8a06d 100644
+--- a/clang/lib/CodeGen/CGCall.cpp
++++ b/clang/lib/CodeGen/CGCall.cpp
+@@ -3087,10 +3087,6 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
+ 
+   QualType type = param->getType();
+ 
+-  if (isInAllocaArgument(CGM.getCXXABI(), type)) {
+-    CGM.ErrorUnsupported(param, "forwarded non-trivially copyable parameter");
+-  }
+-
+   // GetAddrOfLocalVar returns a pointer-to-pointer for references,
+   // but the argument needs to be the original pointer.
+   if (type->isReferenceType()) {
+diff --git a/clang/tools/libclang/CIndex.cpp b/clang/tools/libclang/CIndex.cpp
+index a9c3077e5fa..eb6e17bb254 100644
+--- a/clang/tools/libclang/CIndex.cpp
++++ b/clang/tools/libclang/CIndex.cpp
+@@ -710,12 +710,12 @@ bool CursorVisitor::VisitClassTemplateSpecializationDecl(
    case TSK_Undeclared:
    case TSK_ImplicitInstantiation:
      // Nothing to visit
@@ -84,7 +99,7 @@ index 66b6edc8b11..2b0864f9122 100644
    case TSK_ExplicitSpecialization:
      ShouldVisitBody = true;
      break;
-@@ -937,9 +937,16 @@ bool CursorVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
+@@ -940,9 +940,16 @@ bool CursorVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
    // before visiting these template parameters.
    if (VisitTemplateParameters(D->getTemplateParameters()))
      return true;
@@ -103,7 +118,7 @@ index 66b6edc8b11..2b0864f9122 100644
  }
  
  bool CursorVisitor::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
-@@ -7834,6 +7841,15 @@ CXFile clang_Module_getTopLevelHeader(CXTranslationUnit TU,
+@@ -8293,6 +8300,15 @@ CXFile clang_Module_getTopLevelHeader(CXTranslationUnit TU,
  // C++ AST instrospection.
  //===----------------------------------------------------------------------===//
  
@@ -119,7 +134,7 @@ index 66b6edc8b11..2b0864f9122 100644
  unsigned clang_CXXConstructor_isDefaultConstructor(CXCursor C) {
    if (!clang_isDeclaration(C.kind))
      return 0;
-@@ -7955,6 +7971,16 @@ unsigned clang_EnumDecl_isScoped(CXCursor C) {
+@@ -8414,6 +8430,16 @@ unsigned clang_EnumDecl_isScoped(CXCursor C) {
    return (Enum && Enum->isScoped()) ? 1 : 0;
  }
  
@@ -136,11 +151,11 @@ index 66b6edc8b11..2b0864f9122 100644
  //===----------------------------------------------------------------------===//
  // Attribute introspection.
  //===----------------------------------------------------------------------===//
-diff --git a/tools/libclang/CXType.cpp b/tools/libclang/CXType.cpp
-index dfc01524776..e4340c3b3fd 100644
---- a/tools/libclang/CXType.cpp
-+++ b/tools/libclang/CXType.cpp
-@@ -717,6 +717,42 @@ unsigned clang_isPODType(CXType X) {
+diff --git a/clang/tools/libclang/CXType.cpp b/clang/tools/libclang/CXType.cpp
+index b8009ddc1c1..3cda0f983b5 100644
+--- a/clang/tools/libclang/CXType.cpp
++++ b/clang/tools/libclang/CXType.cpp
+@@ -781,6 +781,42 @@ unsigned clang_isPODType(CXType X) {
    return T.isPODType(cxtu::getASTUnit(TU)->getASTContext()) ? 1 : 0;
  }
  
@@ -183,10 +198,10 @@ index dfc01524776..e4340c3b3fd 100644
  CXType clang_getElementType(CXType CT) {
    QualType ET = QualType();
    QualType T = GetQualType(CT);
-diff --git a/tools/libclang/libclang.exports b/tools/libclang/libclang.exports
-index bf95b97073f..7c8dba1d3e1 100644
---- a/tools/libclang/libclang.exports
-+++ b/tools/libclang/libclang.exports
+diff --git a/clang/tools/libclang/libclang.exports b/clang/tools/libclang/libclang.exports
+index 2c4b083a594..61dcf984ab5 100644
+--- a/clang/tools/libclang/libclang.exports
++++ b/clang/tools/libclang/libclang.exports
 @@ -3,6 +3,7 @@ clang_CXCursorSet_insert
  clang_CXIndex_getGlobalOptions
  clang_CXIndex_setGlobalOptions
@@ -203,7 +218,7 @@ index bf95b97073f..7c8dba1d3e1 100644
  clang_EnumDecl_isScoped
  clang_Cursor_getArgument
  clang_Cursor_getNumTemplateArguments
-@@ -296,6 +298,9 @@ clang_isFileMultipleIncludeGuarded
+@@ -312,6 +314,9 @@ clang_isFileMultipleIncludeGuarded
  clang_isFunctionTypeVariadic
  clang_isInvalid
  clang_isPODType

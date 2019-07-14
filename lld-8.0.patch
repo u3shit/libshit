@@ -1,0 +1,22 @@
+diff --git a/lld/COFF/Writer.cpp b/lld/COFF/Writer.cpp
+index 56b797451cf..129d64be78d 100644
+--- a/lld/COFF/Writer.cpp
++++ b/lld/COFF/Writer.cpp
+@@ -761,7 +761,7 @@ void Writer::createSections() {
+     StringRef Name = getOutputSectionName(Pair.first.first);
+     uint32_t OutChars = Pair.first.second;
+ 
+-    if (Name == ".CRT") {
++    if (Name == ".CRT" || Name == ".rsrc") {
+       // In link.exe, there is a special case for the I386 target where .CRT
+       // sections are treated as if they have output characteristics DATA | R if
+       // their characteristics are DATA | R | W. This implements the same
+@@ -1320,8 +1320,6 @@ void Writer::createSEHTable() {
+   for (ObjFile *File : ObjFile::Instances) {
+     // FIXME: We should error here instead of earlier unless /safeseh:no was
+     // passed.
+-    if (!File->hasSafeSEH())
+-      return;
+ 
+     markSymbolsForRVATable(File, File->getSXDataChunks(), Handlers);
+   }
