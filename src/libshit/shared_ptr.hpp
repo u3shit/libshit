@@ -124,9 +124,7 @@ namespace Libshit
     SharedPtrBase(const SharedPtrBase<U, SharedPtrStorageRefCounted>& o) noexcept
       : SharedPtrBase{o.GetCtrl(), o.get(), true} {}
 
-    SharedPtrBase(SharedPtrBase&& o) noexcept
-      : s{o.GetCtrl(), o.get()}
-    { o.s.Reset(); }
+    SharedPtrBase(SharedPtrBase&& o) noexcept : s{o.s} { o.s.Reset(); }
     template <typename U>
     SharedPtrBase(SharedPtrBase<U, Storage>&& o) noexcept
       : s{o.GetCtrl(), o.get()}
@@ -289,8 +287,7 @@ namespace Libshit
     WeakPtrBase(const WeakPtrBase<U, SharedPtrStorageRefCounted>& o) noexcept
       : WeakPtrBase{o.s.GetCtrl(), o.s.GetPtr(), true} {}
 
-    WeakPtrBase(WeakPtrBase&& o) noexcept : s{o.s.GetCtrl(), o.s.GetPtr()}
-    { o.s.Reset(); }
+    WeakPtrBase(WeakPtrBase&& o) noexcept : s{o.s} { o.s.Reset(); }
     template <typename U>
     WeakPtrBase(WeakPtrBase<U, Storage>&& o) noexcept
       : s{o.s.GetCtrl(), o.s.GetPtr()}

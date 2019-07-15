@@ -41,6 +41,7 @@
 
 # stl/libc++
 - include: ['<exception>', public, '<stdexcept>', public]
+- include: ['<__tuple>', private, '<tuple>', public]
 # don't require #include <utility> when a map should already include it...
 - symbol: ['std::pair', private, '<utility>', public]
 - symbol: ['std::pair', private, '<map>', public]
