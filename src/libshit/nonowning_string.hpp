@@ -23,6 +23,10 @@ namespace Libshit
   // !empty() (but can contain embedded zeros)
   template <typename Char, bool CString,
             typename Traits = std::char_traits<Char>>
+  class BasicNonowningString;
+
+  template <typename Char, bool CString,
+            typename Traits = std::char_traits<Char>>
   class BaseBasicNonowningString
     : boost::totally_ordered<BaseBasicNonowningString<Char, CString, Traits>>,
       boost::totally_ordered<BaseBasicNonowningString<Char, CString, Traits>,
@@ -48,6 +52,8 @@ namespace Libshit
     using unsigned_const_pointer = const unsigned_value_type*;
     using unsigned_reference = unsigned_value_type&;
     using unsigned_const_reference = const unsigned_value_type&;
+
+    static constexpr const size_type npos = std::numeric_limits<size_type>::max();
 
     constexpr BaseBasicNonowningString() noexcept : str{nullptr}, len{0} {}
 
@@ -94,7 +100,10 @@ namespace Libshit
     { return const_reverse_iterator{begin()}; }
 
     constexpr const_reference operator[](size_type i) const noexcept
-    { return str[i]; }
+    {
+      LIBSHIT_ASSERT(CString ? (i <= len) : (i < len));
+      return str[i];
+    }
     constexpr const_reference at(size_type i) const
     {
       if (CString ? (i > len) : (i >= len))
@@ -108,8 +117,10 @@ namespace Libshit
     { return reinterpret_cast<unsigned_const_reference>(at(i)); }
 
     // undefined if string is empty
-    constexpr const_reference front() const noexcept { return str[0]; }
-    constexpr const_reference back() const noexcept { return str[len-1]; }
+    constexpr const_reference front() const noexcept
+    { LIBSHIT_ASSERT(len); return str[0]; }
+    constexpr const_reference back() const noexcept
+    { LIBSHIT_ASSERT(len); return str[len-1]; }
     // can return nullptr or pointer to '\0' in case of empty string
     constexpr const_pointer data() const noexcept { return str; }
     constexpr unsigned_const_pointer udata() const noexcept
@@ -121,7 +132,8 @@ namespace Libshit
     { return std::numeric_limits<size_type>::max(); }
     constexpr bool empty() const noexcept { return len == 0; }
 
-    constexpr void remove_prefix(size_type n) noexcept { str += n; len -= n; }
+    constexpr void remove_prefix(size_type n) noexcept
+    { LIBSHIT_ASSERT(len >= n); str += n; len -= n; }
 
     template <typename Allocator = std::allocator<Char>>
     std::basic_string<Char, Traits, Allocator> to_string() const
@@ -131,7 +143,14 @@ namespace Libshit
     operator std::basic_string<Char, Traits, Allocator>() const
     { return {str, len}; }
 
-    // copy, *find*, substr: too lazy
+    // copy, *find*: too lazy
+    constexpr BasicNonowningString<Char, false, Traits>
+    substr(size_type pos, size_type n = npos) const noexcept
+    {
+      LIBSHIT_ASSERT(pos <= len);
+      return {str+pos, std::min(n, len-pos)};
+    }
+
     template <bool CStringO>
     constexpr int compare(
       BaseBasicNonowningString<Char, CStringO, Traits> o) const noexcept
@@ -183,10 +202,6 @@ namespace Libshit
   X_GEN_OP(>=)
 #undef X_GEN_OP
 
-  template <typename Char, bool CString,
-            typename Traits = std::char_traits<Char>>
-  class BasicNonowningString;
-
   template <typename Char, typename Traits>
   class BasicNonowningString<Char, true, Traits> final
     : public BaseBasicNonowningString<Char, true, Traits>
@@ -206,12 +221,13 @@ namespace Libshit
     using Base = BaseBasicNonowningString<Char, false, Traits>;
   public:
     using Base::Base;
+    using size_type = typename Base::size_type;
 
     BasicNonowningString(BaseBasicNonowningString<Char, true, Traits> str)
       : Base{str.data(), str.length()} {}
 
-    constexpr void remove_suffix(typename Base::size_type n) noexcept
-    { Base::len -= n; }
+    constexpr void remove_suffix(size_type n) noexcept
+    { LIBSHIT_ASSERT(Base::len >= n); Base::len -= n; }
   };
 
   using NonowningString = BasicNonowningString<char, true>;
