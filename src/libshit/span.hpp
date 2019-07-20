@@ -2,6 +2,8 @@
 #define GUARD_SLEEKLY_TROCHLEAR_REPENETRATION_BARNEYS_1688
 #pragma once
 
+#include <cstddef>
+#include <initializer_list>
 #include <iterator>
 #include <type_traits>
 
@@ -9,7 +11,7 @@ namespace Libshit
 {
 
   /// Simple std::span. No static extent support.
-  template <typename T>
+  template <typename T, typename = void /* IWYU workaround, no forward decl */>
   class Span
   {
   public:
