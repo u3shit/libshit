@@ -10,6 +10,7 @@
 
 #include <cstring> /* strstr */ // IWYU pragma: keep
 #include <exception> // IWYU pragma: export
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -101,12 +102,11 @@ namespace Libshit::Lua
     void SetRecTable(const char* name, int idx);
 
     // use optional<T>::value_or to get default value
-    // todo: no optional in vs
-    // template <typename T> std::optional<T> Opt(int idx)
-    // {
-    //   if (lua_isnoneornil(vm, idx)) return {};
-    //   return {Check<T>(idx)};
-    // }
+    template <typename T> std::optional<T> Opt(int idx)
+    {
+      if (lua_isnoneornil(vm, idx)) return {};
+      return {Check<T>(idx)};
+    }
 
     template <typename T, bool Unsafe = false> decltype(auto) Get(int idx = -1)
     { return TypeTraits<T>::template Get<Unsafe>(*this, false, idx); }

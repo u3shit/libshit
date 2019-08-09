@@ -305,8 +305,9 @@ namespace Libshit::Lua
       static bool Is(StateRef vm)
       {
         auto top = lua_gettop(vm);
-        if ((N & IDX_VARARG) && std::size_t(top) >= (N & IDX_MASK)) return false;
-        if (!(N & IDX_VARARG) && std::size_t(top) != N)             return false;
+
+        if ((N & IDX_VARARG) && std::size_t(top) < (N & IDX_MASK)) return false;
+        if (!(N & IDX_VARARG) && std::size_t(top) != N)            return false;
 
         return (GetArg<typename Args::ArgT>::Is(vm, Args::Idx) && ...);
       }

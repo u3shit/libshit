@@ -25,6 +25,7 @@ namespace Libshit::Lua
 #include <array>
 #include <boost/config.hpp>
 #include <cstring>
+#include <optional>
 #include <ostream>
 #include <string>
 #include <type_traits>
@@ -256,7 +257,7 @@ namespace Libshit::Lua
     template <bool Unsafe>
     static Ret Get(StateRef vm, bool arg, int idx)
     {
-      if (lua_isnil(vm, idx)) return nullptr;
+      if (lua_isnil(vm, idx)) return {};
       return ToNullable<NotNullable>::Conv(
         BaseTraits::template Get<Unsafe>(vm, arg, idx));
     }
@@ -280,6 +281,9 @@ namespace Libshit::Lua
 
   template <typename T>
   struct TypeTraits<T*> : NullableTypeTraits<T*> {};
+
+  template <typename T>
+  struct TypeTraits<std::optional<T>> : NullableTypeTraits<std::optional<T>> {};
 
   // used by UserType
   template <typename T, typename Enable = void> struct UserTypeTraits;
