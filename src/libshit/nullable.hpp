@@ -4,6 +4,8 @@
 
 #include "libshit/utils.hpp"
 
+#include <optional>
+
 namespace boost { template <typename T> class intrusive_ptr; }
 namespace Libshit
 {
@@ -18,7 +20,11 @@ namespace Libshit
   // examples: pointer, smart pointers, std::optional
 
   // make a type nullable
-  template <typename T> struct ToNullable;
+  template <typename T> struct ToNullable
+  {
+    using Type = std::optional<T>;
+    static constexpr std::optional<T> Conv(T t) { return Libshit::Move(t); }
+  };
 
   template <typename T> struct ToNullable<T&>
   {
@@ -55,6 +61,13 @@ namespace Libshit
     using Type = NotNull<boost::intrusive_ptr<T>>;
     static Type Conv(boost::intrusive_ptr<T> ptr) noexcept
     { return Type{Move(ptr)}; }
+  };
+
+  template <typename T> struct ToNotNullable<std::optional<T>>
+  {
+    using Type = T;
+    static constexpr T Conv(std::optional<T> opt)
+    { return Libshit::Move(*opt); }
   };
 
 }
