@@ -511,13 +511,14 @@ from waflib import Utils
 # bundle_chk: if string, header only lib's include path
 def system_chk(ctx, name, default, system_chk, bundle_chk, cross=False,
                post_chk=None, define=None):
-    envname = 'BUILD_' + Utils.quote_define_name(name)
-    hasname = 'HAS_'  + Utils.quote_define_name(name)
-    defines = 'DEFINES_' + Utils.quote_define_name(name)
+    def_name = Utils.quote_define_name(name)
+    envname = 'BUILD_' + def_name
+    hasname = 'HAS_'  + def_name
+    defines = 'DEFINES_' + def_name
 
     global all_optional
     if define == None and name in all_optional:
-        define = app + '_WITH_' + Utils.quote_define_name(name)
+        define = app + '_WITH_' + def_name
 
     if bundle_chk == None:
         def fun(ctx):
@@ -529,7 +530,7 @@ def system_chk(ctx, name, default, system_chk, bundle_chk, cross=False,
             ctx.fatal('%s/%s not found. Are git submodules missing?' %
                       (ctx.path.abspath(), bundle_chk))
         def fun(ctx):
-            ctx.env['SYSTEM_INCLUDES_'+name.upper()] = incl_dir.abspath()
+            ctx.env['SYSTEM_INCLUDES_' + def_name] = incl_dir.abspath()
         bundle_chk = fun
 
     def x(name):
