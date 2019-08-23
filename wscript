@@ -145,8 +145,10 @@ def configure(cfg):
     cfg.recurse('ext', name='configure', once=False)
 
 def configure_variant(ctx):
+    ctx.add_os_flags('ASFLAGS', dup=False)
     # override flags specific to app/bundled libraries
     for v in [app, 'EXT']:
+        ctx.add_os_flags('ASFLAGS_'+v, dup=False)
         ctx.add_os_flags('CPPFLAGS_'+v, dup=False)
         ctx.add_os_flags('CFLAGS_'+v, dup=False)
         ctx.add_os_flags('CXXFLAGS_'+v, dup=False)

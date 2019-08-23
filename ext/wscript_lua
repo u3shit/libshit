@@ -77,10 +77,10 @@ def configure(ctx):
         ctx.fatal('Invalid --use-lua value: %s' % ctx.options.with_lua)
 
     if ctx.env.DEBUG and ctx.env.LUAC_MODE in ['system-luajit', 'ljx']:
-        cfg.env.append_value('LUACFLAGS', '-g')
+        ctx.env.append_value('LUACFLAGS', '-g')
     elif not ctx.env.DEBUG and \
          ctx.env.LUAC_MODE in ['luac', 'system-luac', 'luac-wrapper']:
-        cfg.env.append_value('LUACFLAGS', '-s')
+        ctx.env.append_value('LUACFLAGS', '-s')
 
 def build(ctx):
     if ctx.env.WITH_LUA == 'ljx':

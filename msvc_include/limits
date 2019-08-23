@@ -1,0 +1,14 @@
+// -*- c++ -*-
+#pragma once
+
+#include <ymath.h>
+#include <cfloat>
+#include <climits>
+#include <cmath>
+#include <cwchar>
+#include <xstddef>
+
+// it might be overkill, but it appears to work...
+#define static static constexpr
+#include_next <limits>
+#undef static
