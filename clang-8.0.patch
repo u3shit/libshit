@@ -63,21 +63,6 @@ index b792db2852a..96a0a88060d 100644
  }
  
  def ARMInterrupt : InheritableAttr, TargetSpecificAttr<TargetARM> {
-diff --git a/clang/lib/CodeGen/CGCall.cpp b/clang/lib/CodeGen/CGCall.cpp
-index 7d494bb1f1c..01984f8a06d 100644
---- a/clang/lib/CodeGen/CGCall.cpp
-+++ b/clang/lib/CodeGen/CGCall.cpp
-@@ -3087,10 +3087,6 @@ void CodeGenFunction::EmitDelegateCallArg(CallArgList &args,
- 
-   QualType type = param->getType();
- 
--  if (isInAllocaArgument(CGM.getCXXABI(), type)) {
--    CGM.ErrorUnsupported(param, "forwarded non-trivially copyable parameter");
--  }
--
-   // GetAddrOfLocalVar returns a pointer-to-pointer for references,
-   // but the argument needs to be the original pointer.
-   if (type->isReferenceType()) {
 diff --git a/clang/tools/libclang/CIndex.cpp b/clang/tools/libclang/CIndex.cpp
 index a9c3077e5fa..eb6e17bb254 100644
 --- a/clang/tools/libclang/CIndex.cpp
