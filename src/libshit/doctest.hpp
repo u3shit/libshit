@@ -2,11 +2,22 @@
 #define GUARD_CROSSLINGUISTICALLY_MISWROUGHT_SHINGLER_GETS_LAID_1659
 #pragma once
 
+#if LIBSHIT_WITH_TESTS
+#  define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
+#else
+#  define DOCTEST_CONFIG_DISABLE
+#endif
+
 #include <doctest.h> // IWYU pragma: export
 
-#ifdef DOCTEST_CONFIG_DISABLE
+#if LIBSHIT_WITH_TESTS
 
-#  define LIBSHIT_WITH_TESTS 0
+// like CAPTURE but not lazy (so it works with rvalues too)
+#  define CCAPTURE(x)                       \
+  const auto& capture_tmp_##__LINE__ = (x); \
+  DOCTEST_INFO(#x " = " << capture_tmp_##__LINE__)
+
+#else
 
 // doctest is braindead and removes checks in disabled mode, leading to warnings
 // about unused variables. author is retarded too
@@ -28,16 +39,7 @@
 #  define DOCTEST_CHECK_THROWS_AS(expr, ...) \
   try { expr; } catch (const __VA_ARGS__&) {}
 
-#define CCAPTURE(x)
-
-#else
-
-#  define LIBSHIT_WITH_TESTS 1
-
-// like CAPTURE but not lazy (so it works with rvalues too)
-#define CCAPTURE(x)                         \
-  const auto& capture_tmp_##__LINE__ = (x); \
-  DOCTEST_INFO(#x " = " << capture_tmp_##__LINE__)
+#define CCAPTURE(x) (true ? ((void) 0) : ((void) (x)))
 
 #endif
 #endif

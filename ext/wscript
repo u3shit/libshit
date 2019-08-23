@@ -23,10 +23,10 @@ def configure(ctx):
                       define_name='')
     def doctest_post(ctx):
         if ctx.env.WITH_TESTS: # will be false with host variant
-            ctx.env.append_value(
-                'DEFINES_DOCTEST', 'DOCTEST_CONFIG_SUPER_FAST_ASSERTS')
+            defs = ['LIBSHIT_WITH_TESTS=1']
         else:
-            ctx.env.append_value('DEFINES_DOCTEST', 'DOCTEST_CONFIG_DISABLE')
+            defs = ['LIBSHIT_WITH_TESTS=0']
+        ctx.env.append_value('DEFINES_DOCTEST', defs)
     ctx.system_chk('doctest', 'auto', system_doctest, 'doctest/doctest',
                    cross=libshit_cross, post_chk=doctest_post)
 

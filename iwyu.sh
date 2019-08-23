@@ -23,6 +23,7 @@ flags+=(
     -isystem "$dir/ext/lua-5.3.4/src"
     -isystem "$dir/ext/doctest/doctest"
     -Wno-parentheses -Wno-dangling-else
+    -DLIBSHIT_WITH_TESTS=1
     -DLIBSHIT_WITH_LUA=1
 )
 
