@@ -283,16 +283,6 @@ def build(bld):
     fixup_fail_cxx()
     bld.recurse('ext', name='build', once=False)
 
-    import re
-    rc_ver = re.sub('-.*', '', re.sub('\.', ',', VERSION))
-    bld(features   = 'subst',
-        source     = '../src/version.hpp.in',
-        target     = '../src/version.hpp',
-        ext_out    = ['.shit'], # otherwise every fucking c and cpp file will
-                                # depend on this task...
-        VERSION    = VERSION,
-        RC_VERSION = rc_ver)
-
     build_libshit(bld, '')
     if libshit_cross: bld.only_host_env(build_libshit)
 
@@ -316,7 +306,7 @@ def build_libshit(ctx, pref):
 
     if ctx.env.WITH_TESTS:
         src += [
-            'test/main.cpp',
+            'test/test_helper.cpp',
             'test/container/ordered_map.cpp',
             'test/container/parent_list.cpp',
         ]
@@ -336,6 +326,12 @@ def build_libshit(ctx, pref):
                 includes = 'src',
                 export_includes = 'src',
                 target   = pref+'libshit')
+
+    if ctx.env.WITH_TESTS and app == 'LIBSHIT':
+        ctx.program(idx    = 50002 + (len(pref)>0),
+                    source = 'test/libshit_standalone.cpp',
+                    use    = pref+'libshit',
+                    target = pref+'libshit-tests')
 
 
 ################################################################################
@@ -642,3 +638,19 @@ def get_defs(ctx, msg, file, cxx=False):
         raise
 
     return dict(map(lambda l: defs_re.match(l).groups(), out.splitlines()))
+
+# random build helpers
+@conf
+def gen_version_hpp(bld, name):
+    import re
+    lst = list(filter(lambda x: re.match('^[0-9]+$', x), re.split('[\.-]', VERSION)))
+    # prevent parsing a git shortrev as a number
+    if len(lst) < 2: lst = []
+    rc_ver = ','.join((lst + ['0']*4)[0:4])
+    bld(features   = 'subst',
+        source     = name + '.in',
+        target     = name,
+        ext_out    = ['.shit'], # otherwise every fucking c and cpp file will
+                                # depend on this task...
+        VERSION    = VERSION,
+        RC_VERSION = rc_ver)
