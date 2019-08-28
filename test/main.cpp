@@ -36,7 +36,7 @@ namespace Libshit
     struct JUnitReporter final : doctest::IReporter
     {
       std::stringstream ss;
-      doctest::ConsoleReporter conrep{ss};
+      doctest::ConsoleReporter conrep;
 
       std::chrono::high_resolution_clock::time_point start, case_start;
       const doctest::TestCaseData* case_data;
@@ -118,11 +118,17 @@ namespace Libshit
         os << "  </testsuite>\n</testsuites>" << std::endl;
       }
 
-      // called when the whole test run starts (safe to cache a pointer to the
-      // input)
-      void test_run_start(const doctest::ContextOptions& opt) override
+      JUnitReporter(const doctest::ContextOptions& opts)
+        : conrep{opts, ss} {}
+
+      // called when a query should be reported (listing test cases, printing
+      // the version, etc.)
+      virtual void report_query(const doctest::QueryData& dat) override {}
+
+      // called when the whole test run starts
+      void test_run_start() override
       {
-        conrep.test_run_start(opt);
+        conrep.test_run_start();
         total_failures = total_errors = total_tests = total_skipped = 0;
         current_suite.clear();
         start = std::chrono::high_resolution_clock::now();
@@ -143,55 +149,73 @@ namespace Libshit
           WriteXml(std::cout, dur);
       }
 
+      void TCStartCommon()
+      {
+        subcase_str.clear();
+        failures.clear();
+        case_asserts = 0;
+        case_start = std::chrono::high_resolution_clock::now();
+      }
       // called when a test case is started (safe to cache a pointer to the
       // input)
       void test_case_start(const doctest::TestCaseData& data) override
       {
         conrep.test_case_start(data);
         case_data = &data;
-        subcase_str.clear();
-        failures.clear();
-        case_asserts = 0;
-        case_start = std::chrono::high_resolution_clock::now();
+        TCStartCommon();
       }
-      // called when a test case has ended - could be re-entered if more
-      // subcases have to be traversed - check
-      // CurrentTestCaseStats::should_reenter (caching a pointer to the input
-      // doesn't make sense here)
-      void test_case_end(const doctest::CurrentTestCaseStats& stat) override
-      {
-        auto dur = std::chrono::high_resolution_clock::now() - start;
 
-        ss.str("");
-        conrep.test_case_end(stat);
+      void TCEndCommon(std::chrono::high_resolution_clock::duration dur)
+      {
         if (ss.str() == "\033[0m") ss.str("");
 
         ++total_tests;
         if (!failures.empty()) ++total_failures;
         if (!ss.str().empty()) ++total_errors;
 
-        if (subcase_str.empty())
-          subcase_str = case_data->m_name;
-        else
-          subcase_str = case_data->m_name + "/"s + subcase_str;
-
         cases.push_back(Case{
-            dur, case_data->m_test_suite, Move(subcase_str), Move(failures),
-            ss.str(), case_asserts,
+            dur, case_data->m_test_suite, case_data->m_name + subcase_str,
+            Move(failures), ss.str(), case_asserts,
           });
+      }
+      // called when a test case has ended
+      void test_case_end(const doctest::CurrentTestCaseStats& stat) override
+      {
+        auto dur = std::chrono::high_resolution_clock::now() - start;
+        ss.str("");
+        conrep.test_case_end(stat);
+        TCEndCommon(dur);
+      }
+      // called when a test case is reentered because of unfinished subcases
+      // (safe to cache a pointer to the input)
+      void test_case_reenter(const doctest::TestCaseData& data) override
+      {
+        auto dur = std::chrono::high_resolution_clock::now() - start;
+        ss.str("");
+        conrep.test_case_reenter(data);
+        TCEndCommon(dur);
+        TCStartCommon();
+      }
+
+      // called when an exception is thrown from the test case (or it crashes)
+      virtual void test_case_exception(
+        const doctest::TestCaseException& exc) override
+      {
+        ss.str("");
+        conrep.test_case_exception(exc);
+        failures.push_back(ss.str());
       }
 
       // called whenever a subcase is entered (don't cache pointers to the input)
       void subcase_start(const doctest::SubcaseSignature& sig) override
       {
         conrep.subcase_start(sig);
-        subcase_str += sig.m_name + "{"s;
+        subcase_str += "/"s + sig.m_name;
       }
       // called whenever a subcase is exited (don't cache pointers to the input)
-      void subcase_end(const doctest::SubcaseSignature& sig) override
+      void subcase_end() override
       {
-        conrep.subcase_end(sig);
-        subcase_str += "}";
+        conrep.subcase_end();
       }
 
       // called for each assert (don't cache pointers to the input)
@@ -213,12 +237,13 @@ namespace Libshit
       // called when a test case is skipped either because it doesn't pass the
       // filters, has a skip decorator or isn't in the execution range (between
       // first and last) (safe to cache a pointer to the input)
-      void test_case_skipped(const doctest::TestCaseData&) override
+      void test_case_skipped(const doctest::TestCaseData& data) override
       {
-        // conrep.test_case_skipped(data); // doesn't do anything
-        std::abort(); // todo: what?
+        conrep.test_case_skipped(data); // doesn't do anything
       }
     };
+
+    REGISTER_REPORTER("junit", 10, JUnitReporter);
   }
 
   REGISTER_EXCEPTION_TRANSLATOR(const Libshit::Exception& e)
@@ -226,9 +251,7 @@ namespace Libshit
 
   static void Fun(std::vector<const char*>&& args)
   {
-    JUnitReporter rep;
     doctest::Context ctx;
-    doctest::registerReporter("junit", 10, rep);
 
     ctx.setOption("exit", true);
     ctx.applyCommandLine(args.size(), args.data());

@@ -78,7 +78,7 @@ namespace Libshit::Lua
       }                                                  \
       catch (const Libshit::Lua::Error& e)               \
       {                                                  \
-        CCAPTURE(e.what()); CAPTURE(substr);             \
+        CAPTURE(e.what()); CAPTURE(substr);              \
         CHECK(std::strstr(e.what(), substr) != nullptr); \
       }                                                  \
     while (0)
