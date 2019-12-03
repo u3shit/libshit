@@ -244,6 +244,14 @@ namespace Libshit
     return os;
   }
 
+  template <typename T, bool B, typename Traits, typename Alloc>
+  inline std::basic_string<T, Traits, Alloc>& operator+=(
+    std::basic_string<T, Traits, Alloc>& thiz, BasicNonowningString<T, B> view)
+  {
+    thiz.append(view.data(), view.size());
+    return thiz;
+  }
+
   template <typename T, bool B>
   std::basic_string<T> ToString(BasicNonowningString<T, B> str)
   { return std::basic_string<T>{str.data(), str.size()}; }

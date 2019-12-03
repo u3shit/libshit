@@ -5,6 +5,7 @@
 #include "libshit/assert.hpp"
 
 #include <atomic>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 
@@ -68,7 +69,7 @@ namespace Libshit
 
     // every object has an implicit weak_count, removed when removing last
     // strong ref
-    std::atomic<unsigned> weak_count{1}, strong_count{1};
+    std::atomic<std::uint_least32_t> weak_count{1}, strong_count{1};
   };
 
   template <typename T>
