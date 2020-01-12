@@ -2,4 +2,6 @@
 #pragma once
 
 // doctest workaround
-static constexpr const int STDOUT_FILENO = 1;
+#define STDOUT_FILENO 1
+
+#include_next <io.h>

@@ -16,6 +16,9 @@ def configure(ctx):
             ctx.fatal('No boost source at libshit/ext/boost')
 
         ctx.env.SYSTEM_INCLUDES_BOOST = ctx.path.find_node('boost').abspath()
+        # prevent the brain-dead autolink feature on windows, and maybe on
+        # onther platforms that implement this abomination
+        ctx.env.DEFINES_BOOST = ['BOOST_ALL_NO_LIB']
     ctx.system_chk('boost', 'auto', system_boost, bundle_boost, cross=libshit_cross)
 
 def build(ctx):
