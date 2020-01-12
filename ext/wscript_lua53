@@ -30,12 +30,14 @@ def build(ctx):
         features = 'cxx cxxprogram',
         source   = '%s/lua.c' % SRC_DIR,
         use      = 'lua',
+        uselib   = 'EXT',
         target   = 'libshit-lua')
     ctx(idx      = 51202,
         features = 'cxx cxxprogram',
         source   = 'lua_one.cpp',
         defines  = 'MAKE_LUAC',
         use      = 'lua',
+        uselib   = 'EXT',
         target   = 'luac')
 
 from waflib import Task

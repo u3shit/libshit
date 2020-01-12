@@ -20,6 +20,7 @@
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wundef"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 #include <lua.hpp> // IWYU pragma: export
 #pragma GCC diagnostic pop
 
