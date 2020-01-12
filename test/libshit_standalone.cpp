@@ -4,8 +4,6 @@
 
 #include <iostream>
 
-using namespace Libshit;
-
 int main(int argc, char** argv)
 {
     auto& parser = Libshit::OptionParser::GetGlobal();
