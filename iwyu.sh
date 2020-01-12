@@ -20,7 +20,7 @@ flags+=(
     -I"$dir/../build/libshit/src"
     -isystem "$dir/ext/boost"
     -isystem "$dir/ext/brigand/include"
-    -isystem "$dir/ext/lua-5.3.4/src"
+    -isystem "$dir/ext/lua-5.3.5/src"
     -isystem "$dir/ext/doctest/doctest"
     -Wno-parentheses -Wno-dangling-else
     -DLIBSHIT_WITH_TESTS=1
