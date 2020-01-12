@@ -3,12 +3,12 @@
 set -ex
 cd "$(dirname "$0")"
 
-VER=1.70.0
+VER=1.72.0
 _VER=$(echo $VER | sed 's/\./_/g')
 TGT=ext/boost
 DL=https://dl.bintray.com/boostorg/release/$VER/source/boost_$_VER.tar.bz2
 BZ2_FILE=ext/boost_$_VER.tar.bz2
-SHA256=430ae8354789de4fd19ee52f3b1f739e1fba576f0aded0897c3c2bc00fb38778
+SHA256=59c9b274bc451cf91a9ba1dd2c7fdcaf5d60b1b3aa83f2c9fa143417cc660722
 
 if [ -e "$TGT" ]; then
     echo "$(pwd)/$TGT exists, refusing to continue" >&2
