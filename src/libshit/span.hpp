@@ -2,6 +2,8 @@
 #define GUARD_SLEEKLY_TROCHLEAR_REPENETRATION_BARNEYS_1688
 #pragma once
 
+#include "libshit/assert.hpp"
+
 #include <cstddef>
 #include <initializer_list>
 #include <iterator>

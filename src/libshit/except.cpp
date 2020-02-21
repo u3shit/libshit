@@ -142,7 +142,7 @@ namespace Libshit
     }
     catch (const std::exception& e)
     {
-      return e.what();
+      return boost::core::demangle(typeid(e).name()) + ": " + e.what();
     }
     catch (...)
     {

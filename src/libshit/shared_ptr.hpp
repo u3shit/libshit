@@ -58,20 +58,17 @@ namespace Libshit
     // can't put the IS_REFCOUNTED static assert into the class body, as that
     // would break when using this on incomplete types
     SharedPtrStorageRefCounted() noexcept
-    { static_assert(IS_REFCOUNTED<T>); }
+    { static_assert(std::is_same_v<T, void> || IS_REFCOUNTED<T>); }
     SharedPtrStorageRefCounted(RefCounted* ctrl, T* ptr) noexcept
       : ptr{const_cast<U*>(ptr)}
     {
       (void) ctrl;
-      static_assert(IS_REFCOUNTED<T>);
+      static_assert(std::is_same_v<T, void> || IS_REFCOUNTED<T>);
       LIBSHIT_ASSERT(ctrl == ptr);
     }
 
     RefCounted* GetCtrl() const noexcept
-    {
-      static_assert(IS_REFCOUNTED<T>);
-      return ptr;
-    }
+    { return static_cast<RefCounted*>(ptr); } // static_cast needed for void
     T* GetPtr() const noexcept { return ptr; }
     void Reset() noexcept { ptr = nullptr; }
     void Swap(SharedPtrStorageRefCounted& o) noexcept { std::swap(ptr, o.ptr); }
@@ -165,7 +162,8 @@ namespace Libshit
     void swap(SharedPtrBase& o) noexcept { s.Swap(o.s); }
 
     T* get() const noexcept { return s.GetPtr(); }
-    T& operator*() const noexcept { return *s.GetPtr(); }
+    template <typename U = T, typename = std::enable_if_t<!std::is_same_v<U, void>>>
+    U& operator*() const noexcept { return *s.GetPtr(); }
     T* operator->() const noexcept { return s.GetPtr(); }
     unsigned use_count() const noexcept
     { return s.GetCtrl() ? s.GetCtrl()->use_count() : 0; }
