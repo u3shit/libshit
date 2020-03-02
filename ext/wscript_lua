@@ -2,14 +2,11 @@
 
 from waflib import Context
 def options(ctx):
-    grp = ctx.get_option_group('configure options')
-    grp.add_option('--with-lua', action='store',
-                   default=getattr(Context.g_module, 'DEFAULT_LUA', 'none'),
-                   help='Lua to use: none, ljx, lua, system')
-    grp.add_option('--without-lua', action='store_const', dest='with_lua',
-                   const='none', help='No lua support (same as --lua=none)')
+    ctx.with_opt('lua', ['ljx', 'lua', 'system', 'none'],
+                 default=getattr(Context.g_module, 'DEFAULT_LUA', 'none'))
 
-    grp.add_option('--lua-pc-name', action='store', default='lua53',
+    grp = ctx.get_option_group('configure options')
+    grp.add_option('--lua-pc-name', action='store', default='lua5.3',
                    help='Lua pkg-config name (in case of --with-lua=system). '+
                    'Should be lua 5.3 or compatible')
     grp.add_option('--lua-dll', action='store_true', default=None,
@@ -30,51 +27,51 @@ def chk_luac(ctx, modes):
 
 def configure(ctx):
     from waflib import Logs
-    Logs.pprint('NORMAL', 'Configuring lua')
     ctx.add_os_flags('LUACFLAGS')
     ctx.add_os_flags('LUAC')
     defines = 'DEFINES_' + Context.g_module.APPNAME.upper()
 
     def no_lua(ctx, _):
         ctx.env.append_value(defines, 'LIBSHIT_WITH_LUA=0')
-        ctx.env.WITH_LUA = False
+        ctx.env.WITH_LUA = 'none'
     ctx.only_host_env(no_lua)
 
     wlua = ctx.options.with_lua
-    ctx.env.WITH_LUA = wlua
     ctx.env.LUAC_MODE = ctx.options.luac_mode
-    if wlua == 'none':
-        no_lua(ctx, 0)
-        chk_luac(ctx, [[]])
-        return
 
-    ctx.env.append_value(defines, 'LIBSHIT_WITH_LUA=1')
-    if wlua == 'system':
-        ctx.check_cfg(package=ctx.option.lua_pc_name, uselib_store='LUA')
+    def check_none(ctx):
+        chk_luac(ctx, [[]])
+
+    def check_system(ctx):
+        ctx.check_cfg(package=ctx.options.lua_pc_name, args='--cflags --libs',
+                      uselib_store='LUA')
         if not ctx.env.LUAC_MODE: ctx.env.LUAC_MODE = 'copy'
         chk_luac(ctx, ['copy', 'system-luajit', 'system-luac'])
-        return
 
+    def check_common(ctx):
+        if ctx.env.DEST_OS == 'win32':
+            ctx.env.LUA_DLL = ctx.options.lua_dll
 
-    if ctx.env.DEST_OS == 'win32':
-        ctx.env.LUA_DLL = ctx.options.lua_dll
+        if ctx.env['COMPILER_CXX'] != 'msvc':
+            ctx.env.append_value('CFLAGS_LUA', '-fexceptions')
 
-    if ctx.env['COMPILER_CXX'] != 'msvc':
-        ctx.env.append_value('CFLAGS_LUA', '-fexceptions')
+        if ctx.env.LUA_DLL:
+            ctx.env.append_value('DEFINES_LUA', 'LUA_BUILD_AS_DLL')
+        if not ctx.options.release:
+            ctx.env.append_value('DEFINES_LUA', 'LUA_USE_APICHECK')
 
-    if ctx.env.LUA_DLL:
-        ctx.env.append_value('DEFINES_LUA', 'LUA_BUILD_AS_DLL')
-    if not ctx.options.release:
-        ctx.env.append_value('DEFINES_LUA', 'LUA_USE_APICHECK')
-
-    if wlua == 'ljx':
+    def check_ljx(ctx):
+        check_common(ctx)
         ctx.recurse('.', name='configure', wscript='wscript_ljx', once=False)
         chk_luac(ctx, ['copy', 'ljx', 'system-luajit'])
-    elif wlua == 'lua':
+    def check_lua(ctx):
+        check_common(ctx)
         ctx.recurse('.', name='configure', wscript='wscript_lua53', once=False)
         chk_luac(ctx, ['copy', 'luac', 'system-luac', 'luac-wrapper'])
-    else:
-        ctx.fatal('Invalid --use-lua value: %s' % ctx.options.with_lua)
+
+    ctx.with_chk(
+        'lua', {'none': check_none, 'system': check_system,
+                'ljx': check_ljx, 'lua': check_lua}, define='LIBSHIT_WITH_LUA')
 
     if ctx.env.DEBUG and ctx.env.LUAC_MODE in ['system-luajit', 'ljx']:
         ctx.env.append_value('LUACFLAGS', '-g')

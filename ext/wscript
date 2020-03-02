@@ -16,7 +16,9 @@ def configure(ctx):
         ctx.check_cfg(package='libbrigand', args='--cflags',
                       uselib_store='BRIGAND',
                       define_name='', add_have_to_env=False)
-    ctx.system_chk('brigand', 'auto', system_brigand, 'brigand/include', libshit_cross)
+    ctx.with_chk(
+        'brigand', {'system': system_brigand, 'bundle': 'brigand/include'},
+        cross=libshit_cross)
 
     def system_doctest(ctx):
         ctx.check_cxx(header_name='doctest.h', uselib_store='DOCTEST',
@@ -27,8 +29,9 @@ def configure(ctx):
         else:
             defs = ['LIBSHIT_WITH_TESTS=0']
         ctx.env.append_value('DEFINES_DOCTEST', defs)
-    ctx.system_chk('doctest', 'auto', system_doctest, 'doctest/doctest',
-                   cross=libshit_cross, post_chk=doctest_post)
+    ctx.with_chk(
+        'doctest', {'system': system_doctest, 'bundle': 'doctest/doctest'},
+        cross=libshit_cross, post_chk=doctest_post)
 
     ctx.recurse('.', name='configure', wscript='wscript_boost', once=False)
     ctx.recurse('.', name='configure', wscript='wscript_libcxx', once=False)

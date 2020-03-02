@@ -17,12 +17,13 @@ def configure(ctx):
 
         ctx.env.SYSTEM_INCLUDES_BOOST = ctx.path.find_node('boost').abspath()
         # prevent the brain-dead autolink feature on windows, and maybe on
-        # onther platforms that implement this abomination
+        # other platforms that implement this abomination
         ctx.env.DEFINES_BOOST = ['BOOST_ALL_NO_LIB']
-    ctx.system_chk('boost', 'auto', system_boost, bundle_boost, cross=libshit_cross)
+    ctx.with_chk('boost', {'system': system_boost, 'bundle': bundle_boost},
+                 cross=libshit_cross)
 
 def build(ctx):
-    if not ctx.env.BUILD_BOOST: return
+    if ctx.env.WITH_BOOST != 'bundle': return
 
     boost_libs = set(getattr(Context.g_module, 'BOOST_LIBS', []))
     defines = ['BOOST_SYSTEM_STATIC_LINK=1']

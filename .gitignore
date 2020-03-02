@@ -5,6 +5,7 @@
 build
 .lock-waf_*
 .waf*
+__pycache__
 
 ext/boost
 ext/boost*.tar.bz2

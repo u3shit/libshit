@@ -50,9 +50,8 @@ c_config.MACRO_TO_DESTOS['__vita__'] = 'vita'
 app = Context.g_module.APPNAME.upper()
 libshit_cross = getattr(Context.g_module, 'LIBSHIT_CROSS', False)
 
-all_system = set()
-all_optional = set()
 def options(opt):
+    opt.load('with_selector', tooldir='.')
     opt.load('compiler_c compiler_cxx')
     grp = opt.get_option_group('configure options')
 
@@ -65,14 +64,6 @@ def options(opt):
     grp.add_option('--with-tests', action='store_true', default=False,
                    help='Enable tests')
 
-    bnd = opt.add_option_group('Bundling options')
-    bnd.add_option('--all-system', dest='all_system',
-                   action='store_const', const='system',
-                   help="Disable bundled libs where it's generally ok")
-    bnd.add_option('--all-bundled', dest='all_system',
-                   action='store_const', const='bundle',
-                   help="Use bundled libs where it's generally ok")
-
     opt.recurse('ext', name='options')
 
 def configure(cfg):
@@ -80,11 +71,7 @@ def configure(cfg):
     if cfg.options.release:
         cfg.options.optimize = True
 
-    if cfg.options.all_system:
-        global all_system
-        for s in all_system:
-            if getattr(cfg.options, 'system_'+s, None) == None:
-                setattr(cfg.options, 'system_'+s, cfg.options.all_system)
+    cfg.load('with_selector', tooldir='.')
 
     variant = cfg.variant
     environ = cfg.environ
@@ -296,7 +283,7 @@ def build_libshit(ctx, pref):
     ]
     if ctx.env.DEST_OS == 'vita':
         src += ['src/libshit/vita_fixup.c']
-    if ctx.env.WITH_LUA:
+    if ctx.env.WITH_LUA != 'none':
         src += [
             'src/libshit/logger.lua',
             'src/libshit/lua/base.cpp',
@@ -311,7 +298,7 @@ def build_libshit(ctx, pref):
             'test/container/ordered_map.cpp',
             'test/container/parent_list.cpp',
         ]
-        if ctx.env.WITH_LUA:
+        if ctx.env.WITH_LUA != 'none':
             src += [
                 'test/lua/function_call.cpp',
                 'test/lua/function_ref.cpp',
@@ -323,7 +310,7 @@ def build_libshit(ctx, pref):
     ctx.objects(idx      = 50000 + (len(pref)>0),
                 source   = src,
                 uselib   = app,
-                use      = 'BOOST BRIGAND DOCTEST lua libcxx',
+                use      = 'BOOST BRIGAND DOCTEST LUA lua libcxx',
                 includes = 'src',
                 export_includes = 'src',
                 target   = pref+'libshit')
@@ -475,97 +462,6 @@ from waflib.Task import Task
 def getname(self):
     return self.__class__.__name__ + ':'
 Task.keyword = getname
-
-# system building helpers
-from waflib.Options import OptionsContext
-def system_opt(ctx, name, include_all=True, cross=False, has_bundle=True,
-               optional=False):
-    grp = ctx.get_option_group('Bundling options')
-    def x(name):
-        sname = 'system_' + name
-        grp.add_option('--system-'+name, dest=sname,
-                       action='store_const', const='system',
-                       help='Use system '+name)
-        if has_bundle:
-            grp.add_option('--bundled-'+name, dest=sname,
-                           action='store_const', const='bundle',
-                           help='Use bundled '+name)
-        if optional:
-            grp.add_option('--disable-'+name, dest=sname,
-                           action='store_const', const='disable',
-                           help='Disable '+name)
-        if include_all:
-            global all_system
-            all_system.add(name)
-        if optional:
-            global all_optional
-            all_optional.add(name)
-    x(name)
-    if cross: x(name + '-host')
-OptionsContext.system_opt = system_opt
-
-from waflib.Errors import ConfigurationError
-from waflib import Utils
-@conf
-# bundle_chk: if string, header only lib's include path
-def system_chk(ctx, name, default, system_chk, bundle_chk, cross=False,
-               post_chk=None, define=None):
-    def_name = Utils.quote_define_name(name)
-    envname = 'BUILD_' + def_name
-    hasname = 'HAS_'  + def_name
-    defines = 'DEFINES_' + def_name
-
-    global all_optional
-    if define == None and name in all_optional:
-        define = app + '_WITH_' + def_name
-
-    if bundle_chk == None:
-        def fun(ctx):
-            pass
-        bundle_chk = fun
-    if isinstance(bundle_chk, str):
-        incl_dir = ctx.path.find_dir(bundle_chk)
-        if not incl_dir:
-            ctx.fatal('%s/%s not found. Are git submodules missing?' %
-                      (ctx.path.abspath(), bundle_chk))
-        def fun(ctx):
-            ctx.env['SYSTEM_INCLUDES_' + def_name] = incl_dir.abspath()
-        bundle_chk = fun
-
-    def x(name):
-        opt = getattr(ctx.options, 'system_'+name) or default
-        if opt == 'auto' or opt == 'system':
-            try:
-                system_chk(ctx)
-                ctx.env[envname] = False
-                ctx.env[hasname] = True
-                if define: ctx.env.append_value(defines, define + '=1')
-                if post_chk: post_chk(ctx)
-                ctx.msg('Using '+name, 'system')
-                return
-            except ConfigurationError:
-                if opt == 'system': raise
-
-        if opt == 'auto' or opt == 'bundle':
-            try:
-                bundle_chk(ctx)
-                ctx.env[envname] = True
-                ctx.env[hasname] = True
-                if define: ctx.env.append_value(defines, define + '=1')
-                if post_chk: post_chk(ctx)
-                ctx.msg('Using '+name, 'bundled')
-                return
-            except ConfigurationError:
-                if opt == 'bundle': raise
-
-        ctx.msg('Using '+name, False)
-        if define: ctx.env.append_value(defines, define + '=0')
-        global all_optional
-        if opt == 'disable' or name in all_optional: return
-        ctx.fatal('Module '+name+' not found')
-
-    x(name)
-    if cross: ctx.only_host_env(lambda bull,shit: x(name+'-host'))
 
 
 @feature('c', 'cxx', 'includes')
