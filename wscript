@@ -288,8 +288,9 @@ def build_libshit(ctx, pref):
             'src/libshit/logger.lua',
             'src/libshit/lua/base.cpp',
             'src/libshit/lua/base_funcs.lua',
-            'src/libshit/lua/userdata.cpp',
+            'src/libshit/lua/lua53_polyfill.lua',
             'src/libshit/lua/user_type.cpp',
+            'src/libshit/lua/userdata.cpp',
         ]
 
     if ctx.env.WITH_TESTS:

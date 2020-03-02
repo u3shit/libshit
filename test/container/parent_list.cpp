@@ -632,7 +632,7 @@ namespace Libshit::Test
 
     Lua::State vm;
     auto lst = MakeSmart<XList>();
-    vm.Catch([&]()
+    vm.TranslateException([&]()
     {
       vm.Push(lst);
       lua_setglobal(vm, "lst");

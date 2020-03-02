@@ -2,6 +2,7 @@
 
 #include "libshit/assert.hpp"
 #include "libshit/lua/base_funcs.lua.h"
+#include "libshit/lua/lua53_polyfill.lua.h"
 #include "libshit/utils.hpp"
 
 #include <climits>
@@ -30,7 +31,7 @@ namespace Libshit::Lua
   TEST_CASE("state creation")
   {
     State vm;
-    vm.Catch([&]()
+    vm.TranslateException([&]()
     {
       luaL_checkversion(vm);
 
@@ -40,6 +41,13 @@ namespace Libshit::Lua
     });
   }
 
+  inline void StateRef::ToLuaException()
+  {
+    auto s = ExceptionToString();
+    lua_pushlstring(vm, s.data(), s.size());
+    lua_error(vm);
+    LIBSHIT_UNREACHABLE("lua_error returned");
+  }
 
   // plain lua needs it
   // probably optional in ljx, but it won't hurt...
@@ -71,32 +79,42 @@ namespace Libshit::Lua
     }
   }
 
-  static int getfenv(lua_State* vm)
+  // gets upvalue's index
+  static int getfenv_idx(lua_State* vm)
   {
     getfunc(vm, true); // +1
     if (lua_iscfunction(vm, -1))
     {
       lua_pushglobaltable(vm);
-      return 1;
+      return -1;
     }
 
-    auto name = lua_getupvalue(vm, -1, 1); // +2
-    return strcmp(name, "_ENV") == 0 ? 1 : 0;
+    const char* name;
+    for (int i = 1; name = lua_getupvalue(vm, -1, i); ++i) // +2 if true
+    {
+      if (strcmp(name, "_ENV") == 0) return i;
+      lua_pop(vm, 1); // +1
+    }
+    return 0;
   }
+
+  static int getfenv(lua_State* vm) { return getfenv_idx(vm) ? 1 : 0; }
 
   static int setfenv(lua_State* vm)
   {
     luaL_checktype(vm, 2, LUA_TTABLE);
-    getfunc(vm, false); // +1
 
-    auto name = lua_getupvalue(vm, 1, 1); // +2
+    auto idx = getfenv_idx(vm);
+    if (idx == -1) luaL_error(vm, "setfenv: doesn't work with c functions");
+    if (idx == 0) return 1; // +2
     lua_pop(vm, 1); // +1
 
-    if (strcmp(name, "_ENV") == 0)
-    {
-      lua_pushvalue(vm, 2); // +2
-      lua_setupvalue(vm, -2, 1); // +1
-    }
+    lua_pushvalue(vm, lua_upvalueindex(1)); // +2
+    lua_pushvalue(vm, -2); // +3
+    lua_pushinteger(vm, idx); // +4
+    lua_pushvalue(vm, 2); // +5
+    lua_call(vm, 3, 0); // +1
+
     return 1;
   }
 #endif
@@ -111,7 +129,7 @@ assert(getfenv(luafun) == _G)
 assert(luafun() == 1)
 
 setfenv(luafun, {global=2})
-assert(luafun() == 2)
+assert(luafun() == 2) -- using global variable on purpose
 )");
 
     vm.DoString(R"(
@@ -134,12 +152,29 @@ local function b()
   local ret = a()
   assert(getfenv(1) == btbl)
   return ret, global
- end
+end
 local ret = {b()}
 assert(ret[1] == 1)
 assert(ret[2] == 2)
 assert(getfenv(a) == atbl)
 assert(getfenv(b) == btbl)
+)");
+  }
+
+  TEST_CASE("__ipairs metamethod")
+  {
+    State vm;
+    vm.DoString(R"(
+local function myipairs(x)
+  return function(x, i) return i == 0 and 5 or nil end, x, 0
+end
+local t = setmetatable({}, {__ipairs=myipairs})
+local n = 0
+for i in ipairs(t) do
+  assert(i == 5, "bad i "..i)
+  n = n+1
+end
+assert(n == 1, "ipairs not working")
 )");
   }
 
@@ -162,7 +197,7 @@ assert(getfenv(b) == btbl)
   TEST_CASE("TypeName check")
   {
     State vm;
-    vm.Catch([&]()
+    vm.TranslateException([&]()
     {
       vm.DoString(R"(stuff = setmetatable({}, {__name="stuff"}))");
       lua_newuserdata(vm, 0); // +1
@@ -190,7 +225,7 @@ assert(typename(stuff_ud) == "userdata")
 
   State::State() : State(0)
   {
-    Catch(
+    TranslateException(
       [](StateRef vm)
       {
         LIBSHIT_LUA_GETTOP(vm, top);
@@ -201,7 +236,8 @@ assert(typename(stuff_ud) == "userdata")
 #ifndef LUA_VERSION_LJX
         lua_pushcfunction(vm, getfenv); // +1
         lua_setglobal(vm, "getfenv"); // 0
-        lua_pushcfunction(vm, setfenv); // +1
+        LIBSHIT_LUA_RUNBC(vm, lua53_polyfill, 1); // +1
+        lua_pushcclosure(vm, setfenv, 1); // +1
         lua_setglobal(vm, "setfenv"); // 0
 #endif
 
@@ -228,7 +264,7 @@ assert(typename(stuff_ud) == "userdata")
     if (vm) lua_close(vm);
   }
 
-#if LIBSHIT_OS_IS_WINDOWS
+#if LIBSHIT_LUA_SEH_HANDLING
   int StateRef::SEHFilter(lua_State* vm, unsigned code,
                           const char** error_msg, std::size_t* error_len)
   {
@@ -345,7 +381,7 @@ assert(typename(stuff_ud) == "userdata")
       LIBSHIT_LUA_CHECKTOP(vm, top);
     };
 
-    vm.Catch([&]()
+    vm.TranslateException([&]()
     {
       lua_createtable(vm, 4, 2);
       CHECK(vm.RawLen01(1).len == 0);
@@ -423,7 +459,7 @@ assert(typename(stuff_ud) == "userdata")
   TEST_CASE("SetRecTable")
   {
     State vm;
-    vm.Catch([&]()
+    vm.TranslateException([&]()
     {
       lua_pushliteral(vm, "foo"); // +1
       lua_createtable(vm, 0, 0);  // +2
@@ -447,7 +483,10 @@ assert(typename(stuff_ud) == "userdata")
       lua_getglobal(vm, "tbl"); // +2
     });
 
-    CHECK_THROWS(vm.Catch([&]() { vm.SetRecTable("nested.something.foo", 1); }));
+    LIBSHIT_CHECK_LUA_THROWS(
+      vm, 1,
+       vm.SetRecTable("nested.something.foo", 1),
+      "attempt to index a string value");
     vm.DoString(R"(assert(tbl.nested.something == "foo"))");
   }
 
@@ -468,13 +507,13 @@ assert(typename(stuff_ud) == "userdata")
     CHECK_THROWS_AS(vm.DoString("error('foo')"), Error);
   }
 
-  TEST_CASE("Catch lua error")
+  TEST_CASE("Translate lua error")
   {
     State vm;
     try
     {
-      vm.Catch([&]() { return luaL_error(vm, "foobar"); });
-      FAIL("Expected Catch to throw an Error");
+      vm.TranslateException([&]() { return luaL_error(vm, "foobar"); });
+      FAIL("Expected TranslateException to throw an Error");
     }
     catch (const Error& e)
     {
@@ -482,18 +521,31 @@ assert(typename(stuff_ud) == "userdata")
     }
   }
 
-  TEST_CASE("Catch C++ error")
+  TEST_CASE("Translate C++ error")
   {
     State vm;
     try
     {
-      vm.Catch([]() { throw std::runtime_error("zzfoo"); });
-      FAIL("Expected Catch to throw an Error");
+      vm.TranslateException([]() { throw std::runtime_error("zzfoo"); });
+      FAIL("Expected TranslateException to throw an Error");
     }
     catch (const std::runtime_error& e)
     {
       CHECK(e.what() == "zzfoo"s);
     }
+  }
+
+  TEST_CASE("PCall lua error")
+  {
+    State vm;
+    LIBSHIT_CHECK_LUA_THROWS(vm, 0, luaL_error(vm, "magicasdf"), "magicasdf");
+  }
+
+  TEST_CASE("PCall C++ error")
+  {
+    State vm;
+    LIBSHIT_CHECK_LUA_THROWS(
+      vm, 0, throw std::runtime_error("magicasdf"), "magicasdf");
   }
 
   TEST_CASE("Exception interoperability")
@@ -508,7 +560,7 @@ assert(typename(stuff_ud) == "userdata")
     };
 
     LIBSHIT_CHECK_LUA_THROWS(
-      vm, DestructorTest tst; luaL_error(vm, "foobaz"), "foobaz");
+      vm, 0, DestructorTest tst; luaL_error(vm, "foobaz"), "foobaz");
     CHECK_MESSAGE(global == 17, "destructor didn't run!");
   }
 

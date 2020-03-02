@@ -36,6 +36,12 @@
 #  define LIBSHIT_LUA_CHECKTOP(vm, val) ((void) 0)
 #endif
 
+#if LIBSHIT_OS_IS_WINDOWS && (defined(LUA_VERSION_LJX) || defined(LUAJIT_VERSION))
+#  define LIBSHIT_LUA_SEH_HANDLING 1
+#else
+#  define LIBSHIT_LUA_SEH_HANDLING 0
+#endif
+
 namespace Libshit::Lua
 {
 
@@ -52,10 +58,19 @@ namespace Libshit::Lua
   public:
     constexpr StateRef(lua_State* vm) noexcept : vm{vm} {}
 
+    BOOST_NORETURN void ToLuaException();
+
+    /**
+     * Catch and translate lua errors to C++ exceptions.
+     * @warning Only use this when you intend to propagate the exception back to
+     *   lua or you don't need the state after an exception. Plain lua doesn't
+     *   like when you swallow an exception catched like this, use PCall in that
+     *   case.
+     */
     template <typename Fun, typename... Args>
-    auto Catch(Fun f, Args&&... args)
+    auto TranslateException(Fun f, Args&&... args)
     {
-#if LIBSHIT_OS_IS_WINDOWS
+#if LIBSHIT_LUA_SEH_HANDLING
       auto vm_ = vm;
       const char* error_msg;
       std::size_t error_len;
@@ -69,19 +84,37 @@ namespace Libshit::Lua
 #endif
     }
 
+    template <typename Fun>
+    void PCall(int nargs, int nresults, Fun f)
+    {
+      lua_pushcfunction(vm, PCallFun<Fun>); // +1
+      lua_rotate(vm, -nargs-1, 1);
+      lua_pushlightuserdata(vm, &f); // +2
+
+      if (lua_pcall(vm, nargs+1, nresults, 0) != LUA_OK) // -nargs+(nresults|1)
+      {
+        size_t len;
+        auto ptr = lua_tolstring(vm, -1, &len);
+        std::string msg(ptr, len);
+        lua_pop(vm, 1);
+        throw Error(Libshit::Move(msg));
+      }
+    }
+
     // for use with doctest
-#define LIBSHIT_CHECK_LUA_THROWS(vm, expr, substr)       \
-    do                                                   \
-      try                                                \
-      {                                                  \
-        vm.Catch([&]() { expr; });                       \
-        FAIL("Expected to throw an Error");              \
-      }                                                  \
-      catch (const Libshit::Lua::Error& e)               \
-      {                                                  \
-        CAPTURE(e.what()); CAPTURE(substr);              \
-        CHECK(std::strstr(e.what(), substr) != nullptr); \
-      }                                                  \
+#define LIBSHIT_CHECK_LUA_THROWS(vm, nargs, expr, substr) \
+    do                                                    \
+      try                                                 \
+      {                                                   \
+        vm.PCall(nargs, 0, [&](StateRef vm) -> int        \
+          { expr; return 0;});                            \
+        FAIL("Expected to throw an Error");               \
+      }                                                   \
+      catch (const Libshit::Lua::Error& e)                \
+      {                                                   \
+        CAPTURE(e.what()); CAPTURE(substr);               \
+        CHECK(std::strstr(e.what(), substr) != nullptr);  \
+      }                                                   \
     while (0)
 
 
@@ -170,9 +203,19 @@ namespace Libshit::Lua
     lua_State* vm;
 
   private:
+    template <typename Fun>
+    static int PCallFun(lua_State* vm)
+    {
+      auto fun = static_cast<Fun*>(lua_touserdata(vm, -1));
+      lua_pop(vm, 1);
+
+      try { return (*fun)(vm); }
+      catch (const std::exception& e) { StateRef{vm}.ToLuaException(); }
+    }
+
     std::pair<std::size_t, int> Ipairs01Prep(int idx);
 
-#if LIBSHIT_OS_IS_WINDOWS
+#if LIBSHIT_LUA_SEH_HANDLING
     static int SEHFilter(lua_State* vm, unsigned code,
                          const char** error_msg, std::size_t* error_len);
 #else

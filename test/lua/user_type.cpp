@@ -77,7 +77,7 @@ namespace Libshit::Lua::Test
 
     {
       State vm;
-      vm.Catch([&]()
+      vm.TranslateException([&]()
       {
         auto ptr = MakeSmart<Foo>();
         vm.Push(ptr);
@@ -101,7 +101,7 @@ namespace Libshit::Lua::Test
     State vm;
 
     vm.DoString("local x = libshit.lua.test.foo() x:do_it(77) return x");
-    CHECK(vm.Catch([&]() { return vm.Get<Foo>().local_var; }) == 77);
+    CHECK(vm.TranslateException([&]() { return vm.Get<Foo>().local_var; }) == 77);
   }
 
   TEST_CASE("member function with helpers")
@@ -125,7 +125,7 @@ namespace Libshit::Lua::Test
   {
     State vm;
     auto ptr = MakeSmart<Foo>();
-    vm.Catch([&]()
+    vm.TranslateException([&]()
     {
       vm.Push(ptr);
       lua_setglobal(vm, "foo");

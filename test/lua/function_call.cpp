@@ -82,22 +82,25 @@ namespace Libshit::Lua::Test
   TEST_CASE("overload function")
   {
     State vm;
-    vm.PushFunction<overload_int, overload_str>();
+    vm.TranslateException([&]()
+    {
+      vm.PushFunction<overload_int, overload_str>();
 
-    lua_pushvalue(vm, -1);
-    vm.Push(42);
-    lua_call(vm, 1, 0);
-    CHECK(called == 42);
+      lua_pushvalue(vm, -1);
+      vm.Push(42);
+      lua_call(vm, 1, 0);
+      CHECK(called == 42);
 
-    lua_pushvalue(vm, -1);
-    vm.Push("Hello");
-    lua_call(vm, 1, 0);
-    CHECK(called == 5);
+      lua_pushvalue(vm, -1);
+      vm.Push("Hello");
+      lua_call(vm, 1, 0);
+      CHECK(called == 5);
 
-    lua_pushvalue(vm, -1);
-    vm.Push(false);
+      lua_pushvalue(vm, -1);
+      vm.Push(false);
+    });
     LIBSHIT_CHECK_LUA_THROWS(
-      vm, lua_call(vm, 1, 0),
+      vm, 2, lua_call(vm, 1, 0),
       "Invalid arguments (boolean) to overloaded function");
   }
 

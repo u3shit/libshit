@@ -29,7 +29,7 @@ namespace Libshit::Lua::Test
       CHECK(fr.Call<int>(vm) == 3);
       CHECK(fr.Call<int>(vm, "10") == 10); // lua converts string to int
 
-      CHECK_THROWS(vm.Catch([&]() { fr.Call<int>(vm, "xx"); }));
+      LIBSHIT_CHECK_LUA_THROWS(vm, 1, fr.Call<int>(vm, "xx"), "");
     }
 
     SUBCASE("FunctionWrapGen")
@@ -39,7 +39,7 @@ namespace Libshit::Lua::Test
       CHECK(fr() == 1);
       CHECK(fr(77) == 77);
 
-      CHECK_THROWS(vm.Catch([&]() { fr("Hello"); }));
+      LIBSHIT_CHECK_LUA_THROWS(vm, 1, fr("Hello"), "");
     }
 
     SUBCASE("FunctionWrap")

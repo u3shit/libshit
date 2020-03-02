@@ -91,58 +91,50 @@ namespace Libshit::Lua::Test
 
     lua_pushboolean(vm, true);
     LIBSHIT_CHECK_LUA_THROWS(
-      vm, vm.Get<int>(), "invalid lua value: integer expected, got boolean");
-    lua_settop(vm, 1); // apparently luaL_error leaves some junk on the stack
+      vm, 1, vm.Get<int>(), "invalid lua value: integer expected, got boolean");
 
+    lua_pushboolean(vm, true);
     LIBSHIT_CHECK_LUA_THROWS(
-      vm, vm.Get<double>(), "invalid lua value: number expected, got boolean");
-    lua_settop(vm, 1);
+      vm, 1, vm.Get<double>(), "invalid lua value: number expected, got boolean");
 
+    lua_pushboolean(vm, true);
     LIBSHIT_CHECK_LUA_THROWS(
-      vm, vm.Get<const char*>(), "invalid lua value: string expected, got boolean");
-    lua_settop(vm, 1);
+      vm, 1, vm.Get<const char*>(), "invalid lua value: string expected, got boolean");
 
+    lua_pushboolean(vm, true);
     LIBSHIT_CHECK_LUA_THROWS(
-      vm, vm.Get<std::string>(), "invalid lua value: string expected, got boolean");
-    lua_settop(vm, 0);
+      vm, 1, vm.Get<std::string>(), "invalid lua value: string expected, got boolean");
 
     lua_pushinteger(vm, 77);
     LIBSHIT_CHECK_LUA_THROWS(
-      vm, vm.Get<bool>(), "invalid lua value: boolean expected, got number");
-    lua_settop(vm, 1);
+      vm, 1, vm.Get<bool>(), "invalid lua value: boolean expected, got number");
   }
 
   TEST_CASE("fail check")
   {
     State vm;
 
-    // ljx and plain lua produces different error messages...
-  #ifdef LUA_VERSION_LJX
-  #  define BADARG "bad argument #1 to '?' "
-  #else
-  #  define BADARG "bad argument #1 "
-  #endif
+#define BADARG "bad argument #1 to '?' "
     lua_pushboolean(vm, true);
     LIBSHIT_CHECK_LUA_THROWS(
-      vm, vm.Check<int>(1), BADARG "(integer expected, got boolean)");
-    lua_settop(vm, 1); // apparently luaL_error leaves some junk on the stack
+      vm, 1, vm.Check<int>(1), BADARG "(integer expected, got boolean)");
 
+    lua_pushboolean(vm, true);
     LIBSHIT_CHECK_LUA_THROWS(
-      vm, vm.Check<double>(1), BADARG "(number expected, got boolean)");
-    lua_settop(vm, 1);
+      vm, 1, vm.Check<double>(1), BADARG "(number expected, got boolean)");
 
+    lua_pushboolean(vm, true);
     LIBSHIT_CHECK_LUA_THROWS(
-      vm, vm.Check<const char*>(1), BADARG "(string expected, got boolean)");
-    lua_settop(vm, 1);
+      vm, 1, vm.Check<const char*>(1), BADARG "(string expected, got boolean)");
 
+    lua_pushboolean(vm, true);
     LIBSHIT_CHECK_LUA_THROWS(
-      vm, vm.Check<std::string>(1), BADARG "(string expected, got boolean)");
-    lua_settop(vm, 0);
+      vm, 1, vm.Check<std::string>(1), BADARG "(string expected, got boolean)");
 
     lua_pushinteger(vm, 77);
     LIBSHIT_CHECK_LUA_THROWS(
-      vm, vm.Check<bool>(1), BADARG "(boolean expected, got number)");
-    lua_settop(vm, 1);
+      vm, 1, vm.Check<bool>(1), BADARG "(boolean expected, got number)");
+#undef BADARG
   }
 
   /* todo optional support

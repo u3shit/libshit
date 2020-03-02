@@ -8,7 +8,7 @@ def options(ctx):
     grp = ctx.get_option_group('configure options')
     grp.add_option('--lua-pc-name', action='store', default='lua5.3',
                    help='Lua pkg-config name (in case of --with-lua=system). '+
-                   'Should be lua 5.3 or compatible')
+                   'Should be lua 5.3 or compatible with c++ exceptions')
     grp.add_option('--lua-dll', action='store_true', default=None,
                    help='Compile lua as dll (Windows only)')
 

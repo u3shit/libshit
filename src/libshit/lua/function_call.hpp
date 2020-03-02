@@ -236,13 +236,6 @@ namespace Libshit::Lua
         std::invoke_result_t<Fuck&&, Args&&...>>
     { return std::invoke(std::forward<Fuck>(shit), std::forward<Args>(args)...); }
 
-    inline void ToLuaException(StateRef vm)
-    {
-      auto s = ExceptionToString();
-      lua_pushlstring(vm, s.data(), s.size());
-      lua_error(vm);
-    }
-
     template <typename Fuck, typename... Args>
     auto CatchInvoke(StateRef vm, Fuck&& shit, Args&&... args) ->
       typename std::enable_if_t<
@@ -250,11 +243,7 @@ namespace Libshit::Lua
         std::invoke_result_t<Fuck&&, Args&&...>>
     {
       try { return std::invoke(std::forward<Fuck>(shit), std::forward<Args>(args)...); }
-      catch (const std::exception& e)
-      {
-        ToLuaException(vm);
-        LIBSHIT_UNREACHABLE("lua_error returned");
-      }
+      catch (const std::exception& e) { vm.ToLuaException(); }
     }
 
     template <auto Fun, bool Unsafe, typename Ret, typename Args>
