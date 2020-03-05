@@ -51,9 +51,8 @@ namespace Libshit
     using const_iterator = const_pointer;
 
     // construct, destruct
-    constexpr SimpleVector() noexcept = default;
-    constexpr explicit SimpleVector(const Allocator& alloc)
-      noexcept(std::is_nothrow_copy_constructible_v<Allocator>)
+    constexpr SimpleVector() noexcept(noexcept(Allocator())) = default;
+    constexpr explicit SimpleVector(const Allocator& alloc) noexcept
       : Allocator(alloc) {}
     SimpleVector(size_type count, const T& value = T(),
            const Allocator& alloc = Allocator())
@@ -64,7 +63,7 @@ namespace Libshit
       : SimpleVector(o, AllocTraits::select_on_container_copy_construction(o)) {}
     SimpleVector(const SimpleVector& o, const Allocator& alloc)
       : Allocator(alloc) { assign(o.begin_ptr, o.end_ptr); }
-    SimpleVector(SimpleVector&& o)
+    SimpleVector(SimpleVector&& o) noexcept
       : Allocator(Libshit::Move(o)), begin_ptr(o.begin_ptr),
         end_ptr(o.end_ptr), capacity_ptr(o.capacity_ptr)
     { o.begin_ptr = o.end_ptr = o.capacity_ptr = nullptr; }
