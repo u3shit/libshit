@@ -159,6 +159,27 @@ namespace Libshit
       return {t, static_cast<IndexT>(size)};
     }
 
+    // cast helpers
+#define LIBSHIT_CAST(Camel, snake)                                    \
+    template <typename U>                                             \
+    constexpr StrongPointer<U, Index> Camel##PtrCast() noexcept       \
+    { return StrongPointer<U, Index>(snake##_cast<U*>(t)); }          \
+    template <typename U>                                             \
+    constexpr StrongPointer<U, Index> Camel##PtrCast() const noexcept \
+    { return StrongPointer<U, Index>(snake##_cast<U*>(t)); }
+    LIBSHIT_CAST(Static, static)
+    LIBSHIT_CAST(Reinterpret, reinterpret)
+    LIBSHIT_CAST(Const, const)
+    LIBSHIT_CAST(Dynamic, dynamic)
+#undef LIBSHIT_CAST
+
+    template <typename U>
+    constexpr StrongPointer<T, U> IndexCast() noexcept
+    { return StrongPointer<T, U>(t); }
+    template <typename U>
+    constexpr StrongPointer<const T, U> IndexCast() const noexcept
+    { return StrongPointer<T, U>(t); }
+
     // cmp
     constexpr explicit operator bool() const noexcept { return t; }
 #define LIBSHIT_OP(op)                                      \
