@@ -7,8 +7,6 @@
 #include "libshit/lua/function_call_types.hpp" // IWYU pragma: export
 #include "libshit/lua/type_traits.hpp"
 
-#include "libshit/assert.hpp"
-#include "libshit/except.hpp"
 #include "libshit/meta_utils.hpp" // IWYU pragma: keep
 
 #include <boost/config.hpp>

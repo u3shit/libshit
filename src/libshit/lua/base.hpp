@@ -7,11 +7,13 @@
 #include "libshit/assert.hpp"
 #include "libshit/except.hpp"
 #include "libshit/platform.hpp"
+#include "libshit/utils.hpp"
 
 #include <cstring> /* strstr */ // IWYU pragma: keep
 #include <exception> // IWYU pragma: export
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
