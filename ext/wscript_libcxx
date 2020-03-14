@@ -4,23 +4,79 @@ from waflib import Context
 libshit_cross = getattr(Context.g_module, 'LIBSHIT_CROSS', False)
 
 def options(ctx):
-    # todo: make this user selectable at least on linux
-    # ctx.system_opt('libc++', cross=libshit_cross)
-    pass
+    ctx.with_opt('stdlib', ['system', 'bundle-libc++'], 'system,bundle-libc++',
+                 cross=libshit_cross,
+                 # todo: we probably don't want this on windows
+                 #bundle_all='bundle-libc++'
+    )
 
 def configure(ctx):
-    # ctx.system_chk('libc++', 'system', None, None, cross=libshit_cross)
-    pass
+    def check_system(ctx):
+        if ctx.env.DEST_OS == 'vita':
+            ctx.fail("System libstdc++ doesn't work on vita")
+
+    def check_bundle(ctx):
+        ctx.env.CXXFLAGS_LIBCXX = ['-nostdinc++']
+        ctx.env.SYSTEM_INCLUDES_LIBCXX = [
+            ctx.path.find_node('libcxx/include').abspath(),
+            ctx.path.find_node('libcxxabi/include').abspath(),
+        ]
+        if ctx.env.DEST_OS != 'vita':
+            ctx.env.LDFLAGS_LIBCXX = [
+                '-nodefaultlibs', '-lgcc_s', '-lm', '-lc', '-lpthread',
+                '-lsupc++', '-ldl', '-lrt'
+            ]
+
+    ctx.with_chk(
+        'stdlib', {'system': check_system, 'bundle-libc++': check_bundle},
+        cross=libshit_cross)
 
 def build(ctx):
-    if ctx.env.DEST_OS != 'vita': return
+    if ctx.env.WITH_STDLIB != 'bundle-libc++': return
+
+    if ctx.env.DEST_OS != 'vita':
+        src = [
+            'libcxxabi/src/abort_message.cpp',
+            'libcxxabi/src/cxa_aux_runtime.cpp',
+            'libcxxabi/src/cxa_default_handlers.cpp',
+            'libcxxabi/src/cxa_demangle.cpp',
+            'libcxxabi/src/cxa_exception.cpp',
+            'libcxxabi/src/cxa_exception_storage.cpp',
+            'libcxxabi/src/cxa_guard.cpp',
+            'libcxxabi/src/cxa_handlers.cpp',
+            'libcxxabi/src/cxa_noexception.cpp',
+            'libcxxabi/src/cxa_personality.cpp',
+            'libcxxabi/src/cxa_thread_atexit.cpp',
+            'libcxxabi/src/cxa_unexpected.cpp',
+            'libcxxabi/src/cxa_vector.cpp',
+            'libcxxabi/src/cxa_virtual.cpp',
+            'libcxxabi/src/fallback_malloc.cpp',
+            'libcxxabi/src/private_typeinfo.cpp',
+            'libcxxabi/src/stdlib_exception.cpp',
+            'libcxxabi/src/stdlib_new_delete.cpp',
+            'libcxxabi/src/stdlib_stdexcept.cpp',
+            'libcxxabi/src/stdlib_typeinfo.cpp',
+        ]
+        ctx.stlib(idx      = 54101,
+                  source   = src,
+                  defines  = ['_LIBCPP_DISABLE_EXTERN_TEMPLATE',
+                              '_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS',
+                              '_LIBCXXABI_BUILDING_LIBRARY',
+                              '__STDC_CONSTANT_MACROS', '__STDC_FORMAT_MACROS',
+                              '__STDC_LIMIT_MACROS'],
+                  cxxflags= ['-fvisibility-inlines-hidden',
+                             '-fstrict-aliasing', '-funwind-tables',
+                             # https://github.com/llvm/llvm-project/issues/80
+                             '-fno-sanitize=vptr'],
+                  target   = 'libcxxabi',
+                  uselib   = 'EXT LIBCXX')
 
     src = [
         'libcxx/src/algorithm.cpp',
         'libcxx/src/any.cpp',
         'libcxx/src/bind.cpp',
         'libcxx/src/charconv.cpp',
-        # 'libcxx/src/chrono.cpp',
+        'libcxx/src/chrono.cpp',
         'libcxx/src/condition_variable.cpp',
         'libcxx/src/debug.cpp',
         'libcxx/src/exception.cpp',
@@ -48,11 +104,32 @@ def build(ctx):
         'libcxx/src/variant.cpp',
         'libcxx/src/vector.cpp',
     ]
-    ctx.stlib(idx     = 54100,
-              source  = src,
-              defines = ['NDEBUG', '_LIBCPP_BUILDING_LIBRARY',
-                         '_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER',
-                         '__STDC_CONSTANT_MACROS', '__STDC_FORMAT_MACROS',
-                         '__STDC_LIMIT_MACROS'],
-              target  = 'libcxx',
-              uselib  = 'EXT')
+    defines = [
+        'NDEBUG', '_LIBCPP_BUILDING_LIBRARY',
+        '_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER',
+        '__STDC_CONSTANT_MACROS', '__STDC_FORMAT_MACROS', '__STDC_LIMIT_MACROS',
+    ]
+    if ctx.env.DEST_OS != 'vita': defines += ['LIBCXX_BUILDING_LIBCXXABI']
+
+    ctx.stlib(idx      = 54100,
+              source   = src,
+              defines  = defines,
+              cxxflags = '-fvisibility-inlines-hidden',
+              target   = 'libcxx',
+              uselib   = 'EXT LIBCXX',
+              use      = 'libcxxabi')
+
+from waflib.TaskGen import feature, before_method
+@feature('cxx')
+@before_method('propagate_uselib_vars', 'process_use')
+def add_libcxx(self):
+    if self.env.WITH_STDLIB != 'bundle-libc++': return
+    name = getattr(self, 'target', None)
+    if name == 'libcxx' or name == 'libcxxabi': return
+
+    self.use = self.to_list(getattr(self, 'use', []))
+    self.uselib = self.to_list(getattr(self, 'uselib', []))
+    if not 'libcxx' in self.use:
+        self.use.append('libcxx')
+    if not 'LIBCXX' in self.uselib:
+        self.uselib.append('LIBCXX')

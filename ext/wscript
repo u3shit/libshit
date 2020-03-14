@@ -12,6 +12,9 @@ def options(ctx):
     ctx.recurse('.', name='options', wscript='wscript_lua', once=False)
 
 def configure(ctx):
+    # start with libcxx, other c++ libs depend on it
+    ctx.recurse('.', name='configure', wscript='wscript_libcxx', once=False)
+
     def system_brigand(ctx):
         ctx.check_cfg(package='libbrigand', args='--cflags',
                       uselib_store='BRIGAND',
@@ -34,7 +37,6 @@ def configure(ctx):
         cross=libshit_cross, post_chk=doctest_post)
 
     ctx.recurse('.', name='configure', wscript='wscript_boost', once=False)
-    ctx.recurse('.', name='configure', wscript='wscript_libcxx', once=False)
     ctx.recurse('.', name='configure', wscript='wscript_lua', once=False)
 
 def build(ctx):

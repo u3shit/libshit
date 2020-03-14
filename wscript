@@ -243,12 +243,9 @@ def configure_variant(ctx):
         else:
             ctx.end_msg(cpp_ver)
     elif ctx.env.DEST_OS == 'vita':
-        inc = [
-            ctx.path.find_node('vita_include').abspath(),
-            ctx.path.find_node('ext/libcxx/include').abspath(),
-        ]
+        inc = [ ctx.path.find_node('vita_include').abspath() ]
         # type-limits: char is unsigned, thank you very much
-        ctx.env.prepend_value('CXXFLAGS', ['-Wno-type-limits', '-nostdinc++'])
+        ctx.env.prepend_value('CXXFLAGS', ['-Wno-type-limits'])
         ctx.env.prepend_value('SYSTEM_INCLUDES', inc)
         ctx.env.append_value('DEFINES_BOOST', ['BOOST_HAS_STDINT_H'])
         ldflags = [
