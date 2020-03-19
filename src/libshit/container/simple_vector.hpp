@@ -244,6 +244,17 @@ namespace Libshit
     const_iterator cend() const noexcept { return end_ptr; }
     // todo reverse iterators
 
+    // raw (pointer) iterators
+    T* wbegin()
+    { return begin_ptr == nullptr ? nullptr : std::addressof(*begin_ptr); }
+    const T* wbegin() const
+    { return begin_ptr == nullptr ? nullptr : std::addressof(*begin_ptr); }
+    T* wend()
+    { return end_ptr == nullptr ? nullptr : std::addressof(*end_ptr); }
+    const T* wend() const
+    { return end_ptr == nullptr ? nullptr : std::addressof(*end_ptr); }
+
+
     // capacity
     constexpr bool empty() const noexcept { return begin_ptr == end_ptr; }
     constexpr size_type size() const noexcept { return end_ptr - begin_ptr; }

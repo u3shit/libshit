@@ -102,6 +102,7 @@ namespace Libshit
     using Diff = StrongTypedef<DiffT, Tag>;
   public:
     using element_type = T; // for pointer_traits
+    using size_type = Index;
     using difference_type = Diff;
     using value_type = T;
     using pointer = T*;
