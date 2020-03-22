@@ -93,7 +93,9 @@ namespace Libshit
   public:
     using element_type = T;
 
-    SharedPtrBase() = default;
+    // delay ctor instantiation, so SharedPtrStorageRefCounted won't fail on
+    // incomplete types when instantiating this class
+    template <typename U = T> SharedPtrBase() {}
     SharedPtrBase(std::nullptr_t) noexcept {}
 
     // alias ctor

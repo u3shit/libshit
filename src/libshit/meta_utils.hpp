@@ -33,11 +33,14 @@ namespace Libshit
   template <typename X, template <char...> typename Wrap, typename Seq>
   using ToCharPackV = typename ToCharPack<X, Wrap, Seq>::Type;
 
-#define LIBSHIT_LITERAL_CHARPACK(type, str)                                     \
-  ([]{                                                                          \
-    struct X { static constexpr char Get(std::size_t i) { return (str)[i]; } }; \
-    return ::Libshit::ToCharPackV<                                              \
-      X, type, std::make_index_sequence<sizeof(str)-1>>{};                      \
+#define LIBSHIT_LITERAL_CHARPACK(type, str)                                    \
+  ([]{                                                                         \
+    struct LiteralCharpackStruct                                               \
+    {                                                                          \
+      static constexpr char Get(std::size_t i) { return (str)[i]; }            \
+    };                                                                         \
+    return ::Libshit::ToCharPackV<                                             \
+      LiteralCharpackStruct, type, std::make_index_sequence<sizeof(str)-1>>{}; \
   }())
 
 
