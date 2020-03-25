@@ -54,7 +54,7 @@ namespace Libshit
     constexpr SimpleVector() noexcept(noexcept(Allocator())) = default;
     constexpr explicit SimpleVector(const Allocator& alloc) noexcept
       : Allocator(alloc) {}
-    SimpleVector(size_type count, const T& value = T(),
+    SimpleVector(size_type count, const T& value,
            const Allocator& alloc = Allocator())
       : Allocator(alloc) { resize(count, value); }
     explicit SimpleVector(size_type count, const Allocator& alloc = Allocator())
