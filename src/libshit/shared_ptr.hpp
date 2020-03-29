@@ -29,6 +29,33 @@ namespace Libshit
     };
   }
 
+  template <typename T>
+  class RefCountedContainer : public RefCounted
+  {
+  public:
+    template <typename... Args>
+    RefCountedContainer(Args&&... args)
+    { new (t) T(std::forward<Args>(args)...); }
+
+    T* Get() noexcept { return reinterpret_cast<T*>(t); }
+    void Dispose() noexcept override { Get()->~T(); }
+
+  private:
+    alignas(T) char t[sizeof(T)];
+  };
+
+  namespace Detail
+  {
+    template <typename T> struct IsRefCountedContainer : std::false_type
+    { using Type = T; };
+    template <typename T>
+    struct IsRefCountedContainer<RefCountedContainer<T>> : std::true_type
+    { using Type = T; };
+    template <typename T>
+    struct IsRefCountedContainer<const RefCountedContainer<T>> : std::true_type
+    { using Type = const T; };
+  }
+
   // RefCounted objects only need one pointer, others need two
   template <typename T>
   struct SharedPtrStorageNormal
@@ -39,6 +66,7 @@ namespace Libshit
 
     RefCounted* GetCtrl() const noexcept { return ctrl; }
     T* GetPtr() const noexcept { return ptr; }
+    T* GetRetPtr() const noexcept { return ptr; }
     void Reset() noexcept { ctrl = nullptr; ptr = nullptr; }
     void Swap(SharedPtrStorageNormal& o) noexcept
     {
@@ -54,6 +82,7 @@ namespace Libshit
   struct SharedPtrStorageRefCounted
   {
     using U = std::remove_const_t<T>;
+    using RetT = typename Detail::IsRefCountedContainer<T>::Type;
 
     // can't put the IS_REFCOUNTED static assert into the class body, as that
     // would break when using this on incomplete types
@@ -70,6 +99,11 @@ namespace Libshit
     RefCounted* GetCtrl() const noexcept
     { return static_cast<RefCounted*>(ptr); } // static_cast needed for void
     T* GetPtr() const noexcept { return ptr; }
+    RetT* GetRetPtr() const noexcept
+    {
+      if constexpr (Detail::IsRefCountedContainer<T>::value) return ptr->Get();
+      return ptr;
+    }
     void Reset() noexcept { ptr = nullptr; }
     void Swap(SharedPtrStorageRefCounted& o) noexcept { std::swap(ptr, o.ptr); }
 
@@ -80,7 +114,7 @@ namespace Libshit
 
   // shared (strong) ptr
   template <typename T, template<typename> class Storage>
-  class SharedPtrBase
+  class SharedPtrBase : private Storage<T>
   {
     template <typename U = T>
     static constexpr bool IS_NORMAL_S = std::is_same_v<
@@ -91,20 +125,19 @@ namespace Libshit
     static_assert(IS_NORMAL_S<> || IS_REFCOUNTED_S<>);
 
   public:
-    using element_type = T;
+    using element_type = typename Detail::IsRefCountedContainer<T>::Type;
 
     // delay ctor instantiation, so SharedPtrStorageRefCounted won't fail on
     // incomplete types when instantiating this class
-    template <typename U = T> SharedPtrBase() {}
-    SharedPtrBase(std::nullptr_t) noexcept {}
+    template <typename U = T> SharedPtrBase() noexcept {}
+    template <typename U = T> SharedPtrBase(std::nullptr_t) noexcept {}
 
     // alias ctor
-    template <typename U, template<typename> typename UStorage,
-              typename V = T,
+    template <typename U, template<typename> typename UStorage, typename V = T,
               typename = std::enable_if_t<IS_NORMAL_S<V>>>
     SharedPtrBase(SharedPtrBase<U, UStorage> o, T* ptr) noexcept
-      : s{o.GetCtrl(), ptr}
-    { o.s.Reset(); }
+      : Storage<T>{o.GetCtrl(), ptr}
+    { o.UStorage<U>::Reset(); }
 
     // weak->strong, throws on error
     template <typename U>
@@ -112,28 +145,27 @@ namespace Libshit
 
     // copy/move/conv ctor
     SharedPtrBase(const SharedPtrBase& o) noexcept
-      : SharedPtrBase{o.GetCtrl(), o.get(), true} {}
+      : SharedPtrBase{o.GetCtrl(), o.GetPtr(), true} {}
     template <typename U>
     SharedPtrBase(const SharedPtrBase<U, Storage>& o) noexcept
-      : SharedPtrBase{o.GetCtrl(), o.get(), true} {}
+      : SharedPtrBase{o.GetCtrl(), o.GetPtr(), true} {}
     // refcounted->refcounted/shared ok
-    template <typename U,
-              typename V = T,
+    template <typename U, typename V = T,
               typename = std::enable_if_t<IS_NORMAL_S<V>>>
     SharedPtrBase(const SharedPtrBase<U, SharedPtrStorageRefCounted>& o) noexcept
-      : SharedPtrBase{o.GetCtrl(), o.get(), true} {}
+      : SharedPtrBase{o.GetCtrl(), o.GetPtr(), true} {}
 
-    SharedPtrBase(SharedPtrBase&& o) noexcept : s{o.s} { o.s.Reset(); }
+    SharedPtrBase(SharedPtrBase&& o) noexcept : Storage<T>{o}
+    { o.Storage<T>::Reset(); }
     template <typename U>
     SharedPtrBase(SharedPtrBase<U, Storage>&& o) noexcept
-      : s{o.GetCtrl(), o.get()}
-    { o.s.Reset(); }
-    template <typename U,
-              typename V = T,
+      : Storage<T>{o.GetCtrl(), o.GetPtr()}
+    { o.Storage<U>::Reset(); }
+    template <typename U, typename V = T,
               typename = std::enable_if_t<IS_NORMAL_S<V>>>
     SharedPtrBase(SharedPtrBase<U, SharedPtrStorageRefCounted>&& o) noexcept
-      : s{o.GetCtrl(), o.get()}
-    { o.s.Reset(); }
+      : Storage<T>{o.GetCtrl(), o.GetPtr()}
+    { o.SharedPtrStorageRefCounted<U>::Reset(); }
 
 
     // raw ptr for RefCounted objects
@@ -152,25 +184,28 @@ namespace Libshit
     // misc standard members
     SharedPtrBase& operator=(SharedPtrBase p) noexcept
     {
-      s.Swap(p.s);
+      Storage<T>::Swap(p);
       return *this;
     }
     ~SharedPtrBase() noexcept
     { if (GetCtrl()) GetCtrl()->RemoveRef(); }
 
     // shared_ptr members
-    void reset() noexcept { SharedPtrBase{}.swap(*this); }
-    // no other reset functions: currently only make_shared like usage supported
-    void swap(SharedPtrBase& o) noexcept { s.Swap(o.s); }
+    void reset() noexcept { SharedPtrBase{}.Storage<T>::Swap(*this); }
+    template <typename U> void reset(U* ptr)
+    { SharedPtrBase{ptr}.Storage<T>::Swap(*this); }
 
-    T* get() const noexcept { return s.GetPtr(); }
-    template <typename U = T, typename = std::enable_if_t<!std::is_same_v<U, void>>>
-    U& operator*() const noexcept { return *s.GetPtr(); }
-    T* operator->() const noexcept { return s.GetPtr(); }
+    void swap(SharedPtrBase& o) noexcept { Storage<T>::Swap(o); }
+
+    element_type* get() const noexcept { return GetRetPtr(); }
+    template <typename U = element_type,
+              typename = std::enable_if_t<!std::is_same_v<U, void>>>
+    U& operator*() const noexcept { return *GetRetPtr(); }
+    element_type* operator->() const noexcept { return GetRetPtr(); }
     unsigned use_count() const noexcept
-    { return s.GetCtrl() ? s.GetCtrl()->use_count() : 0; }
+    { return GetCtrl() ? GetCtrl()->use_count() : 0; }
     bool unique() const noexcept { return use_count() == 1; }
-    explicit operator bool() const noexcept { return s.GetPtr(); }
+    explicit operator bool() const noexcept { return GetPtr(); }
 
     // casts
 #define LIBSHIT_GEN(camel, snake)                                 \
@@ -184,14 +219,14 @@ namespace Libshit
 
     // low level stuff
     SharedPtrBase(RefCounted* ctrl, T* ptr, bool incr) noexcept
-      : s{ctrl, ptr}
+    : Storage<T>{ctrl, ptr}
     { if (incr && ctrl) ctrl->AddRef(); }
 
-    RefCounted* GetCtrl() const noexcept { return s.GetCtrl(); }
+    using Storage<T>::GetCtrl;
+    using Storage<T>::GetPtr;
+    using Storage<T>::GetRetPtr;
 
   private:
-    Storage<T> s;
-
     template <typename U, template<typename> class UStorage>
     friend class SharedPtrBase;
   };
@@ -221,7 +256,7 @@ namespace Libshit
   LIBSHIT_GEN(type, get, ==) LIBSHIT_GEN(type, get, !=) \
   LIBSHIT_GEN(type, get, <)  LIBSHIT_GEN(type, get, <=) \
   LIBSHIT_GEN(type, get, >)  LIBSHIT_GEN(type, get, >=)
-  LIBSHIT_GEN2(Shared, get)
+  LIBSHIT_GEN2(Shared, GetRetPtr)
 
   // use these types. usually SmartPtr; use SharedPtr when you need aliasing
   // with an otherwise RefCounted type
@@ -234,6 +269,11 @@ namespace Libshit
     IS_REFCOUNTED<T>,
     SharedPtrBase<T, SharedPtrStorageRefCounted>,
     SharedPtrBase<T, SharedPtrStorageNormal>>;
+  // mix between RefCountedPtr and SharedPtr: size is one pointer like with
+  // RefCounted, T doesn't need to inherit from RefCounted like SharedPtr, but
+  // no aliasing, casting, or random pointer to *Ptr conversion
+  template <typename T>
+  using WrappedPtr = RefCountedPtr<RefCountedContainer<T>>;
 
   template <typename T>
   using NotNullSharedPtr = NotNull<SharedPtr<T>>;
@@ -241,6 +281,8 @@ namespace Libshit
   using NotNullRefCountedPtr = NotNull<RefCountedPtr<T>>;
   template <typename T>
   using NotNullSmartPtr = NotNull<SmartPtr<T>>;
+  template <typename T>
+  using NotNullWrappedPtr = NotNull<WrappedPtr<T>>;
 
   template <typename T>
   RefCountedPtr<T> ToRefCountedPtr(T* t) noexcept { return {t}; }
@@ -250,7 +292,7 @@ namespace Libshit
 
   // weak ptr
   template <typename T, template<typename> class Storage>
-  class WeakPtrBase
+  class WeakPtrBase : private Storage<T>
   {
     template <typename U = T>
     static constexpr bool IS_NORMAL_S = std::is_same_v<
@@ -261,7 +303,7 @@ namespace Libshit
     static_assert(IS_NORMAL_S<> || IS_REFCOUNTED_S<>);
 
   public:
-    using element_type = T;
+    using element_type = typename Detail::IsRefCountedContainer<T>::Type;
 
     WeakPtrBase() = default;
     WeakPtrBase(std::nullptr_t) noexcept {}
@@ -269,35 +311,33 @@ namespace Libshit
     template <typename U>
     WeakPtrBase(const SharedPtrBase<U, Storage>& o) noexcept
       : WeakPtrBase{o.GetCtrl(), o.get(), true} {}
-    template <typename U,
-              typename V = T,
+    template <typename U, typename V = T,
               typename = std::enable_if_t<IS_NORMAL_S<V>>>
     WeakPtrBase(const SharedPtrBase<U, SharedPtrStorageRefCounted>& o) noexcept
       : WeakPtrBase{o.GetCtrl(), o.get(), true} {}
 
     // copy/move/conv ctor
     WeakPtrBase(const WeakPtrBase& o) noexcept
-      : WeakPtrBase{o.s.GetCtrl(), o.s.GetPtr(), true} {}
+      : WeakPtrBase{o.GetCtrl(), o.GetPtr(), true} {}
     template <typename U>
     WeakPtrBase(const WeakPtrBase<U, Storage>& o) noexcept
-      : WeakPtrBase{o.s.GetCtrl(), o.s.GetPtr(), true} {}
-    template <typename U,
-              typename V = T,
+      : WeakPtrBase{o.GetCtrl(), o.GetPtr(), true} {}
+    template <typename U, typename V = T,
               typename = std::enable_if_t<IS_NORMAL_S<V>>>
     WeakPtrBase(const WeakPtrBase<U, SharedPtrStorageRefCounted>& o) noexcept
-      : WeakPtrBase{o.s.GetCtrl(), o.s.GetPtr(), true} {}
+      : WeakPtrBase{o.GetCtrl(), o.GetPtr(), true} {}
 
-    WeakPtrBase(WeakPtrBase&& o) noexcept : s{o.s} { o.s.Reset(); }
+    WeakPtrBase(WeakPtrBase&& o) noexcept : Storage<T>{o}
+    { o.Storage<T>::Reset(); }
     template <typename U>
     WeakPtrBase(WeakPtrBase<U, Storage>&& o) noexcept
-      : s{o.s.GetCtrl(), o.s.GetPtr()}
-    { o.s.Reset(); }
-    template <typename U,
-              typename V = T,
+      : Storage<T>{o.GetCtrl(), o.GetPtr()}
+    { o.Storage<U>::Reset(); }
+    template <typename U, typename V = T,
               typename = std::enable_if_t<IS_NORMAL_S<V>>>
     WeakPtrBase(WeakPtrBase<U, SharedPtrStorageRefCounted>&& o) noexcept
-      : s{o.s.GetCtrl(), o.s.GetPtr()}
-    { o.s.Reset(); }
+      : Storage<T>{o.GetCtrl(), o.GetPtr()}
+    { o.SharedPtrStorageRefCounted<U>::Reset(); }
 
     // raw ptr for RefCounted objects
     // assume there's a strong reference to it...
@@ -309,26 +349,23 @@ namespace Libshit
     // misc standard members
     WeakPtrBase& operator=(WeakPtrBase o) noexcept
     {
-      s.Swap(o.s);
+      Storage<T>::Swap(o);
       return *this;
     }
-    ~WeakPtrBase() noexcept
-    {
-      if (s.GetCtrl()) s.GetCtrl()->RemoveWeakRef();
-    }
+    ~WeakPtrBase() noexcept { if (GetCtrl()) GetCtrl()->RemoveWeakRef(); }
 
     // weak_ptr members
-    void reset() noexcept { WeakPtrBase{}.swap(*this); }
-    void swap(WeakPtrBase& o) noexcept { s.Swap(o.s); }
+    void reset() noexcept { WeakPtrBase{}.Storage<T>::Swap(*this); }
+    void swap(WeakPtrBase& o) noexcept { Storage<T>::Swap(o); }
 
     unsigned use_count() const noexcept
-    { return s.GetCtrl() ? s.GetCtrl()->use_count() : 0; }
+    { return GetCtrl() ? GetCtrl()->use_count() : 0; }
     bool expired() const noexcept { return use_count() == 0; }
 
     SharedPtrBase<T, Storage> lock() const noexcept
     {
-      auto ctrl = s.GetCtrl();
-      if (ctrl && ctrl->LockWeak()) return {ctrl, s.GetPtr(), false};
+      auto ctrl = GetCtrl();
+      if (ctrl && ctrl->LockWeak()) return {ctrl, GetPtr(), false};
       else return {};
     }
 
@@ -336,8 +373,8 @@ namespace Libshit
     // the kilometer long typename
     SharedPtrBase<T, Storage> lock_throw() const
     {
-      auto ctrl = s.GetCtrl();
-      if (ctrl && ctrl->LockWeak()) return {ctrl, s.GetPtr(), false};
+      auto ctrl = GetCtrl();
+      if (ctrl && ctrl->LockWeak()) return {ctrl, GetPtr(), false};
       else LIBSHIT_THROW(std::bad_weak_ptr, std::tuple<>{});
     }
 
@@ -346,31 +383,30 @@ namespace Libshit
     {
       // not bulletproof, but should catch most problems
       LIBSHIT_ASSERT(!expired());
-      return {s.GetCtrl(), s.GetPtr(), true};
+      return {GetCtrl(), GetPtr(), true};
     }
 
-    T* unsafe_get() const noexcept
+    element_type* unsafe_get() const noexcept
     {
       LIBSHIT_ASSERT(!expired());
-      return s.GetPtr();
+      return GetRetPtr();
     }
 
     // low level stuff
     WeakPtrBase(RefCounted* ctrl, T* ptr, bool incr) noexcept
-      : s{ctrl, ptr}
+      : Storage<T>{ctrl, ptr}
     { if (incr && ctrl) ctrl->AddWeakRef(); }
 
-    RefCounted* GetCtrl() const noexcept { return s.GetCtrl(); }
-    T* GetPtr() const noexcept { return s.GetPtr(); }
+    using Storage<T>::GetCtrl;
+    using Storage<T>::GetPtr;
+    using Storage<T>::GetRetPtr;
 
   private:
-    Storage<T> s;
-
     template <typename U, template<typename> class UStorage>
     friend class WeakPtrBase;
   };
 
-  LIBSHIT_GEN2(Weak, GetPtr)
+  LIBSHIT_GEN2(Weak, GetRetPtr)
 #undef LIBSHIT_GEN2
 #undef LIBSHIT_GEN
 
@@ -389,6 +425,8 @@ namespace Libshit
     IS_REFCOUNTED<T>,
     WeakPtrBase<T, SharedPtrStorageRefCounted>,
     WeakPtrBase<T, SharedPtrStorageNormal>>;
+  template <typename T>
+  using WeakWrappedPtr = WeakRefCountedPtr<RefCountedContainer<T>>;
 
   template <typename T>
   WeakRefCountedPtr<T> ToWeakRefCountedPtr(T* t) noexcept
@@ -405,22 +443,10 @@ namespace Libshit
   template <typename T, typename Ret, typename = void>
   struct MakeSharedHelper
   {
-    struct Alloc : public RefCounted
-    {
-      alignas(T) char t[sizeof(T)];
-
-      template <typename... Args>
-      Alloc(Args&&... args)
-      { new (t) T(std::forward<Args>(args)...); }
-
-      T* Get() noexcept { return reinterpret_cast<T*>(t); }
-      void Dispose() noexcept override { Get()->~T(); }
-    };
-
     template <typename... Args>
     static NotNull<Ret> Make(Args&&... args)
     {
-      auto a = new Alloc{std::forward<Args>(args)...};
+      auto a = new RefCountedContainer<T>{std::forward<Args>(args)...};
       return NotNull<Ret>{a, a->Get(), false};
     }
   };
@@ -445,6 +471,7 @@ namespace Libshit
       std::forward<Args>(args)...);                      \
   }
   LIBSHIT_GEN(Shared) LIBSHIT_GEN(RefCounted) LIBSHIT_GEN(Smart)
+  LIBSHIT_GEN(Wrapped)
 #undef LIBSHIT_GEN
 
 }
