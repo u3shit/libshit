@@ -290,7 +290,35 @@ namespace Libshit
     void clear() noexcept { clear_to_end(begin_ptr); }
     // todo insert
     // todo emplace
-    // todo erase
+
+    // vector::erase has the basic exception safety guarantee
+    // https://stackoverflow.com/a/28139567
+    iterator erase(const_iterator it)
+    {
+      LIBSHIT_ASSERT(it >= begin_ptr && it < end_ptr);
+      std::move(it+1, end(), it);
+      pop_back();
+      return it;
+    }
+
+    iterator erase(const_iterator first, const_iterator last)
+    {
+      LIBSHIT_ASSERT(begin_ptr <= first && first <= last && last <= end_ptr);
+      std::move(last, end_ptr, first);
+      resize(end_ptr - begin_ptr - (last-first));
+      return first;
+    }
+
+    // O(1) erase that doesn't keep order: moves the last item into the erased
+    iterator unordered_erase(const_iterator it)
+      noexcept(std::is_nothrow_move_assignable_v<T>)
+    {
+      LIBSHIT_ASSERT(it >= begin_ptr && it < end_ptr);
+      *it = Move(back());
+      pop_back();
+      return it;
+    }
+
     reference push_back(const T& t) { return emplace_back(t); }
     reference push_back(T&& t) { return emplace_back(Libshit::Move(t)); }
     template <typename... Args>
