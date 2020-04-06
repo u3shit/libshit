@@ -26,14 +26,14 @@ namespace Libshit
    * @throws std::bad_alloc if there's not enough memory.
    * @throws anything that T's constructor throws.
    */
-  template <typename T, typename Enable = std::enable_if_t<
-                          std::is_array_v<T>>>
-  inline NotNullUniquePtr<T> MakeUnique(std::size_t n, UninitializedTag)
+  template <typename T>
+  inline std::enable_if_t<std::is_array_v<T>, NotNullUniquePtr<T>>
+  MakeUnique(std::size_t n, UninitializedTag)
   { return NotNullUniquePtr<T>{new typename std::remove_extent<T>::type[n]}; }
 
-  template <typename T, typename... Args, typename Enable = std::enable_if_t<
-                                            !std::is_array_v<T>>>
-  inline NotNullUniquePtr<T> MakeUnique(Args&&... args)
+  template <typename T, typename... Args>
+  inline std::enable_if_t<!std::is_array_v<T>, NotNullUniquePtr<T>>
+  MakeUnique(Args&&... args)
   { return NotNullUniquePtr<T>{new T(std::forward<Args>(args)...)}; }
 
 
