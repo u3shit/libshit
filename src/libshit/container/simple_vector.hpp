@@ -218,14 +218,12 @@ namespace Libshit
     reference back() noexcept
     {
       LIBSHIT_ASSERT(begin_ptr != end_ptr);
-      auto copy = end_ptr;
-      return *--end_ptr;
+      return end_ptr[-1];
     }
     const_reference back() const noexcept
     {
       LIBSHIT_ASSERT(begin_ptr != end_ptr);
-      auto copy = end_ptr;
-      return *--end_ptr;
+      return end_ptr[-1];
     }
     T* data() noexcept
     { return begin_ptr == nullptr ? nullptr : std::addressof(*begin_ptr); }
@@ -293,27 +291,37 @@ namespace Libshit
 
     // vector::erase has the basic exception safety guarantee
     // https://stackoverflow.com/a/28139567
-    iterator erase(const_iterator it)
+    iterator erase(const_iterator cit)
     {
-      LIBSHIT_ASSERT(it >= begin_ptr && it < end_ptr);
+      LIBSHIT_ASSERT(cit >= begin_ptr && cit < end_ptr);
+      auto it = const_cast<iterator>(cit);
       std::move(it+1, end(), it);
       pop_back();
       return it;
     }
 
-    iterator erase(const_iterator first, const_iterator last)
+    iterator erase(const_iterator cfirst, const_iterator clast)
     {
-      LIBSHIT_ASSERT(begin_ptr <= first && first <= last && last <= end_ptr);
+      LIBSHIT_ASSERT(begin_ptr <= cfirst && cfirst <= clast && clast <= end_ptr);
+      auto first = const_cast<iterator>(cfirst);
+      auto last = const_cast<iterator>(clast);
       std::move(last, end_ptr, first);
-      resize(end_ptr - begin_ptr - (last-first));
+
+      auto new_end = end_ptr - (last-first);
+      for (auto p = new_end; p < end_ptr; ++p)
+        AllocTraits::destroy(static_cast<Allocator&>(*this), std::addressof(*p));
+      asan_annotate(end_ptr, 0, new_end, 0);
+      end_ptr = new_end;
+
       return first;
     }
 
     // O(1) erase that doesn't keep order: moves the last item into the erased
-    iterator unordered_erase(const_iterator it)
+    iterator unordered_erase(const_iterator cit)
       noexcept(std::is_nothrow_move_assignable_v<T>)
     {
-      LIBSHIT_ASSERT(it >= begin_ptr && it < end_ptr);
+      LIBSHIT_ASSERT(cit >= begin_ptr && cit < end_ptr);
+      auto it = const_cast<iterator>(cit);
       *it = Move(back());
       pop_back();
       return it;
