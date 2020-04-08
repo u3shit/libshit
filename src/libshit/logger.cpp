@@ -143,6 +143,9 @@ namespace Libshit::Logger
   }
   static Global global;
 
+  bool HasAnsiColor() noexcept { return global.ansi_colors; }
+  bool HasWinColor() noexcept { return global.win_colors; }
+
   static Option ansi_colors_opt{
     GetOptionGroup(), "ansi-colors", 0, nullptr,
     "Force output colorization with ASCII escape sequences",

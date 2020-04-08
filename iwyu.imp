@@ -27,6 +27,9 @@
 - include: ['<boost/iterator/iterator_traits.hpp>', public,
             '<boost/algorithm/string/replace.hpp>', public]
 
+- include: ['@<boost/stacktrace/.*>', private,
+            '<boost/stacktrace.hpp>', public]
+
 # token_functions errors if I directly include it
 - include: ['<boost/token_functions.hpp>', private,
             '<boost/tokenizer.hpp>', public]

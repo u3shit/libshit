@@ -322,7 +322,7 @@ namespace Libshit
     {
       LIBSHIT_ASSERT(cit >= begin_ptr && cit < end_ptr);
       auto it = const_cast<iterator>(cit);
-      *it = Move(back());
+      if (it != &back()) *it = Move(back());
       pop_back();
       return it;
     }

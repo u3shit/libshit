@@ -202,7 +202,10 @@ def configure_variant(ctx):
     ctx.check_cxx(cxxflags='-std=c++17')
     ctx.env.append_value('CXXFLAGS', ['-std=c++17'])
 
-    ctx.filter_flags(['CFLAGS', 'CXXFLAGS'], ['-fvisibility=hidden'])
+    if ctx.options.release:
+        # only hide symbols in release builds, this creates better stacktraces
+        # in tools that doesn't support DWARF debug info
+        ctx.filter_flags(['CFLAGS', 'CXXFLAGS'], ['-fvisibility=hidden'])
 
     if ctx.env.DEST_OS == 'win32':
         # fixup: waf expects mingw, not clang in half-msvc-emulation-mode

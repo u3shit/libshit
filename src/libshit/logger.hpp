@@ -31,6 +31,9 @@ namespace Libshit::Logger
   extern int global_level;
   extern bool show_fun;
 
+  bool HasAnsiColor() noexcept;
+  bool HasWinColor() noexcept;
+
   bool CheckLog(const char* name, int level) noexcept;
   std::ostream& Log(
     const char* name, int level, const char* file, unsigned line,

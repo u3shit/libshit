@@ -247,7 +247,7 @@ namespace Libshit
   }
 
   REGISTER_EXCEPTION_TRANSLATOR(const Libshit::Exception& e)
-  { return Libshit::ExceptionToString(e).c_str(); }
+  { return Libshit::ExceptionToString(e, false).c_str(); }
 
   static void Fun(std::vector<const char*>&& args)
   {

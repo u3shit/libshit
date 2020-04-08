@@ -3,10 +3,16 @@
 #include "libshit/assert.hpp"
 #include "libshit/platform.hpp"
 
+// do not use, unless you have to: very slow (executes addr2line for *each*
+// stacktrace line), flaky (has hard coded full path to addr2line)
+// #define BOOST_STACKTRACE_USE_ADDR2LINE
 #include <boost/core/demangle.hpp>
+#include <boost/stacktrace.hpp>
 
 #include <atomic>
+#include <cstdint>
 #include <cstdlib>
+#include <iomanip>
 #include <map>
 #include <memory>
 #include <new>
@@ -21,12 +27,65 @@ extern "C" void _assert(const char* msg, const char* file, unsigned line);
 
 namespace Libshit
 {
+  static void PrintStacktrace(
+    std::ostream& os, const boost::stacktrace::stacktrace& trace, bool color)
+  {
+    if (color) os << "\033[1m";
+    os << "Stacktrace";
+    if (color) os << "\033[0m";
+    os << ":\n";
+    auto flags = os.flags();
+    os.width(0);
+    for (std::size_t i = 0, n = trace.size(); i < n; ++i)
+    {
+      if (color) os << "\033[37m";
+      os << std::setw(4) << std::setfill(' ') << i << ": ";
+      if (color) os << "\033[36m";
+      os << std::setw(sizeof(void*)*2) << std::setfill('0') << std::hex
+         << reinterpret_cast<std::uintptr_t>(trace[i].address()) << std::dec;
+      if (color) os << "\033[33m";
+      auto name = trace[i].name();
+      if (name.empty()) os << " ??";
+      else os << ' ' << name;
+
+      if (color) os << "\033[37m";
+      auto line = trace[i].source_line();
+      if (line)
+      {
+        os << " at ";
+        if (color) os << "\033[32m";
+        os << trace[i].source_file();
+        if (color) os << "\033[37m";
+        os << ':';
+        if (color) os << "\033[1;37m";
+        os << line;
+        if (color) os << "\033[0;37m";
+      }
+
+      // uh-oh
+      boost::stacktrace::detail::location_from_symbol loc(trace[i].address());
+      if (!loc.empty())
+      {
+        os << " in ";
+        if (color) os << "\033[34m";
+        os << loc.name();
+      }
+
+      if (color) os << "\033[0m";
+      os << '\n';
+    }
+    os.flags(flags);
+  }
+
   struct ExceptionInfo
   {
     std::atomic<unsigned> refcount = 0;
     const char* file = nullptr;
     unsigned line = 0;
     const char* func = nullptr;
+#if LIBSHIT_IS_DEBUG
+    boost::stacktrace::stacktrace trace;
+#endif
     std::multimap<std::string, std::string> map;
 
     ExceptionInfo() = default;
@@ -68,15 +127,43 @@ namespace Libshit
     info->func = func;
   }
 
-  void Exception::PrintDesc(std::ostream& os) const
+  void Exception::PrintDesc(std::ostream& os, bool color) const
   {
     if (!info) return;
-    if (info->file) os << "Exception at " << info->file << ':' << info->line;
-    if (info->func) os << " in " << info->func;
-    if (info->file || info->func) os << "\n";
+    if (color) os << "\033[1m";
+    os << "Exception";
+    if (color) os << "\033[0m";
+    if (info->file)
+    {
+      os << " at ";
+      if (color) os << "\033[32m";
+      os << info->file;
+      if (color) os << "\033[0m";
+      os << ':';
+      if (color) os << "\033[1m";
+      os << info->line;
+      if (color) os << "\033[0m";
+    }
+    if (info->func)
+    {
+      os << " in ";
+      if (color) os << "\033[33m";
+      os << info->func;
+      if (color) os << "\033[0m";
+    }
+    os << "\n";
 
     for (auto& e : info->map)
-      os << e.first << ": " << e.second << '\n';
+    {
+      if (color) os << "\033[1m";
+      os << e.first;
+      if (color) os << "\033[0m";
+      os << ": " << e.second << '\n';
+    }
+
+#if LIBSHIT_IS_DEBUG
+    PrintStacktrace(os, info->trace, color);
+#endif
   }
 
   std::string Exception::operator[](const std::string& key) const
@@ -123,31 +210,54 @@ namespace Libshit
     RETHROW(std::bad_variant_access)
   }
 
-  std::string ExceptionToString(const Exception& e)
+  std::ostream& operator<<(std::ostream& os, PrintCustomException info)
+  {
+    auto se = dynamic_cast<const std::exception*>(&info.e);
+    if (se)
+    {
+      if (info.color) os << "\033[1m";
+      os << se->what();
+      if (info.color) os << "\033[0m";
+      os << "\n";
+    }
+    if (info.color) os << "\033[1m";
+    os << "Type";
+    if (info.color) os << "\033[0m";
+    os << ": " << boost::core::demangle(typeid(info.e).name()) << "\n";
+    info.e.PrintDesc(os, info.color);
+    return os;
+  }
+
+  std::string ExceptionToString(const Exception& e, bool color)
   {
     std::stringstream ss;
-    auto se = dynamic_cast<const std::exception*>(&e);
-    if (se) ss << se->what() << "\n";
-    ss << "Type: " << boost::core::demangle(typeid(e).name()) << "\n";
-    e.PrintDesc(ss);
+    ss << PrintCustomException{e, color};
     return ss.str();
   }
 
-  std::string ExceptionToString()
+  std::ostream& operator<<(std::ostream& os, PrintActiveException info)
   {
     try { throw; }
     catch (const Exception& e)
     {
-      return ExceptionToString(e);
+      os << PrintCustomException{e, info.color};
     }
     catch (const std::exception& e)
     {
-      return boost::core::demangle(typeid(e).name()) + ": " + e.what();
+      os << boost::core::demangle(typeid(e).name()) + ": " + e.what();
     }
     catch (...)
     {
-      return "Unknown exception (run while you can)";
+      os << "Unknown exception (run while you can)";
     }
+    return os;
+  }
+
+  std::string ExceptionToString(bool color)
+  {
+    std::stringstream ss;
+    ss << PrintActiveException{color};
+    return ss.str();
   }
 
   void AssertFailed(
@@ -156,27 +266,41 @@ namespace Libshit
   {
     if constexpr (LIBSHIT_OS_IS_WINDOWS)
     {
-      std::string fake_expr = expr;
-      if (fun)
-      {
-        fake_expr += "\nFunction: ";
-        fake_expr += fun;
-      }
-      if (msg)
-      {
-        fake_expr += "\nMessage: ";
-        fake_expr += msg;
-      }
-      _assert(fake_expr.c_str(), file ? file : "", line);
+      std::stringstream ss{expr};
+      if (fun) ss << "\nFunction: " << fun;
+      if (msg) ss << "\nMessage: " << msg;
+      ss << "\n";
+      PrintStacktrace(ss, boost::stacktrace::stacktrace{}, false);
+      _assert(ss.str().c_str(), file ? file : "", line);
     }
     else
     {
+      auto color = Libshit::Logger::HasAnsiColor();
       auto& log = Logger::Log("assert", Logger::ERROR, file, line, fun);
-      log << "Assertion failed!\n";
-      if (!Logger::show_fun && fun) log << "in function " << fun << '\n';
-      log << "Expression: " << expr << '\n';
+      if (color) log << "\033[1m";
+      log << "Assertion failed!";
+      if (color) log << "\033[0m";
+      log << '\n';
+      if (!Logger::show_fun && fun)
+      {
+        log << "in function ";
+        if (color) log << "\033[33m";
+        log << fun;
+        if (color) log << "\033[0m";
+        log << '\n';
+      }
+      if (color) log << "\033[1m";
+      log << "Expression";
+      if (color) log << "\033[0m";
+      log << ": ";
+      if (color) log << "\033[35m";
+      log << expr;
+      if (color) log << "\033[0m";
+      log << '\n';
       if (msg) log << "Message: " << msg << '\n';
-      log << std::flush;
+      PrintStacktrace(log, boost::stacktrace::stacktrace{}, color);
+      log.flush();
+
       std::abort();
     }
   }

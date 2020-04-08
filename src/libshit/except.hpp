@@ -58,7 +58,7 @@ namespace Libshit
     void AddInfo(std::string key, std::string value);
     void AddLocation(const char* file, unsigned line, const char* func);
 
-    void PrintDesc(std::ostream& os) const;
+    void PrintDesc(std::ostream& os, bool color) const;
 
     template <typename T>
     void AddInfo(std::string key, const T& value)
@@ -133,8 +133,19 @@ namespace Libshit
 #endif
 
   BOOST_NORETURN void RethrowException();
-  std::string ExceptionToString();
-  std::string ExceptionToString(const Exception& e);
+  std::string ExceptionToString(bool color);
+  std::string ExceptionToString(const Exception& e, bool color);
+
+  struct PrintActiveException { bool color; };
+  constexpr inline PrintActiveException PrintException(bool color) noexcept
+  { return {color}; }
+  std::ostream& operator<<(std::ostream& os, PrintActiveException e);
+
+  struct PrintCustomException { const Exception& e; bool color; };
+  constexpr inline PrintCustomException PrintException(
+    const Exception& e, bool color) noexcept
+  { return {e, color}; }
+  std::ostream& operator<<(std::ostream& os, PrintCustomException e);
 
 #define LIBSHIT_GEN_EXCEPTION_TYPE(name, base)     \
   struct name : base, virtual ::Libshit::Exception \
