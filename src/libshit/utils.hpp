@@ -2,6 +2,7 @@
 #define UUID_BCBF4E5C_155A_4984_902F_4A42237608D8
 #pragma once
 
+#include <algorithm>
 #include <type_traits>
 
 namespace Libshit
@@ -83,13 +84,42 @@ namespace Libshit
   {
     const T func;
   public:
-    explicit AtScopeExit(const T& func) noexcept : func(func) {}
+    explicit AtScopeExit(const T& func)
+      noexcept(std::is_nothrow_copy_constructible_v<T>) : func(func) {}
     AtScopeExit(const AtScopeExit&) = delete;
     void operator=(const AtScopeExit&) = delete;
 
     ~AtScopeExit() noexcept(noexcept(func())) { func(); }
   };
 
+  /// Conditional AtScopeExit, can be disabled.
+  template <typename T>
+  class AtScopeExitC
+  {
+    const T func;
+    bool enabled;
+  public:
+    explicit AtScopeExitC(const T& func, bool enabled = true)
+      noexcept(std::is_nothrow_copy_constructible_v<T>)
+      : func(func), enabled{enabled} {}
+    AtScopeExitC(AtScopeExitC&& o)
+      noexcept(std::is_nothrow_move_constructible_v<T>)
+      : func(Move(o.func)), enabled{o.enabled} { o.enabled = false; }
+    AtScopeExitC& operator=(AtScopeExitC o)
+      noexcept(std::is_nothrow_swappable_v<T>)
+    {
+      using std::swap;
+      swap(func, o.func);
+      enabled = o.enabled;
+      return *this;
+    }
+
+    void Enable() noexcept { enabled = true; }
+    void Disable() noexcept { enabled = false; }
+    bool IsEnabled() const noexcept { return enabled; }
+
+    ~AtScopeExitC() noexcept(noexcept(func())) { if (enabled) func(); }
+  };
 }
 
 #endif
