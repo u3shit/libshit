@@ -86,14 +86,25 @@ namespace Libshit::Logger
       std::map<std::string, int, std::less<>> level_map;
     };
   }
-  //static auto global = new Global;
+
+  // BIG FUGLY HACK: under clang windows, this GlobalInitializer is
+  // constructed/destructed multiple times (on the same address!)
+  static unsigned global_refcount;
   static std::aligned_storage_t<sizeof(Global), alignof(Global)> global_storage;
   Global& GetGlobal() noexcept
   { return *reinterpret_cast<Global*>(&global_storage); }
   namespace Detail
   {
-    GlobalInitializer::GlobalInitializer() { new (&global_storage) Global; }
-    GlobalInitializer::~GlobalInitializer() noexcept { GetGlobal().~Global(); }
+    GlobalInitializer::GlobalInitializer()
+    {
+      if (global_refcount++ != 0) return;
+      new (&global_storage) Global;
+    }
+    GlobalInitializer::~GlobalInitializer() noexcept
+    {
+      if (--global_refcount != 0) return;
+      GetGlobal().~Global();
+    }
   }
 
   std::recursive_mutex& GetLogMutex() noexcept { return GetGlobal().log_mutex; }
