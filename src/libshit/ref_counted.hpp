@@ -18,7 +18,8 @@ namespace Libshit
     RefCounted() = default;
     RefCounted(const RefCounted&) = delete;
     void operator=(const RefCounted&) = delete;
-    virtual ~RefCounted() = default;
+    virtual ~RefCounted() noexcept
+    { LIBSHIT_ASSERT(strong_count.load(std::memory_order_acquire) == 0); }
 
     virtual void Dispose() noexcept {}
 
@@ -65,6 +66,22 @@ namespace Libshit
     }
 
   private:
+    inline void StackUnref() noexcept
+    {
+      // decrease strong count even in release mode, so Dispose will see
+      // strong_count == 0 (resurrecting is not supported by current RefCounted
+      // but whatever)
+      auto c = strong_count.fetch_sub(1, std::memory_order_acq_rel);
+      LIBSHIT_ASSERT_MSG(
+        c == 1, "RefCountedStackHolder: strong references remain");
+      Dispose();
+
+      // we're dead anyway, we don't have to update the weak_count
+      LIBSHIT_ASSERT_MSG(
+        weak_count.load(std::memory_order_acquire) == 1,
+        "RefCountedStackHolder: weak references remain");
+    }
+
     template <typename T> friend class RefCountedStackHolder;
 
     // every object has an implicit weak_count, removed when removing last
@@ -74,7 +91,6 @@ namespace Libshit
 
   template <typename T>
   constexpr bool IS_REFCOUNTED = std::is_base_of<RefCounted, T>::value;
-
 
   /**
    * Helper class that can be used to place a RefCounted object on the
@@ -92,22 +108,11 @@ namespace Libshit
     RefCountedStackHolder(Args&&... args)
       noexcept(std::is_nothrow_constructible_v<T, Args&&...>)
       : t(std::forward<Args>(args)...) {}
+    RefCountedStackHolder(const RefCountedStackHolder&) = delete;
+    void operator=(const RefCountedStackHolder&) = delete;
 
     ~RefCountedStackHolder() noexcept
-    {
-      // decrease strong count even in release mode, so Dispose will see
-      // strong_count == 0 (resurrecting is not supported by current RefCounted
-      // but whatever)
-      auto c = t.strong_count.fetch_sub(1, std::memory_order_acq_rel);
-      LIBSHIT_ASSERT_MSG(
-        c == 1, "RefCountedStackHolder: strong references remain");
-      t.Dispose();
-
-      // we're dead anyway, we don't have to update the weak_count
-      LIBSHIT_ASSERT_MSG(
-        t.weak_count.load(std::memory_order_acquire) == 1,
-        "RefCountedStackHolder: weak references remain");
-    }
+    { static_cast<RefCounted&>(t).StackUnref(); }
 
     T& operator*() noexcept { return t; }
     const T& operator*() const noexcept { return t; }
