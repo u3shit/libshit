@@ -18,8 +18,7 @@ namespace Libshit
     RefCounted() = default;
     RefCounted(const RefCounted&) = delete;
     void operator=(const RefCounted&) = delete;
-    virtual ~RefCounted() noexcept
-    { LIBSHIT_ASSERT(strong_count.load(std::memory_order_acquire) == 0); }
+    virtual ~RefCounted() noexcept = default;
 
     virtual void Dispose() noexcept {}
 

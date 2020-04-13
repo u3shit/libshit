@@ -6,6 +6,10 @@
 // do not use, unless you have to: very slow (executes addr2line for *each*
 // stacktrace line), flaky (has hard coded full path to addr2line)
 // #define BOOST_STACKTRACE_USE_ADDR2LINE
+
+#if LIBSHIT_OS_IS_VITA
+#  define BOOST_STACKTRACE_USE_NOOP // doesn't work on vita
+#endif
 #include <boost/core/demangle.hpp>
 #include <boost/stacktrace.hpp>
 
@@ -30,6 +34,7 @@ namespace Libshit
   static void PrintStacktrace(
     std::ostream& os, const boost::stacktrace::stacktrace& trace, bool color)
   {
+#ifndef BOOST_STACKTRACE_USE_NOOP
     if (color) os << "\033[1m";
     os << "Stacktrace";
     if (color) os << "\033[22m";
@@ -75,6 +80,7 @@ namespace Libshit
       if (i < n-1) os << '\n';
     }
     os.flags(flags);
+#endif
   }
 
   struct ExceptionInfo

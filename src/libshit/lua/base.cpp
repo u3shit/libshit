@@ -41,7 +41,7 @@ namespace Libshit::Lua
     });
   }
 
-  inline void StateRef::ToLuaException()
+  void StateRef::ToLuaException()
   {
     auto s = ExceptionToString(false);
     lua_pushlstring(vm, s.data(), s.size());

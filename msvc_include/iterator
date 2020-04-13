@@ -1,0 +1,15 @@
+// -*- c++ -*-
+#pragma once
+
+#include_next <iterator>
+
+namespace std
+{
+
+  template <typename T>
+  constexpr auto size(const T& t) -> decltype(t.size()) { return t.size(); }
+
+  template <typename T, size_t N>
+  constexpr size_t size(const T (&ary)[N]) noexcept { return N; }
+
+}

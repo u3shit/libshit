@@ -55,7 +55,7 @@ namespace Libshit::Logger
   int global_level = -1;
   bool show_fun = false;
 #if !LIBSHIT_IS_DEBUG
-  constexpr std::ostream* nullptr_ostream;
+  std::ostream* nullptr_ostream;
 #endif
 
   namespace
@@ -172,7 +172,7 @@ namespace Libshit::Logger
     auto h = GetStdHandle(STD_OUTPUT_HANDLE);
     if (h != INVALID_HANDLE_VALUE)
     {
-      DDWORD mode = 0;
+      DWORD mode = 0;
       if (GetConsoleMode(h, &mode))
         SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
     }

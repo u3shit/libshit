@@ -171,4 +171,4 @@ def lua_to_h(self, node):
         tsk = self.luac_task(node, out, self.env.LUAC + [luac.abspath()])
         tsk.dep_nodes += [luac]
     else:
-        self.bld.fatal('Unknown LUAC_MODE')
+        self.bld.fatal('Unknown LUAC_MODE %s' % self.env.LUAC_MODE)

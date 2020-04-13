@@ -13,7 +13,7 @@ def options(ctx):
 def configure(ctx):
     def check_system(ctx):
         if ctx.env.DEST_OS == 'vita':
-            ctx.fail("System libstdc++ doesn't work on vita")
+            ctx.fatal("System libstdc++ doesn't work on vita")
 
     def check_bundle(ctx):
         ctx.env.CXXFLAGS_LIBCXX = ['-nostdinc++']
