@@ -32,7 +32,7 @@ namespace Libshit
   {
     if (color) os << "\033[1m";
     os << "Stacktrace";
-    if (color) os << "\033[0m";
+    if (color) os << "\033[22m";
     os << ":\n";
     auto flags = os.flags();
     os.width(0);
@@ -72,7 +72,7 @@ namespace Libshit
       }
 
       if (color) os << "\033[0m";
-      os << '\n';
+      if (i < n-1) os << '\n';
     }
     os.flags(flags);
   }
@@ -157,7 +157,7 @@ namespace Libshit
     {
       if (color) os << "\033[1m";
       os << e.first;
-      if (color) os << "\033[0m";
+      if (color) os << "\033[22m";
       os << ": " << e.second << '\n';
     }
 
@@ -222,7 +222,7 @@ namespace Libshit
     }
     if (info.color) os << "\033[1m";
     os << "Type";
-    if (info.color) os << "\033[0m";
+    if (info.color) os << "\033[22m";
     os << ": " << boost::core::demangle(typeid(info.e).name()) << "\n";
     info.e.PrintDesc(os, info.color);
     return os;
@@ -278,26 +278,33 @@ namespace Libshit
       auto color = Libshit::Logger::HasAnsiColor();
       auto& log = Logger::Log("assert", Logger::ERROR, file, line, fun);
       if (color) log << "\033[1m";
-      log << "Assertion failed!";
-      if (color) log << "\033[0m";
-      log << '\n';
+      log << "Assertion failed";
       if (!Logger::show_fun && fun)
       {
-        log << "in function ";
+        if (color) log << "\033[22m";
+        log << " in function ";
         if (color) log << "\033[33m";
         log << fun;
-        if (color) log << "\033[0m";
-        log << '\n';
       }
+      if (color) log << "\033[0m";
+      log << '\n';
       if (color) log << "\033[1m";
       log << "Expression";
-      if (color) log << "\033[0m";
+      if (color) log << "\033[22m";
       log << ": ";
       if (color) log << "\033[35m";
       log << expr;
       if (color) log << "\033[0m";
       log << '\n';
-      if (msg) log << "Message: " << msg << '\n';
+      if (msg)
+      {
+        if (color) log << "\033[1m";
+        log << "Message";
+        if (color) log << "\033[22m";
+        log << ": " << msg;
+        if (color) log << "\033[0m";
+        log << '\n';
+      }
       PrintStacktrace(log, boost::stacktrace::stacktrace{}, color);
       log.flush();
 

@@ -146,17 +146,52 @@ namespace Libshit::Logger
   bool HasAnsiColor() noexcept { return global.ansi_colors; }
   bool HasWinColor() noexcept { return global.win_colors; }
 
+  static void EnableAnsiColors(std::vector<const char*>&&) noexcept
+  {
+#if LIBSHIT_OS_IS_WINDOWS
+#  ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#    define ENABLE_VIRTUAL_TERMINAL_PROCESSING 4
+#  endif
+    // This should enable ANSI sequence processing on win10+. Completely
+    // untested as I don't use that spyware.
+    auto h = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (h != INVALID_HANDLE_VALUE)
+    {
+      DDWORD mode = 0;
+      if (GetConsoleMode(h, &mode))
+        SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    }
+#endif
+    global.win_colors = false;
+    global.ansi_colors = true;
+  }
+
   static Option ansi_colors_opt{
     GetOptionGroup(), "ansi-colors", 0, nullptr,
     "Force output colorization with ASCII escape sequences",
-    [](auto&&) { global.win_colors = false; global.ansi_colors = true; }};
+    FUNC<EnableAnsiColors>};
   static Option no_colors_opt{
     GetOptionGroup(), "no-colors", 0, nullptr,
     "Disable output colorization",
     [](auto&&) { global.win_colors = false; global.ansi_colors = false; }};
 
-  static size_t max_name = 8;
-  static size_t max_file = 20, max_fun = 20;
+  static std::uint8_t rand_colors[] = {
+    4,5,6, 12,13,14,
+
+    // (16..231).select{|i| i-=16; b=i%6; i/=6; g=i%6; i/=6; i+g+b>6}
+    33, 38, 39, 43, 44, 45, 48, 49, 50, 51, 63, 68, 69, 73, 74, 75, 78, 79, 80,
+    81, 83, 84, 85, 86, 87, 93, 98, 99, 103, 104, 105, 108, 109, 110, 111, 113,
+    114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 128, 129, 133, 134, 135,
+    138, 139, 140, 141, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153,
+    154, 155, 156, 157, 158, 159, 163, 164, 165, 168, 169, 170, 171, 173, 174,
+    175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189,
+    190, 191, 192, 193, 194, 195, 198, 199, 200, 201, 203, 204, 205, 206, 207,
+    208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222,
+    223, 224, 225, 226, 227, 228, 229, 230, 231
+  };
+
+  static size_t max_name = 16;
+  static size_t max_file = 42, max_fun = 20;
 
   namespace
   {
@@ -234,16 +269,20 @@ namespace Libshit::Logger
           SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | color);
         }
 #endif
-        if (global.ansi_colors)
+        auto print_col = [&]()
         {
-          switch (level)
+          if (global.ansi_colors)
           {
-          case ERROR:   os << "\033[1;31m"; break;
-          case WARNING: os << "\033[1;33m"; break;
-          case INFO:    os << "\033[1;32m"; break;
-          default:      os << "\033[1m";    break;
+            switch (level)
+            {
+            case ERROR:   os << "\033[0;1;31m"; break;
+            case WARNING: os << "\033[0;1;33m"; break;
+            case INFO:    os << "\033[0;1;32m"; break;
+            default:      os << "\033[0;1m";    break;
+            }
           }
-        }
+        };
+        print_col();
 
         switch (level)
         {
@@ -254,7 +293,15 @@ namespace Libshit::Logger
         }
 
         max_name = std::max(max_name, std::strlen(name));
-        os << '[' << std::setw(max_name) << name << ']';
+        os << '[';
+        if (global.ansi_colors)
+        {
+          auto i = std::hash<std::string>{}(name) % std::size(rand_colors);
+          os << "\033[22;38;5;" << unsigned(rand_colors[i]) << 'm';
+        }
+        os << std::setw(max_name) << name;
+        print_col();
+        os << ']';
 
 #if LIBSHIT_OS_IS_WINDOWS
         if (global.win_colors)
