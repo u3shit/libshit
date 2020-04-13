@@ -8,14 +8,16 @@
 #  undef ERROR
 #endif
 
-#include "libshit/options.hpp"
+#include "libshit/function.hpp"
 #include "libshit/lua/function_call.hpp"
+#include "libshit/options.hpp"
 
 #if LIBSHIT_WITH_LUA
 #  include "libshit/logger.lua.h"
 #endif
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -23,7 +25,10 @@
 #include <iomanip>
 #include <iostream>
 #include <map>
+#include <new>
 #include <string>
+#include <type_traits>
+#include <vector>
 
 #if !LIBSHIT_OS_IS_WINDOWS
 #  include <unistd.h>
@@ -49,12 +54,49 @@ namespace Libshit::Logger
 
   int global_level = -1;
   bool show_fun = false;
-  std::recursive_mutex log_mutex;
 #if !LIBSHIT_IS_DEBUG
-  std::ostream* nullptr_ostream;
+  constexpr std::ostream* nullptr_ostream;
 #endif
 
-  static std::map<std::string, int, std::less<>> level_map;
+  namespace
+  {
+    struct Global
+    {
+      Global()
+      {
+        // otherwise clog is actually unbuffered...
+        static char buf[4096];
+        // buf can be nullptr on linux (and posix?), but crashes on windows...
+        setvbuf(stderr, buf, _IOFBF, 4096);
+        std::ios_base::sync_with_stdio(false);
+
+#if LIBSHIT_OS_IS_WINDOWS
+        win_colors = _isatty(2);
+#elif !LIBSHIT_OS_IS_VITA
+        const char* x;
+        ansi_colors = isatty(2) &&
+          (x = getenv("TERM")) ? strcmp(x, "dummy") != 0 : false;
+#endif
+      }
+
+      bool win_colors = false;
+      bool ansi_colors = false;
+
+      std::recursive_mutex log_mutex;
+      std::map<std::string, int, std::less<>> level_map;
+    };
+  }
+  //static auto global = new Global;
+  static std::aligned_storage_t<sizeof(Global), alignof(Global)> global_storage;
+  Global& GetGlobal() noexcept
+  { return *reinterpret_cast<Global*>(&global_storage); }
+  namespace Detail
+  {
+    GlobalInitializer::GlobalInitializer() { new (&global_storage) Global; }
+    GlobalInitializer::~GlobalInitializer() noexcept { GetGlobal().~Global(); }
+  }
+
+  std::recursive_mutex& GetLogMutex() noexcept { return GetGlobal().log_mutex; }
 
   static Option show_fun_opt{
     GetOptionGroup(), "show-functions", 0, nullptr,
@@ -109,42 +151,15 @@ namespace Libshit::Logger
         else
         {
           auto lvl = ParseLevel(tok.c_str() + p + 1);
-          level_map[tok.substr(0, p)] = lvl;
+          GetGlobal().level_map[tok.substr(0, p)] = lvl;
         }
       }
     }};
 
   static auto& os = std::clog;
 
-  namespace
-  {
-    struct Global
-    {
-      Global()
-      {
-        // otherwise clog is actually unbuffered...
-        static char buf[4096];
-        // buf can be nullptr on linux (and posix?), but crashes on windows...
-        setvbuf(stderr, buf, _IOFBF, 4096);
-        std::ios_base::sync_with_stdio(false);
-
-#if LIBSHIT_OS_IS_WINDOWS
-        win_colors = _isatty(2);
-#elif !LIBSHIT_OS_IS_VITA
-        const char* x;
-        ansi_colors = isatty(2) &&
-          (x = getenv("TERM")) ? strcmp(x, "dummy") != 0 : false;
-#endif
-      }
-
-      bool win_colors = false;
-      bool ansi_colors = false;
-    };
-  }
-  static Global global;
-
-  bool HasAnsiColor() noexcept { return global.ansi_colors; }
-  bool HasWinColor() noexcept { return global.win_colors; }
+  bool HasAnsiColor() noexcept { return GetGlobal().ansi_colors; }
+  bool HasWinColor() noexcept { return GetGlobal().win_colors; }
 
   static void EnableAnsiColors(std::vector<const char*>&&) noexcept
   {
@@ -162,8 +177,8 @@ namespace Libshit::Logger
         SetConsoleMode(h, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
     }
 #endif
-    global.win_colors = false;
-    global.ansi_colors = true;
+    GetGlobal().win_colors = false;
+    GetGlobal().ansi_colors = true;
   }
 
   static Option ansi_colors_opt{
@@ -173,7 +188,11 @@ namespace Libshit::Logger
   static Option no_colors_opt{
     GetOptionGroup(), "no-colors", 0, nullptr,
     "Disable output colorization",
-    [](auto&&) { global.win_colors = false; global.ansi_colors = false; }};
+    [](auto&&)
+    {
+      GetGlobal().win_colors = false;
+      GetGlobal().ansi_colors = false;
+    }};
 
   static std::uint8_t rand_colors[] = {
     4,5,6, 12,13,14,
@@ -199,7 +218,7 @@ namespace Libshit::Logger
     {
       std::streamsize xsputn(const char* msg, std::streamsize n) override
       {
-        std::unique_lock lock{log_mutex, std::defer_lock};
+        std::unique_lock lock{GetGlobal().log_mutex, std::defer_lock};
         auto old_n = n;
         while (n)
         {
@@ -252,7 +271,8 @@ namespace Libshit::Logger
         HANDLE h;
         int color;
 
-        if (global.win_colors)
+        auto win_col = HasWinColor();
+        if (win_col)
         {
 
           os.flush();
@@ -269,9 +289,10 @@ namespace Libshit::Logger
           SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | color);
         }
 #endif
+        auto ansi_col = HasAnsiColor();
         auto print_col = [&]()
         {
-          if (global.ansi_colors)
+          if (ansi_col)
           {
             switch (level)
             {
@@ -294,7 +315,7 @@ namespace Libshit::Logger
 
         max_name = std::max(max_name, std::strlen(name));
         os << '[';
-        if (global.ansi_colors)
+        if (ansi_col)
         {
           auto i = std::hash<std::string>{}(name) % std::size(rand_colors);
           os << "\033[22;38;5;" << unsigned(rand_colors[i]) << 'm';
@@ -304,13 +325,13 @@ namespace Libshit::Logger
         os << ']';
 
 #if LIBSHIT_OS_IS_WINDOWS
-        if (global.win_colors)
+        if (win_col)
         {
           os.flush();
           SetConsoleTextAttribute(h, color);
         }
 #endif
-        if (global.ansi_colors) os << "\033[22m";
+        if (ansi_col) os << "\033[22m";
 
         if (file)
         {
@@ -329,7 +350,7 @@ namespace Libshit::Logger
       void WriteEnd()
       {
 #if LIBSHIT_OS_IS_WINDOWS
-        if (global.win_colors)
+        if (HasWinColor())
         {
           os.flush();
           SetConsoleTextAttribute(
@@ -337,7 +358,7 @@ namespace Libshit::Logger
             FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
         }
 #endif
-        if (global.ansi_colors) os << "\033[0m";
+        if (HasAnsiColor()) os << "\033[0m";
 
         os << '\n';
       }
@@ -353,24 +374,42 @@ namespace Libshit::Logger
 
   bool CheckLog(const char* name, int level) noexcept
   {
-    auto it = level_map.find(name);
-    if (it != level_map.end()) return it->second >= level;
+    auto it = GetGlobal().level_map.find(name);
+    if (it != GetGlobal().level_map.end()) return it->second >= level;
     else return global_level >= level;
   }
 
-  static thread_local LogBuffer filter;
-  static thread_local std::ostream log_os{&filter};
+  namespace Detail
+  {
+    struct PerThread
+    {
+      LogBuffer filter;
+      std::ostream log_os{&filter};
+    };
+
+    PerThreadInitializer::PerThreadInitializer() { pimpl = new PerThread; }
+    PerThreadInitializer::~PerThreadInitializer() noexcept
+    { delete pimpl; pimpl = nullptr; }
+  }
 
   std::ostream& Log(
     const char* name, int level, const char* file, unsigned line,
     const char* fun)
   {
-    filter.name = name;
-    filter.level = level;
-    filter.file = file;
-    filter.line = line;
-    filter.fun = fun;
-    return log_os;
+    auto p = Detail::per_thread_initializer.pimpl;
+    // I don't know whether this is a bug or not, but apparently the tread local
+    // can be destroyed while later dtors might still log. Hopefully this will
+    // only happen on the main thread in rare cases, so the leak is not that
+    // serious.
+    if (p == nullptr)
+      p = Detail::per_thread_initializer.pimpl = new Detail::PerThread;
+
+    p->filter.name = name;
+    p->filter.level = level;
+    p->filter.file = file;
+    p->filter.line = line;
+    p->filter.fun = fun;
+    return p->log_os;
   }
 
 #if LIBSHIT_WITH_LUA

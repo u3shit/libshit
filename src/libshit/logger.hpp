@@ -47,7 +47,7 @@ namespace Libshit::Logger
 
   // you can lock manually it if you want to make sure consecutive lines end up
   // in one block
-  extern std::recursive_mutex log_mutex;
+  std::recursive_mutex& GetLogMutex() noexcept;
 
 #define LIBSHIT_LOG(name, level)              \
   ::Libshit::Logger::CheckLog(name, level) && \
@@ -76,6 +76,21 @@ namespace Libshit::Logger
 #  define LIBSHIT_CHECK_DBG(name, level) false
 #endif
 
+  // ugly implementation details, don't look
+  namespace Detail
+  {
+    struct GlobalInitializer
+    { GlobalInitializer(); ~GlobalInitializer() noexcept; };
+
+    struct PerThreadInitializer
+    {
+      PerThreadInitializer();
+      ~PerThreadInitializer() noexcept;
+      struct PerThread* pimpl;
+    };
+    inline GlobalInitializer global_initializer;
+    inline thread_local PerThreadInitializer per_thread_initializer;
+  }
 }
 
 LIBSHIT_ENUM(Libshit::Logger::Level);
