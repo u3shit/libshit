@@ -124,13 +124,16 @@ namespace Libshit
   }
 
 #if LIBSHIT_IS_DEBUG
-#  define LIBSHIT_THROW(type, ...) \
-  (throw ::Libshit::GetException<type>(  \
-    LIBSHIT_FILE, __LINE__, LIBSHIT_FUNCTION, __VA_ARGS__))
+#  define LIBSHIT_GET_EXCEPTION(type, ...) \
+  ::Libshit::GetException<type>(           \
+    LIBSHIT_FILE, __LINE__, LIBSHIT_FUNCTION, __VA_ARGS__)
 #else
-#  define LIBSHIT_THROW(type, ...) \
-  (throw ::Libshit::GetException<type>(nullptr, 0, nullptr, __VA_ARGS__))
+#  define LIBSHIT_GET_EXCEPTION(type, ...) \
+  ::Libshit::GetException<type>(nullptr, 0, nullptr, __VA_ARGS__)
 #endif
+
+#define LIBSHIT_THROW(type, ...) \
+  (throw LIBSHIT_GET_EXCEPTION(type, __VA_ARGS__))
 
   BOOST_NORETURN void RethrowException();
   std::string ExceptionToString(bool color);
