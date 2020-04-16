@@ -17,7 +17,20 @@
 
 namespace Libshit
 {
-#if __has_feature(address_sanitizer)
+
+#if defined(__SANITIZE_ADDRESS__)
+#  define LIBSHIT_HAS_ASAN 1
+#elif defined(__has_feature)
+#  if __has_feature(address_sanitizer)
+#    define LIBSHIT_HAS_ASAN 1
+#  else
+#    define LIBSHIT_HAS_ASAN 0
+#  endif
+#else
+#  define LIBSHIT_HAS_ASAN 0
+#endif
+
+#if LIBSHIT_HAS_ASAN
   extern "C" void __sanitizer_annotate_contiguous_container(
     const void*, const void*, const void*, const void*);
 #endif
@@ -56,9 +69,9 @@ namespace Libshit
       : Allocator(alloc) {}
     SimpleVector(size_type count, const T& value,
            const Allocator& alloc = Allocator())
-      : Allocator(alloc) { resize(count, value); }
+      : Allocator(alloc) { resize_common(true, count, value); }
     explicit SimpleVector(size_type count, const Allocator& alloc = Allocator())
-      : Allocator(alloc) { resize(count); }
+      : Allocator(alloc) { resize_common(true, count); }
     SimpleVector(const SimpleVector& o)
       : SimpleVector(o, AllocTraits::select_on_container_copy_construction(o)) {}
     SimpleVector(const SimpleVector& o, const Allocator& alloc)
@@ -72,7 +85,7 @@ namespace Libshit
       std::initializer_list<T> init, const Allocator& alloc = Allocator())
       : Allocator{alloc} { assign(init); }
 
-    template <typename InputIt>
+    template <typename InputIt, typename = std::void_t<ItTag<InputIt>>>
     SimpleVector(
       InputIt beg_it, InputIt end_it, const Allocator& alloc = Allocator())
       : Allocator(alloc) { assign(beg_it, end_it); }
@@ -139,7 +152,7 @@ namespace Libshit
     }
 
     template <typename InputIt>
-    void assign(InputIt beg_it, InputIt end_it)
+    std::void_t<ItTag<InputIt>> assign(InputIt beg_it, InputIt end_it)
     {
       if constexpr (std::is_base_of_v<std::forward_iterator_tag, ItTag<InputIt>>)
       {
@@ -337,11 +350,11 @@ namespace Libshit
         auto max = max_size();
         if (capacity_ptr - begin_ptr >= max)
           LIBSHIT_THROW(std::length_error, "Vector::emplace_back");
-        auto size = end_ptr - begin_ptr;
+        auto size = size_type(end_ptr - begin_ptr);
         if (size >= max / 3) // this will result in a sudden 3x growth factor...
           resize_capacity(max);
         else
-          resize_capacity(std::max(difference_type(4), size * 3 / 2));
+          resize_capacity(std::max(size_type(4), size * 3 / 2));
       }
       asan_annotate(end_ptr, 0, end_ptr, 1);
       try
@@ -365,34 +378,13 @@ namespace Libshit
       asan_annotate(end_ptr, 0, p, 0);
       end_ptr = p;
     }
+
     template <typename... Args> // extension
     void resize(size_type n, const Args&... args)
-    {
-      reserve(n);
-      auto new_end = begin_ptr + n;
-      auto p = end_ptr;
-      if (p < new_end)
-        asan_annotate(end_ptr, 0, new_end, 0);
-      try
-      {
-        for (; p < new_end; ++p)
-          AllocTraits::construct(
-            static_cast<Allocator&>(*this), std::addressof(*p), args...);
-      }
-      catch (...)
-      {
-        while (p != end_ptr)
-          AllocTraits::destroy(
-            static_cast<Allocator&>(*this), std::addressof(*--p));
-        asan_annotate(new_end, 0, end_ptr, 0);
-        throw;
-      }
-      for (auto p = new_end; p < end_ptr; ++p)
-        AllocTraits::destroy(static_cast<Allocator&>(*this), std::addressof(*p));
-      if (new_end < end_ptr)
-        asan_annotate(end_ptr, 0, new_end, 0);
-      end_ptr = new_end;
-    }
+    { resize_common(true, n, args...); }
+    // extension
+    void uninitialized_resize(size_type n) { resize_common(false, n); }
+
     void swap(SimpleVector& o) noexcept
     {
       using std::swap;
@@ -405,13 +397,22 @@ namespace Libshit
       swap(capacity_ptr, o.capacity_ptr);
     }
 
+    bool operator!=(const SimpleVector& o) const
+    {
+      if (end_ptr - begin_ptr != o.end_ptr - o.begin_ptr) return true;
+      for (auto a = begin_ptr, b = o.begin_ptr, e = end_ptr; a != e; ++a, ++b)
+        if (*a != *b) return true;
+      return false;
+    }
+    bool operator==(const SimpleVector& o) const { return !(*this != o); }
+
   private:
     pointer begin_ptr = nullptr, end_ptr = nullptr, capacity_ptr = nullptr;
 
     void asan_annotate(
       const pointer& old_end, int old_offs, const pointer& new_end, int new_offs)
     {
-#if __has_feature(address_sanitizer)
+#if LIBSHIT_HAS_ASAN
       if (begin_ptr != nullptr)
         __sanitizer_annotate_contiguous_container(
           std::addressof(*begin_ptr), std::addressof(*capacity_ptr),
@@ -448,6 +449,50 @@ namespace Libshit
       end_ptr = q;
       capacity_ptr = new_beg + n;
       asan_annotate(capacity_ptr, 0, end_ptr, 0);
+    }
+
+    template <typename... Args>
+    void resize_common(bool init, size_type n, const Args&... args)
+    {
+      if (n > capacity_ptr - begin_ptr)
+      {
+        auto max = max_size();
+        if (n > max) LIBSHIT_THROW(std::length_error, "Vector::resize");
+        if (n > max / 3) // this will result in a sudden 3x growth factor...
+          resize_capacity(max);
+        else
+        {
+          auto size = size_type(end_ptr - begin_ptr);
+          resize_capacity(std::max(n, size * 3 / 2));
+        }
+      }
+
+      auto new_end = begin_ptr + n;
+      auto p = end_ptr;
+      if (p < new_end)
+        asan_annotate(end_ptr, 0, new_end, 0);
+
+      if (init)
+        try
+        {
+          for (; p < new_end; ++p)
+            AllocTraits::construct(
+              static_cast<Allocator&>(*this), std::addressof(*p), args...);
+        }
+        catch (...)
+        {
+          while (p != end_ptr)
+            AllocTraits::destroy(
+              static_cast<Allocator&>(*this), std::addressof(*--p));
+          asan_annotate(new_end, 0, end_ptr, 0);
+          throw;
+        }
+
+      for (auto p = new_end; p < end_ptr; ++p)
+        AllocTraits::destroy(static_cast<Allocator&>(*this), std::addressof(*p));
+      if (new_end < end_ptr)
+        asan_annotate(end_ptr, 0, new_end, 0);
+      end_ptr = new_end;
     }
 
     void clear_to_end(pointer new_end)

@@ -25,9 +25,13 @@
 #pragma push_macro("_Min_element")
 #define _Min_element constexpr _Min_element _Pragma("pop_macro(\"_Min_element\")")
 
+// min/max
+#pragma push_macro("_Post_equal_to_")
+#define _Post_equal_to_(x) constexpr
 
 #include_next <algorithm>
 
+#pragma pop_macro("_Post_equal_to_")
 #pragma pop_macro("_Ty")
 
 namespace std

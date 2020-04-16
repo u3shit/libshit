@@ -298,6 +298,7 @@ def build_libshit(ctx, pref):
             'test/test_helper.cpp',
             'test/container/ordered_map.cpp',
             'test/container/parent_list.cpp',
+            'test/container/simple_vector.cpp',
         ]
         if ctx.env.WITH_LUA != 'none':
             src += [

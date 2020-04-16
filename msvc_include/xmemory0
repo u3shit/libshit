@@ -1,0 +1,37 @@
+// -*- c++ -*-
+#pragma once
+
+#include <cstdlib>
+#include <limits>
+#include <new>
+#include <xutility>
+
+#define allocator_traits allocator_traits_base
+
+#include_next <xmemory0>
+
+#undef allocator_traits
+
+namespace std
+{
+  namespace Detail
+  {
+    template <typename T, typename = void>
+    struct get_is_always_equal : std::is_empty<T> {};
+
+    template <typename T>
+    struct get_is_always_equal<T, std::void_t<typename T::is_always_equal>>
+      : T::is_always_equal {};
+  }
+
+  template <typename T>
+  struct allocator_traits : allocator_traits_base<T>
+  {
+    using is_always_equal = typename Detail::get_is_always_equal<T>::type;
+    template <typename U>
+    using rebind_traits = allocator_traits<
+      typename allocator_traits_base<T>::template rebind_alloc<U>>;
+    // is this some kind of msvc extension??
+    using other = allocator_traits<T>;
+  };
+}

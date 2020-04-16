@@ -57,7 +57,7 @@ namespace Libshit
 
     // nonstandard: simplified container->span conversion
     template <typename Container>
-    constexpr Span(Container& c)
+    constexpr Span(Container&& c)
       noexcept(noexcept(std::data(c)) && noexcept(std::size(c)))
       : ptr{std::data(c)}, psize{std::size(c)} {}
     template <typename Container>

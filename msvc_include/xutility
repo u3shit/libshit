@@ -12,5 +12,40 @@
 #pragma push_macro("inline")
 #define inline inline _Pragma("pop_macro(\"inline\")")
 
+#define iterator_traits dummy_iterator_traits
 #include_next<xutility>
+#undef iterator_traits
 #pragma pop_macro("inline")
+
+namespace std
+{
+  // create sfinae friendly iterator traits
+  namespace Detail
+  {
+    template <typename T, typename = void> struct iterator_traits0 {};
+    template <typename T>
+    struct iterator_traits0<T, std::void_t<
+      typename T::difference_type, typename T::value_type, typename T::pointer,
+      typename T::reference, typename T::iterator_category>>
+    {
+      using difference_type	  = typename T::difference_type;
+      using value_type	       = typename T::value_type;
+      using pointer	          = typename T::pointer;
+      using reference	        = typename T::reference;
+      using iterator_category	= typename T::iterator_category;
+    };
+  }
+
+  template <typename T>
+  struct iterator_traits : Detail::iterator_traits0<T> {};
+
+  template <typename T>
+  struct iterator_traits<T*>
+  {
+    using difference_type	  = std::ptrdiff_t;
+    using value_type	       = std::remove_cv_t<T>;
+    using pointer	          = T*;
+    using reference	        = T&;
+    using iterator_category	= std::random_access_iterator_tag;
+  };
+}

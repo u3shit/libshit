@@ -47,4 +47,9 @@ namespace std
     explicit in_place_index_t() = default;
   };
   template<size_t I> inline constexpr in_place_index_t<I> in_place_index{};
+
+  // as_const
+  template <typename T>
+  constexpr std::add_const_t<T>& as_const(T& t) noexcept { return t; }
+  template <typename T> void as_const(T&& t) noexcept = delete;
 }
