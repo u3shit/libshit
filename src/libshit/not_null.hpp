@@ -71,4 +71,15 @@ namespace Libshit
   { return NotNull<T>(Move(t)); }
 }
 
+namespace std
+{
+  template <typename T>
+  struct hash<Libshit::NotNull<T>>
+  {
+    using NN = Libshit::NotNull<T>;
+    std::size_t operator()(const NN& n) const noexcept
+    { return std::hash<T>(n.Get()); }
+  };
+}
+
 #endif

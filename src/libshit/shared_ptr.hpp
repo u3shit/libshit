@@ -476,4 +476,15 @@ namespace Libshit
 
 }
 
+namespace std
+{
+  template <typename T, template<typename> class Storage>
+  struct hash<Libshit::SharedPtrBase<T, Storage>>
+  {
+    using Ptr = Libshit::SharedPtrBase<T, Storage>;
+    std::size_t operator()(const Ptr& ptr) const noexcept
+    { return std::hash<typename Ptr::element_type*>(ptr.get()); }
+  };
+}
+
 #endif
