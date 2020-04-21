@@ -266,6 +266,8 @@ def configure_variant(ctx):
     else:
         ctx.env.append_value('LINKFLAGS', '-rdynamic')
 
+        ctx.check_cc(lib='dl', mandatory=False)
+
 def build(bld):
     fixup_rc()
     fixup_fail_cxx()
@@ -312,7 +314,7 @@ def build_libshit(ctx, pref):
     ctx.objects(idx      = 50000 + (len(pref)>0),
                 source   = src,
                 uselib   = app,
-                use      = 'BOOST BRIGAND DOCTEST LUA lua libcxx',
+                use      = 'BOOST BRIGAND DOCTEST DL LUA lua libcxx',
                 includes = 'src',
                 export_includes = 'src',
                 target   = pref+'libshit')
