@@ -6,7 +6,6 @@
 #include "libshit/utils.hpp"
 
 #include <climits>
-#include <cstddef>
 #include <cstring>
 #include <initializer_list>
 #include <new>
