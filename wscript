@@ -114,7 +114,7 @@ def configure(cfg):
 
     if cfg.options.optimize:
         cfg.filter_flags(['CFLAGS', 'CXXFLAGS', 'LINKFLAGS'], [
-            '-Ofast', '-flto', '-fno-fat-lto-objects',
+            '-O3', '-flto', '-fno-fat-lto-objects',
              '-fomit-frame-pointer'])
 
         if cfg.env.DEST_OS == 'win32':
@@ -122,7 +122,7 @@ def configure(cfg):
         else:
             cfg.env.append_value('LINKFLAGS', '-Wl,-O1')
     elif cfg.options.optimize_ext:
-        cfg.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], ['-Ofast'])
+        cfg.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], ['-O3'])
 
     if cfg.options.release:
         cfg.define('NDEBUG', 1)
