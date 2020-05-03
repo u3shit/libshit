@@ -69,6 +69,7 @@ namespace Libshit
         { return c < 32 && c != 9 && c != 10 && c != 13; };
         str.erase(std::remove_if(str.begin(), str.end(), p), str.end());
         boost::replace_all(str, "&", "&amp;");
+        boost::replace_all(str, "<", "&lt;");
       }
 
       static std::string Escape(std::string str)
@@ -81,7 +82,6 @@ namespace Libshit
       static std::string EscapeBody(std::string str)
       {
         CommonEscape(str);
-        boost::replace_all(str, "<", "&lt;");
         boost::replace_all(str, ">", "&gt;");
         return str;
       }
