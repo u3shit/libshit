@@ -34,7 +34,9 @@ namespace Libshit::Logger
   bool HasAnsiColor() noexcept;
   bool HasWinColor() noexcept;
 
-  bool CheckLog(const char* name, int level) noexcept;
+  int GetLogLevel(const char* name) noexcept;
+  inline bool CheckLog(const char* name, int level) noexcept
+  { return GetLogLevel(name) >= level; }
   std::ostream& Log(
     const char* name, int level, const char* file, unsigned line,
     const char* fun);
@@ -49,11 +51,12 @@ namespace Libshit::Logger
   // in one block
   std::recursive_mutex& GetLogMutex() noexcept;
 
-#define LIBSHIT_LOG(name, level)              \
-  ::Libshit::Logger::CheckLog(name, level) && \
+#define LIBSHIT_LOG(name, level)                     \
+  ::Libshit::Logger::GetLogLevel(name) >= (level) && \
   ::Libshit::Logger::Log(name, level, LIBSHIT_LOG_ARGS)
 
-#define LIBSHIT_CHECK_LOG ::Libshit::Logger::CheckLog
+#define LIBSHIT_CHECK_LOG(name, level) \
+  (::Libshit::Logger::GetLogLevel(name) >= (level))
 
 #define LIBSHIT_ERR(name)        LIBSHIT_LOG(name, ::Libshit::Logger::ERROR)
 #define LIBSHIT_CHECK_ERR(name)  LIBSHIT_CHECK_LOG(name, ::Libshit::Logger::ERROR)
@@ -74,6 +77,33 @@ namespace Libshit::Logger
 #  define LIBSHIT_DBG(name, level) \
   while (false) *::Libshit::Logger::nullptr_ostream
 #  define LIBSHIT_CHECK_DBG(name, level) false
+#endif
+
+  // caching for performance: use it if you have a lot of debug logs in a tight
+  // loop. Usage: call CACHE_LOGLEVEL() somewhere at the beginning of the func,
+  // then use CDBG, CINF, etc, instead of DBG, INF, ... in that function
+#define LIBSHIT_CACHE_LOGLEVEL(name) \
+  int libshit_log_level_cache = ::Libshit::Logger::GetLogLevel(name)
+
+#define LIBSHIT_CLOG(name, level)       \
+  libshit_log_level_cache >= (level) && \
+  ::Libshit::Logger::Log(name, level, LIBSHIT_LOG_ARGS)
+#define LIBSHIT_CCHECK_LOG(name, level) (libshit_log_level_cache >= (level))
+
+#define LIBSHIT_CERR(name)        LIBSHIT_CLOG(name, ::Libshit::Logger::ERROR)
+#define LIBSHIT_CCHECK_ERR(name)  LIBSHIT_CCHECK_LOG(name, ::Libshit::Logger::ERROR)
+#define LIBSHIT_CWARN(name)       LIBSHIT_CLOG(name, ::Libshit::Logger::WARNING)
+#define LIBSHIT_CCHECK_WARN(name) LIBSHIT_CCHECK_LOG(name, ::Libshit::Logger::WARNING)
+#define LIBSHIT_CINF(name)        LIBSHIT_CLOG(name, ::Libshit::Logger::INFO)
+#define LIBSHIT_CCHECK_INF(name)  LIBSHIT_CCHECK_LOG(name, ::Libshit::Logger::INFO)
+#if LIBSHIT_IS_DEBUG
+#  define LIBSHIT_CDBG(name, level)                                             \
+  ([]{static_assert(0 <= (level) && (level) < 5, "invalid debug level");},1) && \
+  LIBSHIT_CLOG(name, level)
+#  define LIBSHIT_CCHECK_DBG(name, level) LIBSHIT_CCHECK_LOG(name, level)
+#else
+#  define LIBSHIT_CDBG(name, level) LIBSHIT_DBG(name, level)
+#  define LIBSHIT_CCHECK_DBG(name, level) false
 #endif
 
   // ugly implementation details, don't look

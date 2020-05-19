@@ -11,17 +11,19 @@
 #include "libshit/function.hpp"
 #include "libshit/lua/function_call.hpp"
 #include "libshit/options.hpp"
+#include "libshit/utils.hpp"
 
 #if LIBSHIT_WITH_LUA
 #  include "libshit/logger.lua.h"
 #endif
+
+#include <boost/tokenizer.hpp>
 
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <map>
@@ -33,8 +35,6 @@
 #if !LIBSHIT_OS_IS_WINDOWS
 #  include <unistd.h>
 #endif
-
-#include <boost/tokenizer.hpp>
 
 #if LIBSHIT_STDLIB_IS_MSVC
 #  define strncasecmp _strnicmp
@@ -83,7 +83,11 @@ namespace Libshit::Logger
       bool ansi_colors = false;
 
       std::recursive_mutex log_mutex;
-      std::map<std::string, int, std::less<>> level_map;
+      std::vector<std::pair<const char*, int>> level_map;
+      // direct access data/size for checker function below
+      const std::pair<const char*, int>* levels = nullptr;
+      std::size_t level_size = 0;
+      std::vector<std::string> strings;
     };
   }
 
@@ -154,6 +158,7 @@ namespace Libshit::Logger
       auto arg = args.front();
       boost::tokenizer<boost::char_separator<char>, const char*>
         tokens{arg, arg+strlen(arg), sep};
+      auto& g = GetGlobal();
       for (const auto& tok : tokens)
       {
         auto p = tok.find_first_of('=');
@@ -162,9 +167,22 @@ namespace Libshit::Logger
         else
         {
           auto lvl = ParseLevel(tok.c_str() + p + 1);
-          GetGlobal().level_map[tok.substr(0, p)] = lvl;
+          auto name = tok.substr(0, p);
+          auto it = std::find_if(
+            g.level_map.begin(), g.level_map.end(),
+            [&](const auto& i) { return i.first == name; });
+          if (it == g.level_map.end())
+          {
+            auto& str = g.strings.emplace_back(Move(name));
+            g.level_map.emplace_back(str.c_str(), lvl);
+          }
+          else
+            it->second = lvl;
         }
       }
+
+      g.levels = g.level_map.data();
+      g.level_size = g.level_map.size();
     }};
 
   static auto& os = std::clog;
@@ -383,11 +401,19 @@ namespace Libshit::Logger
     };
   }
 
-  bool CheckLog(const char* name, int level) noexcept
+  int GetLogLevel(const char* name) noexcept
   {
-    auto it = GetGlobal().level_map.find(name);
-    if (it != GetGlobal().level_map.end()) return it->second >= level;
-    else return global_level >= level;
+    // inline GetGlobal, for debug builds
+    if (auto n = reinterpret_cast<Global*>(&global_storage)->level_size)
+    {
+      auto l = reinterpret_cast<Global*>(&global_storage)->levels;
+      while (--n)
+      {
+        if (strcmp(l->first, name) == 0) return l->second;
+        ++l;
+      }
+    }
+    return global_level;
   }
 
   namespace Detail
