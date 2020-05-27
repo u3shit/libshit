@@ -407,7 +407,7 @@ namespace Libshit::Logger
     if (auto n = reinterpret_cast<Global*>(&global_storage)->level_size)
     {
       auto l = reinterpret_cast<Global*>(&global_storage)->levels;
-      while (--n)
+      while (n--)
       {
         if (strcmp(l->first, name) == 0) return l->second;
         ++l;
