@@ -83,6 +83,7 @@ namespace Libshit::Logger
 
       bool win_colors = false;
       bool ansi_colors = false;
+      bool print_time = false;
 
       std::recursive_mutex log_mutex;
       std::vector<std::pair<const char*, int>> level_map;
@@ -224,6 +225,10 @@ namespace Libshit::Logger
       GetGlobal().win_colors = false;
       GetGlobal().ansi_colors = false;
     }};
+  static Option print_time_opt{
+    GetOptionGroup(), "print-time", 0, nullptr,
+    "Print timestamps before log messages",
+    [](auto&&) { GetGlobal().print_time = true; }};
 
   static std::uint8_t rand_colors[] = {
     4,5,6, 12,13,14,
@@ -345,7 +350,7 @@ namespace Libshit::Logger
         }
 #endif
 
-        PrintTime(os);
+        if (GetGlobal().print_time) PrintTime(os);
 
         auto ansi_col = HasAnsiColor();
         auto print_col = [&]()
