@@ -33,6 +33,8 @@
 #include <vector>
 
 #if !LIBSHIT_OS_IS_WINDOWS
+#  include <sys/time.h>
+#  include <time.h>
 #  include <unistd.h>
 #endif
 
@@ -241,6 +243,30 @@ namespace Libshit::Logger
   static size_t max_name = 16;
   static size_t max_file = 42, max_fun = 20;
 
+  static void PrintTime(std::ostream& os)
+  {
+    auto fill = os.fill();
+    os.fill('0');
+#define F(n) std::setw(n)
+
+#if LIBSHIT_OS_IS_WINDOWS
+    SYSTEMTIME tim;
+    GetLocalTime(&tim);
+    os << tim.wYear << '-' << F(2) << tim.wMonth << '-' << F(2) << tim.wDay
+       << ' ' << F(2) << tim.wHour << ':' << F(2) << tim.wMinute
+       << ':' << F(2) << tim.wSecond << '.' << F(3) << tim.wMilliseconds << ' ';
+#else
+    struct timeval tv;
+    if (gettimeofday(&tv, nullptr) < 0) return;
+    char buf[128];
+    if (strftime(buf, 128, "%F %H:%M:%S.", localtime(&tv.tv_sec)) == 0) return;
+    os << buf << F(6) << tv.tv_usec << ' ';
+#endif
+
+#undef F
+    os.fill(fill);
+  }
+
   namespace
   {
     struct LogBuffer final : public std::streambuf
@@ -318,6 +344,9 @@ namespace Libshit::Logger
           SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | color);
         }
 #endif
+
+        PrintTime(os);
+
         auto ansi_col = HasAnsiColor();
         auto print_col = [&]()
         {
