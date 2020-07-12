@@ -1,0 +1,23 @@
+// -*- c++ -*-
+#pragma once
+
+#include <xmemory>
+#include <stdexcept>
+
+#pragma push_macro("emplace_back")
+#define emplace_back \
+  DummyFun();                                         \
+  template <typename... Args>                         \
+  reference emplace_back(Args&&... args)              \
+  {                                                   \
+    OriginalEmplaceBack(std::forward<Args>(args)...); \
+    return back();                                    \
+  }                                                   \
+  template <typename... _Valty>                       \
+  void OriginalEmplaceBack                            \
+  _Pragma("pop_macro(\"emplace_back\")")
+
+#pragma push_macro("emplace_back")
+#define emplace_back emplace_back _Pragma("pop_macro(\"emplace_back\")")
+
+#include_next <vector>
