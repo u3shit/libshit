@@ -267,8 +267,6 @@ def configure_variant(ctx):
     else:
         ctx.env.append_value('LINKFLAGS', '-rdynamic')
 
-        ctx.check_cc(lib='dl', mandatory=False)
-
 def build(bld):
     fixup_rc()
     fixup_fail_cxx()
