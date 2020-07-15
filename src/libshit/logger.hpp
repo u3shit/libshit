@@ -84,6 +84,11 @@ namespace Libshit::Logger
   // then use CDBG, CINF, etc, instead of DBG, INF, ... in that function
 #define LIBSHIT_CACHE_LOGLEVEL(name) \
   int libshit_log_level_cache = ::Libshit::Logger::GetLogLevel(name)
+#if LIBSHIT_IS_DEBUG
+#  define LIBSHIT_CACHE_DBGLOGLEVEL(name) LIBSHIT_CACHE_LOGLEVEL(name)
+#else
+#  define LIBSHIT_CACHE_DBGLOGLEVEL(name)
+#endif
 
 #define LIBSHIT_CLOG(name, level)       \
   libshit_log_level_cache >= (level) && \
