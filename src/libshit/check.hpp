@@ -8,7 +8,7 @@
 
 #include <boost/config.hpp>
 
-#if LIBSHIT_IS_DEBUG
+#if LIBSHIT_IS_DEBUG || LIBSHIT_HAS_ASSERT
 #  include "libshit/file.hpp" // IWYU pragma: export
 #  define LIBSHIT_CHECK_ARGS LIBSHIT_FILE, __LINE__, LIBSHIT_FUNCTION
 #else
@@ -51,7 +51,7 @@ namespace Libshit::Check
     static constexpr bool IS_NOEXCEPT = true;
   };
 
-  using Assert = std::conditional_t<LIBSHIT_IS_DEBUG, DoAssert, No>;
+  using Assert = std::conditional_t<LIBSHIT_HAS_ASSERT, DoAssert, No>;
 
   struct Throw
   {

@@ -18,7 +18,9 @@
 #include <type_traits>
 #include <utility>
 
-#if LIBSHIT_IS_DEBUG
+#define LIBSHIT_EXCEPTION_WITH_SOURCE_LOCATION LIBSHIT_IS_DEBUG
+
+#if LIBSHIT_EXCEPTION_WITH_SOURCE_LOCATION
 #  include "libshit/file.hpp" // IWYU pragma: export
 #endif
 
@@ -123,7 +125,7 @@ namespace Libshit
     return ret;
   }
 
-#if LIBSHIT_IS_DEBUG
+#if LIBSHIT_EXCEPTION_WITH_SOURCE_LOCATION
 #  define LIBSHIT_GET_EXCEPTION(type, ...) \
   ::Libshit::GetException<type>(           \
     LIBSHIT_FILE, __LINE__, LIBSHIT_FUNCTION, __VA_ARGS__)

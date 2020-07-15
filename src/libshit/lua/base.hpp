@@ -30,7 +30,7 @@
 #  include <excpt.h> // needed for SEHFilter under clang
 #endif
 
-#if LIBSHIT_IS_DEBUG
+#if LIBSHIT_HAS_ASSERT
 #  define LIBSHIT_LUA_GETTOP(vm, name) auto name = lua_gettop(vm)
 #  define LIBSHIT_LUA_CHECKTOP(vm, val) LIBSHIT_ASSERT(lua_gettop(vm) == val)
 #else

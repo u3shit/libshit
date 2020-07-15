@@ -6,6 +6,8 @@
 
 #include <boost/config.hpp>
 
+#define LIBSHIT_HAS_ASSERT LIBSHIT_IS_DEBUG
+
 #ifndef __has_builtin
 #  define __has_builtin(x) 0
 #endif
@@ -28,7 +30,7 @@
 #  define LIBSHIT_RASSERT_MSG(expr, msg) \
   (BOOST_LIKELY(!!(expr)) ? ((void)0) : LIBSHIT_ASSERT_FAILED(#expr, msg))
 
-#if LIBSHIT_IS_DEBUG
+#if LIBSHIT_HAS_ASSERT
 #  include "libshit/file.hpp" // IWYU pragma: export
 
 #  define LIBSHIT_ASSERT_FAILED(expr, msg)                   \

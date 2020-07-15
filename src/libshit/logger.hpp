@@ -8,7 +8,17 @@
 #include <iosfwd>
 #include <mutex>
 
-#if LIBSHIT_IS_DEBUG
+// This two can be overridden in a per cpp basis, for example to have DBG log in
+// an otherwise release build, just make sure you define them before
+// (indirectly) including logger.hpp.
+#ifndef LIBSHIT_IS_DBG_LOG_ENABLED
+#  define LIBSHIT_IS_DBG_LOG_ENABLED LIBSHIT_IS_DEBUG
+#endif
+#ifndef LIBSHIT_LOG_WITH_SOURCE_LOCATION
+#  define LIBSHIT_LOG_WITH_SOURCE_LOCATION LIBSHIT_IS_DEBUG
+#endif
+
+#if LIBSHIT_LOG_WITH_SOURCE_LOCATION
 #  include "libshit/file.hpp" /* IWYU pragma: export */ // IWYU pragma: keep
 #endif
 
@@ -41,7 +51,7 @@ namespace Libshit::Logger
     const char* name, int level, const char* file, unsigned line,
     const char* fun);
 
-#if LIBSHIT_IS_DEBUG
+#if LIBSHIT_LOG_WITH_SOURCE_LOCATION
 #  define LIBSHIT_LOG_ARGS LIBSHIT_FILE, __LINE__, LIBSHIT_FUNCTION
 #else
 #  define LIBSHIT_LOG_ARGS nullptr, 0, nullptr
@@ -65,15 +75,16 @@ namespace Libshit::Logger
 #define LIBSHIT_INF(name)        LIBSHIT_LOG(name, ::Libshit::Logger::INFO)
 #define LIBSHIT_CHECK_INF(name)  LIBSHIT_CHECK_LOG(name, ::Libshit::Logger::INFO)
 
-#if LIBSHIT_IS_DEBUG
+  // silence warnings about null pointer dereference with clang in template
+  // instatiations
+  extern std::ostream* nullptr_ostream;
+
+#if LIBSHIT_IS_DBG_LOG_ENABLED
 #  define LIBSHIT_DBG(name, level)                                              \
   ([]{static_assert(0 <= (level) && (level) < 5, "invalid debug level");},1) && \
   LIBSHIT_LOG(name, level)
 #  define LIBSHIT_CHECK_DBG(name, level) LIBSHIT_CHECK_LOG(name, level)
 #else
-  // silence warnings about null pointer dereference with clang in template
-  // instatiations
-  extern std::ostream* nullptr_ostream;
 #  define LIBSHIT_DBG(name, level) \
   while (false) *::Libshit::Logger::nullptr_ostream
 #  define LIBSHIT_CHECK_DBG(name, level) false
@@ -84,7 +95,7 @@ namespace Libshit::Logger
   // then use CDBG, CINF, etc, instead of DBG, INF, ... in that function
 #define LIBSHIT_CACHE_LOGLEVEL(name) \
   int libshit_log_level_cache = ::Libshit::Logger::GetLogLevel(name)
-#if LIBSHIT_IS_DEBUG
+#if LIBSHIT_IS_DBG_LOG_ENABLED
 #  define LIBSHIT_CACHE_DBGLOGLEVEL(name) LIBSHIT_CACHE_LOGLEVEL(name)
 #else
 #  define LIBSHIT_CACHE_DBGLOGLEVEL(name)
@@ -101,7 +112,7 @@ namespace Libshit::Logger
 #define LIBSHIT_CCHECK_WARN(name) LIBSHIT_CCHECK_LOG(name, ::Libshit::Logger::WARNING)
 #define LIBSHIT_CINF(name)        LIBSHIT_CLOG(name, ::Libshit::Logger::INFO)
 #define LIBSHIT_CCHECK_INF(name)  LIBSHIT_CCHECK_LOG(name, ::Libshit::Logger::INFO)
-#if LIBSHIT_IS_DEBUG
+#if LIBSHIT_IS_DBG_LOG_ENABLED
 #  define LIBSHIT_CDBG(name, level)                                             \
   ([]{static_assert(0 <= (level) && (level) < 5, "invalid debug level");},1) && \
   LIBSHIT_CLOG(name, level)

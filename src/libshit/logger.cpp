@@ -57,9 +57,7 @@ namespace Libshit::Logger
 
   int global_level = -1;
   bool show_fun = false;
-#if !LIBSHIT_IS_DEBUG
   std::ostream* nullptr_ostream;
-#endif
 
   namespace
   {
@@ -119,8 +117,7 @@ namespace Libshit::Logger
 
   static Option show_fun_opt{
     GetOptionGroup(), "show-functions", 0, nullptr,
-    LIBSHIT_IS_DEBUG ? "Show function signatures in log"
-      : "Ignored for compatibility with debug builds",
+    "Show function signatures in log when available",
     [](auto&&) { show_fun = true; }};
 
   static int ParseLevel(const char* str)
@@ -151,11 +148,11 @@ namespace Libshit::Logger
     GetOptionGroup(), "log-level", 'l', 1,
     "[MODULE=LEVEL,[...]][DEFAULT_LEVEL]",
     "Sets logging level for the specified modules, or the global default\n\t"
-    "Valid levels: none, err, warn, info"
-#if LIBSHIT_IS_DEBUG
-    ", 0..4 (debug levels)"
+    "Valid levels: none, err, warn, info, 0..4 (debug levels"
+#if !LIBSHIT_IS_DBG_LOG_ENABLED
+    " - non-debug build, most of them will be missing"
 #endif
-    "\n\tDefault level: info",
+    ")\n\tDefault level: info",
     [](auto&& args)
     {
       boost::char_separator<char> sep{","};
@@ -505,16 +502,14 @@ namespace Libshit::Logger
     unsigned line = 0;
     const char* fun = nullptr;
 
-    if constexpr (LIBSHIT_IS_DEBUG)
+    lua_Debug dbg;
+    if (lua_getstack(vm, 1, &dbg) && lua_getinfo(vm, "Sln", &dbg))
     {
-      lua_Debug dbg;
-      if (lua_getstack(vm, 1, &dbg) && lua_getinfo(vm, "Sln", &dbg))
-      {
-        file = dbg.short_src;
-        line = dbg.currentline;
-        fun = dbg.name;
-      }
+      file = dbg.short_src;
+      line = dbg.currentline;
+      fun = dbg.name;
     }
+
     auto& os = Log(name, level, file, line, fun);
 
     size_t len;
