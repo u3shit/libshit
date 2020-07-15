@@ -1,0 +1,26 @@
+# -*- python -*-
+
+def options(ctx):
+    ctx.with_opt('tracy', ['bundle', 'none'], 'none')
+
+def configure(ctx):
+    def bundle_tracy(ctx):
+        ctx.env.append_value('DEFINES_TRACY', 'TRACY_ENABLE')
+        ctx.env.append_value('SYSTEM_INCLUDES_TRACY',
+                             ctx.path.find_dir('tracy').abspath())
+    ctx.with_chk('tracy', {'bundle': bundle_tracy, 'none': 'tracy'},
+                 define='LIBSHIT_WITH_TRACY')
+
+def build(ctx):
+    # TODO: compile tracy anyway, SetThreadName requires TracySystem.cpp even
+    # when tracy is off
+    # if ctx.env.WITH_TRACY != 'bundle': return
+
+    ctx.objects(idx     = 51500,
+                source  = ['tracy/TracyClient.cpp'],
+                use     = 'TRACY',
+                # https://github.com/wolfpld/tracy/issues/73
+                # https://archive.is/sHOKy
+                defines = ['TRACY_DELAYED_INIT'],
+                target  = 'tracy',
+                uselib  = 'EXT')

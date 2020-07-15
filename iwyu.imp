@@ -42,6 +42,10 @@
 # doctest
 - include: ['<doctest.h>', private, '<libshit/doctest.hpp>', public]
 
+# tracy
+- include: ['<common/TracyColor.hpp>', private, '<Tracy.hpp>', public]
+- include: ['<common/TracySystem.hpp>', private, '<Tracy.hpp>', public]
+
 # stl/libc++
 - include: ['<exception>', public, '<stdexcept>', public]
 - include: ['<__tuple>', private, '<tuple>', public]

@@ -6,6 +6,7 @@
 # 511xx ljx (host)
 # 513xx lua53
 # 514xx libc++
+# 515xx tracy
 
 import subprocess
 try:
@@ -294,6 +295,8 @@ def build_libshit(ctx, pref):
             'src/libshit/lua/user_type.cpp',
             'src/libshit/lua/userdata.cpp',
         ]
+    if ctx.env.WITH_TRACY != 'none':
+        src += [ 'src/libshit/tracy_alloc.cpp' ]
 
     if ctx.env.WITH_TESTS:
         src += [
@@ -314,7 +317,7 @@ def build_libshit(ctx, pref):
     ctx.objects(idx      = 50000 + (len(pref)>0),
                 source   = src,
                 uselib   = app,
-                use      = 'BOOST BRIGAND DOCTEST DL LUA lua libcxx',
+                use      = 'BOOST BRIGAND DOCTEST DL LUA TRACY lua libcxx tracy',
                 includes = 'src',
                 export_includes = 'src',
                 target   = pref+'libshit')

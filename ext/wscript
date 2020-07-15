@@ -10,6 +10,7 @@ def options(ctx):
     ctx.recurse('.', name='options', wscript='wscript_boost', once=False)
     ctx.recurse('.', name='options', wscript='wscript_libcxx', once=False)
     ctx.recurse('.', name='options', wscript='wscript_lua', once=False)
+    ctx.recurse('.', name='options', wscript='wscript_tracy', once=False)
 
 def configure(ctx):
     # start with libcxx, other c++ libs depend on it
@@ -38,8 +39,10 @@ def configure(ctx):
 
     ctx.recurse('.', name='configure', wscript='wscript_boost', once=False)
     ctx.recurse('.', name='configure', wscript='wscript_lua', once=False)
+    ctx.recurse('.', name='configure', wscript='wscript_tracy', once=False)
 
 def build(ctx):
     ctx.recurse('.', name='build', wscript='wscript_boost', once=False)
     ctx.recurse('.', name='build', wscript='wscript_libcxx', once=False)
     ctx.recurse('.', name='build', wscript='wscript_lua', once=False)
+    ctx.recurse('.', name='build', wscript='wscript_tracy', once=False)

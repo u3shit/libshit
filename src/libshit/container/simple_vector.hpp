@@ -4,6 +4,7 @@
 
 #include "libshit/assert.hpp"
 #include "libshit/except.hpp"
+#include "libshit/platform.hpp"
 #include "libshit/utils.hpp"
 
 #include <algorithm>
@@ -17,18 +18,6 @@
 
 namespace Libshit
 {
-
-#if defined(__SANITIZE_ADDRESS__)
-#  define LIBSHIT_HAS_ASAN 1
-#elif defined(__has_feature)
-#  if __has_feature(address_sanitizer)
-#    define LIBSHIT_HAS_ASAN 1
-#  else
-#    define LIBSHIT_HAS_ASAN 0
-#  endif
-#else
-#  define LIBSHIT_HAS_ASAN 0
-#endif
 
 #if LIBSHIT_HAS_ASAN
   extern "C" void __sanitizer_annotate_contiguous_container(

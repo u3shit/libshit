@@ -5,6 +5,8 @@
 #include "libshit/lua/lua53_polyfill.lua.h"
 #include "libshit/utils.hpp"
 
+#include <TracyLua.hpp>
+
 #include <climits>
 #include <cstring>
 #include <initializer_list>
@@ -250,6 +252,7 @@ assert(typename(stuff_ud) == "userdata")
 
         // helper funs
         LIBSHIT_LUA_RUNBC(vm, base_funcs, 0);
+        tracy::LuaRegister(vm);
 
         for (auto r : Registers())
           r(vm);

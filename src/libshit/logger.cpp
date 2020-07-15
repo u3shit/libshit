@@ -18,6 +18,7 @@
 #endif
 
 #include <boost/tokenizer.hpp>
+#include <Tracy.hpp>
 
 #include <algorithm>
 #include <cstdint>
@@ -295,9 +296,11 @@ namespace Libshit::Logger
           WriteBegin();
           if (!buf.empty())
           {
+            TracyMessageC(buf.data(), buf.size(), GetTracyColor());
             os.write(buf.data(), buf.size());
             buf.clear();
           }
+          if (end != msg) TracyMessageC(msg, end-msg, GetTracyColor());
           os.write(msg, end-msg);
           WriteEnd();
 
@@ -324,6 +327,16 @@ namespace Libshit::Logger
         return 0;
       }
 
+      std::uint32_t GetTracyColor()
+      {
+        switch (level)
+        {
+        case ERROR:   return 0xff0000;
+        case WARNING: return 0xffff00;
+        case INFO:    return 0x00ff00;
+        default:      return 0;
+        }
+      }
 
       void WriteBegin()
       {

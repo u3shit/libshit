@@ -16,3 +16,6 @@
 [submodule "ext/libcxxabi"]
 	path = ext/libcxxabi
 	url = https://github.com/llvm-mirror/libcxxabi
+[submodule "ext/tracy"]
+	path = ext/tracy
+	url = git://github.com/wolfpld/tracy.git

@@ -35,4 +35,16 @@
 #define LIBSHIT_IS_DEBUG 0
 #endif
 
+#if defined(__SANITIZE_ADDRESS__)
+#  define LIBSHIT_HAS_ASAN 1
+#elif defined(__has_feature)
+#  if __has_feature(address_sanitizer)
+#    define LIBSHIT_HAS_ASAN 1
+#  else
+#    define LIBSHIT_HAS_ASAN 0
+#  endif
+#else
+#  define LIBSHIT_HAS_ASAN 0
+#endif
+
 #endif
