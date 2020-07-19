@@ -1,0 +1,4 @@
+This is an implementation of the disabled mode macros of tracy. This is based on
+the tracy documentation (tracy.tex), except for the SetThreadName which is not
+documented here. This way we don't have to link with/include BSD licensed tracy
+code when bulding a non-tracy build.

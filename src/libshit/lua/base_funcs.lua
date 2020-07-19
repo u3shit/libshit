@@ -74,3 +74,12 @@ function typename(t)
   end
   return type(t)
 end
+
+-- tracy noop funs
+-- LuaJit can inline lua funcs but not c funcs, so this will be much faster.
+-- In tracy enabled builds, this funcs are overridden by tracy.
+local function noop() end
+tracy = {
+  ZoneBegin = noop, ZoneEnd = noop, ZoneBeginN = noop, ZoneName = noop,
+  Message = noop, ZoneName = noop, ZoneBeginS = noop, ZoneBeginNS = noop,
+}

@@ -8,18 +8,17 @@ def configure(ctx):
         ctx.env.append_value('DEFINES_TRACY', 'TRACY_ENABLE')
         ctx.env.append_value('SYSTEM_INCLUDES_TRACY',
                              ctx.path.find_dir('tracy').abspath())
-    ctx.with_chk('tracy', {'bundle': bundle_tracy, 'none': 'tracy'},
+
+        ctx.check_cc(lib='dl', mandatory=False)
+        ctx.check_cc(lib='pthread', mandatory=False)
+        # bsd only?
+        ctx.check_cc(lib='execinfo', mandatory=False)
+
+    ctx.with_chk('tracy', {'bundle': bundle_tracy, 'none': 'no-tracy'},
                  define='LIBSHIT_WITH_TRACY')
 
-    ctx.check_cc(lib='dl', mandatory=False)
-    ctx.check_cc(lib='pthread', mandatory=False)
-    # bsd only?
-    ctx.check_cc(lib='execinfo', mandatory=False)
-
 def build(ctx):
-    # TODO: compile tracy anyway, SetThreadName requires TracySystem.cpp even
-    # when tracy is off
-    # if ctx.env.WITH_TRACY != 'bundle': return
+    if ctx.env.WITH_TRACY != 'bundle': return
 
     ctx.objects(idx     = 51500,
                 source  = ['tracy/TracyClient.cpp'],
