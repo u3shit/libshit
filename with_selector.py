@@ -134,7 +134,8 @@ def with_chk(ctx, name, chks, cross=False, post_chk=None, define=None,
                     val = '%s=%s' % (define, opt != 'none' and 1 or 0)
                     ctx.env.append_value(defines, val)
                 if post_chk: post_chk(ctx)
-                ctx.msg('Using ' + name, opt, color = opt != 'none')
+                ctx.msg('Using ' + name, opt,
+                        color = opt != 'none' and 'GREEN' or 'YELLOW')
 
                 commit_envs(ctx, saved)
                 return
