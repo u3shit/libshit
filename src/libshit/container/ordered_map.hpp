@@ -57,6 +57,8 @@ namespace Libshit
       const OrderedMapIterator<Smart, std::remove_const_t<T>>& it)
       : ptr{it.ptr} {}
 
+    OrderedMapIterator& operator=(const OrderedMapIterator&) noexcept = default;
+
     T& operator*() const noexcept { return **ptr; }
     T* operator->() const noexcept { return &**ptr; }
     T& operator[](std::ptrdiff_t n) { return *(*this + n); }

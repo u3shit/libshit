@@ -164,6 +164,9 @@ def configure_variant(ctx):
         '-Wall', '-Wextra', '-pedantic',
         '-Wno-parentheses', '-Wno-assume', '-Wno-attributes',
         '-Wimplicit-fallthrough', '-Wno-dangling-else', '-Wno-unused-parameter',
+        # I don't even know what this warning supposed to mean, gcc. how can you
+        # not set a parameter?
+        '-Wno-unused-but-set-parameter',
         # __try in lua exception handler
         '-Wno-language-extension-token',
     ])
@@ -183,8 +186,10 @@ def configure_variant(ctx):
     if ctx.env.COMPILER_CXX == 'clang++':
         ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], ['-Werror=undef'])
     elif ctx.env.COMPILER_CXX == 'g++':
-        # no pedantic: empty semicolons outside functions are valid since 2011...
-        ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], ['-Wno-pedantic'])
+        ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], [
+            '-Wno-pedantic', # empty semicolons outside functions are valid since 2011...
+            '-Wno-unknown-pragmas' # do not choke on #pragma clang
+        ])
     ctx.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], [
         '-Wno-parentheses-equality', # boost fs, windows build
         '-Wno-assume', # boost fs
@@ -266,6 +271,8 @@ def configure_variant(ctx):
         ctx.env.append_value('LDFLAGS', ldflags)
     else:
         ctx.env.append_value('LINKFLAGS', '-rdynamic')
+        # needed by debug stacktrace
+        ctx.check_cxx(lib='dl')
 
 def build(bld):
     fixup_rc()

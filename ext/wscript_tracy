@@ -9,7 +9,6 @@ def configure(ctx):
         ctx.env.append_value('SYSTEM_INCLUDES_TRACY',
                              ctx.path.find_dir('tracy').abspath())
 
-        ctx.check_cc(lib='dl', mandatory=False)
         ctx.check_cc(lib='pthread', mandatory=False)
         # bsd only?
         ctx.check_cc(lib='execinfo', mandatory=False)

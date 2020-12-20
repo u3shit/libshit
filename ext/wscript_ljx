@@ -46,7 +46,6 @@ def configure_ljx(ctx, variant, host_variant, suf):
         ctx.load('gas')
 
     if ctx.env.DEST_OS == 'linux':
-        ctx.check_cc(lib='dl')
         # do not change to check_cfg, .pc file only exists from version 8.0
         ctx.check_cc(lib='readline')
         # readline depends on ncurses, but this dep is only required when

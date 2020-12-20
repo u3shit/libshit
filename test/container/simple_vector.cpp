@@ -40,6 +40,8 @@ namespace Libshit::Test
       X(const X& o) : i{o.i} { ++count; }
       ~X() { --count; }
 
+      X& operator=(const X&) noexcept = default; // shut up gcc
+
       bool operator==(const X& o) const noexcept { return i == o.i; }
       bool operator!=(const X& o) const noexcept { return i != o.i; }
     };
