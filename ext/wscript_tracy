@@ -16,6 +16,15 @@ def configure(ctx):
     ctx.with_chk('tracy', {'bundle': bundle_tracy, 'none': 'no-tracy'},
                  define='LIBSHIT_WITH_TRACY')
 
+    if ctx.env.CROSS:
+        def fun(ctx, prefix):
+            ctx.env.SYSTEM_INCLUDES_TRACY = \
+                ctx.path.find_dir('no-tracy').abspath()
+            ctx.env.WITH_TRACY = 'none'
+            ctx.env.append_value('DEFINES_TRACY', 'LIBSHIT_WITH_TRACY=0')
+        ctx.only_host_env(fun)
+
+
 def build(ctx):
     if ctx.env.WITH_TRACY != 'bundle': return
 

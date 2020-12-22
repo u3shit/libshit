@@ -62,7 +62,7 @@ def system_opt(ctx, name, cross=False, optional=False):
         system = 'system,none'
     else:
         system = 'system'
-    with_opt(ctx, name, variants,
+    with_opt(ctx, name, variants, cross=cross,
              default='system,bundle', bundle_all='bundle', system_all=system)
 OptionsContext.system_opt = system_opt
 
