@@ -6,9 +6,12 @@ libshit_cross = getattr(Context.g_module, 'LIBSHIT_CROSS', False)
 def options(ctx):
     ctx.with_opt('stdlib', ['system', 'bundle-libc++'], 'system,bundle-libc++',
                  cross=libshit_cross,
-                 # todo: we probably don't want this on windows
+                 # todo: we probably don't want this on windows with neptools
                  #bundle_all='bundle-libc++'
     )
+
+def use_libcxxabi(ctx):
+    return ctx.env.DEST_OS != 'vita' and ctx.env.DEST_OS != 'win32'
 
 def configure(ctx):
     def check_system(ctx):
@@ -17,11 +20,13 @@ def configure(ctx):
 
     def check_bundle(ctx):
         ctx.env.CXXFLAGS_LIBCXX = ['-nostdinc++']
-        ctx.env.SYSTEM_INCLUDES_LIBCXX = [
-            ctx.path.find_node('libcxx/include').abspath(),
-            ctx.path.find_node('libcxxabi/include').abspath(),
-        ]
-        if ctx.env.DEST_OS != 'vita':
+        ctx.env.SYSTEM_INCLUDES_LIBCXX = \
+            [ ctx.path.find_node('libcxx/include').abspath() ]
+        if use_libcxxabi(ctx):
+            ctx.env.SYSTEM_INCLUDES_LIBCXX += \
+                [ ctx.path.find_node('libcxxabi/include').abspath() ]
+
+        if ctx.env.DEST_OS != 'vita' and ctx.env.DEST_OS != 'win32':
             ctx.env.LDFLAGS_LIBCXX = [
                 '-nodefaultlibs', '-lgcc_s', '-lm', '-lc', '-lpthread',
                 '-lsupc++', '-ldl', '-lrt'
@@ -34,7 +39,7 @@ def configure(ctx):
 def build(ctx):
     if ctx.env.WITH_STDLIB != 'bundle-libc++': return
 
-    if ctx.env.DEST_OS != 'vita':
+    if use_libcxxabi(ctx):
         src = [
             'libcxxabi/src/abort_message.cpp',
             'libcxxabi/src/cxa_aux_runtime.cpp',
@@ -104,12 +109,18 @@ def build(ctx):
         'libcxx/src/variant.cpp',
         'libcxx/src/vector.cpp',
     ]
+    if ctx.env.DEST_OS == 'win32':
+        src += [
+            'libcxx/src/support/win32/locale_win32.cpp',
+            'libcxx/src/support/win32/support.cpp',
+            'libcxx/src/support/win32/thread_win32.cpp',
+        ]
     defines = [
         'NDEBUG', '_LIBCPP_BUILDING_LIBRARY',
         '_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER',
         '__STDC_CONSTANT_MACROS', '__STDC_FORMAT_MACROS', '__STDC_LIMIT_MACROS',
     ]
-    if ctx.env.DEST_OS != 'vita': defines += ['LIBCXX_BUILDING_LIBCXXABI']
+    if use_libcxxabi(ctx): defines += ['LIBCXX_BUILDING_LIBCXXABI']
 
     ctx.stlib(idx      = 54100,
               source   = src,
