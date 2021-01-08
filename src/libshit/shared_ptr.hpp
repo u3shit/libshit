@@ -93,7 +93,8 @@ namespace Libshit
     {
       (void) ctrl;
       static_assert(std::is_same_v<T, void> || IS_REFCOUNTED<T>);
-      LIBSHIT_ASSERT(ctrl == ptr);
+      // ptr == nullptr && ctrl != nullptr: valid in DynamicPointerCast
+      LIBSHIT_ASSERT(!ptr || ctrl == ptr);
     }
 
     RefCounted* GetCtrl() const noexcept
