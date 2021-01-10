@@ -19,6 +19,10 @@ namespace Libshit
   std::string Wtf16ToWtf8(Libshit::U16StringView in);
   std::string Wtf16LEToWtf8(Libshit::U16StringView in);
 
+  // replaces invalid surrogate pairs with replacement char
+  std::string Utf16ToUtf8(Libshit::U16StringView in);
+  std::string Utf16LEToUtf8(Libshit::U16StringView in);
+
 }
 
 #endif
