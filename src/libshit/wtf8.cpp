@@ -4,6 +4,7 @@
 #include "libshit/doctest.hpp"
 
 #include <boost/config.hpp>
+#include <boost/endian/conversion.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -18,7 +19,10 @@ namespace Libshit
   static bool IsTrailSurrogate(char16_t c)
   { return c >= 0xdc00 && c <= 0xdfff; }
 
-  std::string Wtf16ToWtf8(Libshit::U16StringView in)
+  static std::uint16_t NoConv(std::uint16_t c) { return c; }
+
+  template <std::uint16_t (*Conv)(std::uint16_t)>
+  static std::string GenWtf16ToWtf8(Libshit::U16StringView in)
   {
     std::string out;
     out.reserve(in.size() * 3);
@@ -26,13 +30,14 @@ namespace Libshit
     for (std::size_t i = 0; i < in.size(); ++i)
     {
       char32_t cp;
-      if (IsLeadSurrogate(in[i]) && (i+1) < in.size() &&
-          IsTrailSurrogate(in[i+1]))
+      auto c = Conv(in[i]);
+      if (IsLeadSurrogate(c) && i < (in.size()-1) &&
+          IsTrailSurrogate(Conv(in[i+1])))
       {
-        cp = 0x10000 + ((in[i] - 0xd800) << 10) + (in[i+1] - 0xdc00);
+        cp = 0x10000 + ((c - 0xd800) << 10) + (Conv(in[i+1]) - 0xdc00);
         ++i;
       }
-      else cp = in[i];
+      else cp = c;
 
       if (cp < 0x80) out.push_back(cp);
       else if (cp < 0x800)
@@ -60,7 +65,14 @@ namespace Libshit
     return out;
   }
 
-  std::u16string Wtf8ToWtf16(Libshit::StringView in)
+  std::string Wtf16ToWtf8(Libshit::U16StringView in)
+  { return GenWtf16ToWtf8<NoConv>(in); }
+
+  std::string Wtf16LEToWtf8(Libshit::U16StringView in)
+  { return GenWtf16ToWtf8<boost::endian::little_to_native>(in); }
+
+  template <std::uint16_t (*Conv)(std::uint16_t)>
+  std::u16string GenWtf8ToWtf16(Libshit::StringView in)
   {
     std::u16string out;
     out.reserve(in.size());
@@ -96,11 +108,11 @@ namespace Libshit
       if (--rem_chars == 0)
         if (cp >= 0x10000)
         {
-          out.push_back(((cp - 0x10000) >> 10) + 0xd800);
-          out.push_back(((cp - 0x10000) & 0x3ff) + 0xdc00);
+          out.push_back(Conv(((cp - 0x10000) >> 10) + 0xd800));
+          out.push_back(Conv(((cp - 0x10000) & 0x3ff) + 0xdc00));
         }
         else
-          out.push_back(cp);
+          out.push_back(Conv(cp));
     }
 
     if (rem_chars != 0) LIBSHIT_THROW(Wtf8DecodeError, "Invalid WTF-8");
@@ -108,41 +120,47 @@ namespace Libshit
     return out;
   }
 
+  std::u16string Wtf8ToWtf16(Libshit::StringView in)
+  { return GenWtf8ToWtf16<NoConv>(in); }
+
+  std::u16string Wtf8ToWtf16LE(Libshit::StringView in)
+  { return GenWtf8ToWtf16<boost::endian::native_to_little>(in); }
+
   TEST_CASE("Conversion")
   {
-    CHECK(Wtf16ToWtf8(u"Abc") == u8"Abc"); // ASCII
-    CHECK(Wtf8ToWtf16(u8"Abc") == u"Abc");
+    auto check = [](Libshit::StringView u8, Libshit::U16StringView u16,
+                    const char* u16le_raw)
+    {
+      CHECK(Wtf16ToWtf8(u16) == u8);
+      CHECK(Wtf8ToWtf16(u8) == u16);
 
-    CHECK(Wtf16ToWtf8(u"Brütal") == u8"Brütal"); // 2 byte BMP
-    CHECK(Wtf8ToWtf16(u8"Brütal") == u"Brütal");
+      Libshit::U16StringView u16le{
+        reinterpret_cast<const char16_t*>(u16le_raw), u16.size()};
+      CHECK(Wtf16LEToWtf8(u16le) == u8);
+      CHECK(Wtf8ToWtf16LE(u8) == u16le);
+    };
 
-    CHECK(Wtf16ToWtf8(u"猫(=^・^=)") == u8"猫(=^・^=)"); // 3 byte BMP
-    CHECK(Wtf8ToWtf16(u8"猫(=^・^=)") == u"猫(=^・^=)");
+    check(u8"Abc", u"Abc", "A\0b\0c\0"); // ASCII
+    check(u8"Brütal", u"Brütal", "B\0r\0\xfc\0t\0a\0l\0"); // 2 byte BMP
+    check(u8"猫(=^・^=)", u"猫(=^・^=)",
+          "\x2b\x73(\0=\0^\0\xfb\x30^\0=\0)\0"); // 3 byte BMP
 
     // if you can see this your terminal is too modern
-    CHECK(Wtf16ToWtf8(u"💩") == u8"💩"); // non-BMP
-    CHECK(Wtf8ToWtf16(u8"💩") == u"💩");
+    check(u8"💩", u"💩", "\x3d\xd8\xa9\xdc"); // non-BMP
 
     // invalid surrogate pairs
     char16_t surrogate_start16[] = { 0xd83d, 0 };
-    char surrogate_start8[] = "\xed\xa0\xbd";
-    CHECK(Wtf16ToWtf8(surrogate_start16) == surrogate_start8);
-    CHECK(Wtf8ToWtf16(surrogate_start8) == surrogate_start16);
+    check("\xed\xa0\xbd", surrogate_start16, "\x3d\xd8");
 
     char16_t surrogate_end16[] = { 0xdca9, 0 };
-    char surrogate_end8[] = "\xed\xb2\xa9";
-    CHECK(Wtf16ToWtf8(surrogate_end16) == surrogate_end8);
-    CHECK(Wtf8ToWtf16(surrogate_end8) == surrogate_end16);
+    check("\xed\xb2\xa9", surrogate_end16, "\xa9\xdc");
 
     char16_t surrogate_reverse16[] = { 0xdca9, 0xd83d, 0 };
-    char surrogate_reverse8[] = "\xed\xb2\xa9\xed\xa0\xbd";
-    CHECK(Wtf16ToWtf8(surrogate_reverse16) == surrogate_reverse8);
-    CHECK(Wtf8ToWtf16(surrogate_reverse8) == surrogate_reverse16);
+    check("\xed\xb2\xa9\xed\xa0\xbd", surrogate_reverse16, "\xa9\xdc\x3d\xd8");
 
     char16_t surrogate_end_valid16[] = { 0xdca9, /**/ 0xd83d, 0xdca9, 0 };
-    char surrogate_end_valid8[] = "\xed\xb2\xa9" "\xf0\x9f\x92\xa9";
-    CHECK(Wtf16ToWtf8(surrogate_end_valid16) == surrogate_end_valid8);
-    CHECK(Wtf8ToWtf16(surrogate_end_valid8) == surrogate_end_valid16);
+    check("\xed\xb2\xa9" "\xf0\x9f\x92\xa9", surrogate_end_valid16,
+          "\xa9\xdc" "\x3d\xd8\xa9\xdc");
   }
 
   // skip: very slow in non-optimized builds
