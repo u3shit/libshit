@@ -19,7 +19,7 @@
 namespace Libshit
 {
 
-  // like string_view, except it CString=true, it must be zero terminated if
+  // like string_view, except if CString=true, it must be zero terminated if
   // !empty() (but can contain embedded zeros)
   template <typename Char, bool CString,
             typename Traits = std::char_traits<Char>>
@@ -232,9 +232,13 @@ namespace Libshit
 
   using NonowningString = BasicNonowningString<char, true>;
   using NonowningWString = BasicNonowningString<wchar_t, true>;
+  using NonowningU16String = BasicNonowningString<char16_t, true>;
+  using NonowningU32String = BasicNonowningString<char32_t, true>;
 
   using StringView = BasicNonowningString<char, false>;
   using WStringView = BasicNonowningString<wchar_t, false>;
+  using U16StringView = BasicNonowningString<char16_t, false>;
+  using U32StringView = BasicNonowningString<char32_t, false>;
 
   template <typename T, bool b>
   std::basic_ostream<T>& operator<<(

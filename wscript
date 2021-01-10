@@ -292,9 +292,10 @@ def build(bld):
 def build_libshit(ctx, pref):
     src = [
         'src/libshit/char_utils.cpp',
-        'src/libshit/options.cpp',
         'src/libshit/except.cpp',
         'src/libshit/logger.cpp',
+        'src/libshit/options.cpp',
+        'src/libshit/wtf8.cpp',
     ]
     if ctx.env.DEST_OS == 'vita':
         src += ['src/libshit/vita_fixup.c']
