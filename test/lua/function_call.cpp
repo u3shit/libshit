@@ -18,7 +18,7 @@ namespace Libshit::Lua::Test
     CHECK(global == 1);
   }
 
-  int intfun(int a, int b) { return a+b+3; }
+  static int intfun(int a, int b) { return a+b+3; }
   TEST_CASE("int function")
   {
     State vm;
@@ -33,7 +33,7 @@ namespace Libshit::Lua::Test
     CHECK(lua_gettop(vm) == 0);
   }
 
-  std::string strfun(size_t a, const std::string& b)
+  static std::string strfun(size_t a, const std::string& b)
   {
     std::string ret;
     for (size_t i = 0; i < a; ++i)
@@ -54,7 +54,7 @@ namespace Libshit::Lua::Test
     CHECK(lua_gettop(vm) == 0);
   }
 
-  std::tuple<bool, int, std::string> tuplefun(bool a, int n)
+  static std::tuple<bool, int, std::string> tuplefun(bool a, int n)
   {
     std::stringstream ss;
     ss << a << n;

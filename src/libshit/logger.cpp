@@ -97,7 +97,7 @@ namespace Libshit::Logger
   // constructed/destructed multiple times (on the same address!)
   static unsigned global_refcount;
   static std::aligned_storage_t<sizeof(Global), alignof(Global)> global_storage;
-  Global& GetGlobal() noexcept
+  static Global& GetGlobal() noexcept
   { return *reinterpret_cast<Global*>(&global_storage); }
   namespace Detail
   {

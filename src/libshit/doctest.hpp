@@ -13,9 +13,11 @@
 #if LIBSHIT_WITH_TESTS
 
 // like CAPTURE but not lazy (so it works with rvalues too)
-#  define CCAPTURE(x)                       \
-  const auto& capture_tmp_##__LINE__ = (x); \
-  DOCTEST_INFO(#x " = " << capture_tmp_##__LINE__)
+#  define CCAPTURE_NAME(l) CCAPTURE_NAME2(l)
+#  define CCAPTURE_NAME2(l) capture_tmp_##l
+#  define CCAPTURE(x)                        \
+  const auto& CCAPTURE_NAME(__LINE__) = (x); \
+  DOCTEST_INFO(#x " = " << CCAPTURE_NAME(__LINE__))
 
 #else
 

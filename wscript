@@ -161,7 +161,7 @@ def configure_variant(ctx):
         ctx.env.append_value('LINKFLAGS', ['-Wl,--gc-sections'])
 
     ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], [
-        '-Wall', '-Wextra', '-pedantic',
+        '-Wall', '-Wextra', '-pedantic', '-Wdouble-promotion',
         '-Wno-parentheses', '-Wno-assume', '-Wno-attributes',
         '-Wimplicit-fallthrough', '-Wno-dangling-else', '-Wno-unused-parameter',
         # I don't even know what this warning supposed to mean, gcc. how can you
@@ -183,13 +183,20 @@ def configure_variant(ctx):
     ])
 
     # gcc is a piece of crap: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431
+    # missing-prototypes/missing-declarations: of course, clang and gcc flags
+    # mean different things, and gcc yells when -Wmissing-prototypes is used in
+    # c++
     if ctx.env.COMPILER_CXX == 'clang++':
-        ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], ['-Werror=undef'])
+        ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], [
+            '-Werror=undef', '-Wmissing-prototypes',
+        ])
     elif ctx.env.COMPILER_CXX == 'g++':
         ctx.filter_flags(['CFLAGS_'+app, 'CXXFLAGS_'+app], [
             '-Wno-pedantic', # empty semicolons outside functions are valid since 2011...
             '-Wno-unknown-pragmas' # do not choke on #pragma clang
         ])
+        ctx.filter_flags(['CXXFLAGS_'+app], ['-Wmissing-declarations'])
+
     ctx.filter_flags(['CFLAGS_EXT', 'CXXFLAGS_EXT'], [
         '-Wno-parentheses-equality', # boost fs, windows build
         '-Wno-assume', # boost fs

@@ -96,7 +96,7 @@ namespace Libshit
   template <typename T>
   class AtScopeExitC
   {
-    const T func;
+    T func;
     bool enabled;
   public:
     explicit AtScopeExitC(const T& func, bool enabled = true)
@@ -117,6 +117,13 @@ namespace Libshit
     void Enable() noexcept { enabled = true; }
     void Disable() noexcept { enabled = false; }
     bool IsEnabled() const noexcept { return enabled; }
+
+    /// Execute the function if it wasn't yet
+    void Fire() noexcept
+    {
+      if (enabled) func();
+      enabled = false;
+    }
 
     ~AtScopeExitC() noexcept(noexcept(func())) { if (enabled) func(); }
   };

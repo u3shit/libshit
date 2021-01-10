@@ -210,7 +210,7 @@ namespace Libshit
       void subcase_start(const doctest::SubcaseSignature& sig) override
       {
         conrep.subcase_start(sig);
-        subcase_str += "/"s + sig.m_name;
+        subcase_str += "/"s + sig.m_name.c_str();
       }
       // called whenever a subcase is exited (don't cache pointers to the input)
       void subcase_end() override
