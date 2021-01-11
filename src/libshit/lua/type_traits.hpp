@@ -126,7 +126,7 @@ namespace Libshit::Lua
     { return lua_type(vm, idx) == LUA_TNUMBER; }
 
     static void Push(StateRef vm, T val)
-    { lua_pushnumber(vm, val); }
+    { lua_pushnumber(vm, lua_Number(val)); }
 
     static void PrintName(std::ostream& os) { os << TYPE_NAME<T>; }
   };
