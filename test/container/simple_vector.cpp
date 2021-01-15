@@ -138,7 +138,7 @@ namespace Libshit::Test
         CHECK(v == Libshit::SimpleVector<T>{0, 9, 8, 3});
 
         CHECK_THROWS(v.at(4));
-        CHECK_THROWS(std::as_const(v).at(-1));
+        CHECK_THROWS(std::as_const(v).at(1111));
 
         CHECK(v.front() == 0);
         CHECK(std::as_const(v).front() == 0);

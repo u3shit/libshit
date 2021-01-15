@@ -39,7 +39,7 @@ namespace Libshit
   struct OrderedMapItem : public Libshit::RefCounted, public OrderedMapItemHook
   {
   private:
-    std::size_t vector_index = -1;
+    std::size_t vector_index = static_cast<std::size_t>(-1);
     template <typename T, typename KeyOfValue, typename Compare>
     friend class OrderedMap;
   };
@@ -408,7 +408,7 @@ namespace Libshit
     void FixupIndex(typename VectorType::iterator b) noexcept
     { for (; b != vect.end(); ++b) VectorIndex(**b) = b - vect.begin(); }
 
-    void RemoveItem(T& t) noexcept { VectorIndex(t) = -1; }
+    void RemoveItem(T& t) noexcept { VectorIndex(t) = size_type(-1); }
 
     template <typename Checker, typename U>
     std::pair<iterator, bool> InsertGen(const_iterator p, U&& t)

@@ -45,22 +45,22 @@ namespace Libshit
       if (cp < 0x80) out.push_back(cp);
       else if (cp < 0x800)
       {
-        out.push_back(0xc0 | (cp >> 6));
-        out.push_back(0x80 | (cp & 0x3f));
+        out.push_back(char(0xc0 | (cp >> 6)));
+        out.push_back(char(0x80 | (cp & 0x3f)));
       }
       else if (cp < 0x10000)
       {
-        out.push_back(0xe0 | (cp >> 12));
-        out.push_back(0x80 | ((cp >> 6) & 0x3f));
-        out.push_back(0x80 | (cp & 0x3f));
+        out.push_back(char(0xe0 | (cp >> 12)));
+        out.push_back(char(0x80 | ((cp >> 6) & 0x3f)));
+        out.push_back(char(0x80 | (cp & 0x3f)));
       }
       else
       {
         LIBSHIT_ASSERT_MSG(cp <= 0x10FFFF, "Math broken");
-        out.push_back(0xf0 | (cp >> 18));
-        out.push_back(0x80 | ((cp >> 12) & 0x3f));
-        out.push_back(0x80 | ((cp >> 6) & 0x3f));
-        out.push_back(0x80 | (cp & 0x3f));
+        out.push_back(char(0xf0 | (cp >> 18)));
+        out.push_back(char(0x80 | ((cp >> 12) & 0x3f)));
+        out.push_back(char(0x80 | ((cp >> 6) & 0x3f)));
+        out.push_back(char(0x80 | (cp & 0x3f)));
       }
     }
 
@@ -102,8 +102,9 @@ namespace Libshit
     int rem_chars = 0;
     uint8_t st = 0;
     char32_t cp;
-    for (unsigned char c : in)
+    for (char cc : in)
     {
+      unsigned char c = static_cast<unsigned char>(cc);
       if (rem_chars == 0)
       {
         st = buf[c >> 3];

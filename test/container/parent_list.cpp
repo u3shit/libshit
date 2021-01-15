@@ -615,8 +615,10 @@ namespace Libshit::Test
         CHECK(inv);)
 
   CHKBASIC(sort, (auto& a, auto& b), a.data < b.data, lst.size() == 5)
-  CHKBASIC(remove_if, (auto& a), a.data == 2, (lst.size() & ~1) == 4)
-  CHKBASIC(unique, (auto&, auto& b), b.data == 3, (lst.size() & ~1) == 4)
+  CHKBASIC(remove_if, (auto& a), a.data == 2,
+           (lst.size() & std::size_t(~1)) == 4)
+  CHKBASIC(unique, (auto&, auto& b), b.data == 3,
+           (lst.size() & std::size_t(~1)) == 4)
 
   CHK(merge, lst0.merge OPENPAREN lst1 COMMA, (auto& a, auto& b),
       a.data < b.data,
@@ -666,12 +668,13 @@ namespace Libshit::Test
 
     SUBCASE("to_table")
     {
-      vm.DoString("\
-local tbl = lst:to_table()                     \n\
-for i=0,4 do                                   \n\
-  assert(tbl[i].i == i and tbl[i].data == i+3) \n\
-end                                            \n\
-assert(tbl[5] == nil)");
+      vm.DoString(R"(
+local tbl = lst:to_table()
+for i=0,4 do
+  assert(tbl[i].i == i and tbl[i].data == i+3)
+end
+assert(tbl[5] == nil)
+)");
     }
   }
 #endif

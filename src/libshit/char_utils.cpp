@@ -109,25 +109,25 @@ namespace Libshit
   {
     // assume locale is not set in the test executable...
 
-    for (unsigned i = 0; i < 1<<CHAR_BIT; ++i)
+    for (int i = 0; i < 1<<CHAR_BIT; ++i)
     {
       CAPTURE(i);
-      CHECK(!!isdigit(i) == Ascii::IsDigit(i));
-      CHECK(!!isxdigit(i) == Ascii::IsXDigit(i));
-      CHECK(!!islower(i) == Ascii::IsLower(i));
-      CHECK(!!isupper(i) == Ascii::IsUpper(i));
-      CHECK(!!isalpha(i) == Ascii::IsAlpha(i));
-      CHECK(!!isalnum(i) == Ascii::IsAlnum(i));
-      CHECK(!!isgraph(i) == Ascii::IsGraph(i));
-      CHECK(!!ispunct(i) == Ascii::IsPunct(i));
-      CHECK(!!isblank(i) == Ascii::IsBlank(i));
-      CHECK(!!isspace(i) == Ascii::IsSpace(i));
-      CHECK(!!isprint(i) == Ascii::IsPrint(i));
-      CHECK(!!iscntrl(i) == Ascii::IsCntrl(i));
-      CHECK(!!isascii(i) == Ascii::IsAscii(i));
+      CHECK(!!isdigit(i) == Ascii::IsDigit(char(i)));
+      CHECK(!!isxdigit(i) == Ascii::IsXDigit(char(i)));
+      CHECK(!!islower(i) == Ascii::IsLower(char(i)));
+      CHECK(!!isupper(i) == Ascii::IsUpper(char(i)));
+      CHECK(!!isalpha(i) == Ascii::IsAlpha(char(i)));
+      CHECK(!!isalnum(i) == Ascii::IsAlnum(char(i)));
+      CHECK(!!isgraph(i) == Ascii::IsGraph(char(i)));
+      CHECK(!!ispunct(i) == Ascii::IsPunct(char(i)));
+      CHECK(!!isblank(i) == Ascii::IsBlank(char(i)));
+      CHECK(!!isspace(i) == Ascii::IsSpace(char(i)));
+      CHECK(!!isprint(i) == Ascii::IsPrint(char(i)));
+      CHECK(!!iscntrl(i) == Ascii::IsCntrl(char(i)));
+      CHECK(!!isascii(i) == Ascii::IsAscii(char(i)));
 
-      CHECK(char(tolower(i)) == Ascii::ToLower(i));
-      CHECK(char(toupper(i)) == Ascii::ToUpper(i));
+      CHECK(char(tolower(i)) == Ascii::ToLower(char(i)));
+      CHECK(char(toupper(i)) == Ascii::ToUpper(char(i)));
     }
 
     CHECK(Ascii::ToDigit('0') == 0);
