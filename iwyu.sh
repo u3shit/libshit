@@ -11,7 +11,10 @@ base_dir="${base_dir-$dir}"
 base_dir_escaped="$(sed 's/[[*?\]/\\\0/g' <<<"$base_dir")"
 
 flags+=(
-    -std=c++17 -stdlib=libc++
+    -std=c++17
+    -nostdinc++
+    -isystem "$dir/ext/libcxx/include"
+    -isystem "$dir/ext/libcxxabi/include"
     -Xiwyu --mapping_file="$dir/iwyu.imp"
     -Xiwyu --max_line_length=200
     -I"$dir/src"
