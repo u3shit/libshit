@@ -27,7 +27,7 @@ namespace Libshit
   static Option xml_file_opt{
     OptionParser::GetTestingOptions(), "xml-output", 1, "FILE",
     "Save xml output to this file\n"
-    "\t(run as \"--xml-output <filename> --test --reporters=junit\")",
+    "\t(run as \"--xml-output <filename> --test --reporters=libshit-junit\")",
     [](auto&& args) { xml_file = Move(args.front()); }};
 
   namespace
@@ -243,7 +243,7 @@ namespace Libshit
       }
     };
 
-    REGISTER_REPORTER("junit", 10, JUnitReporter);
+    REGISTER_REPORTER("libshit-junit", 10, JUnitReporter);
   }
 
   REGISTER_EXCEPTION_TRANSLATOR(const Libshit::Exception& e)
