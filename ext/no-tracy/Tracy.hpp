@@ -60,9 +60,13 @@
 
 // memory
 #define TracyAlloc(ptr, size) (void) 0
-#define TracyFree(ptr) (void) 0
+#define TracyAllocN(ptr, size, name) (void) 0
 #define TracyAllocS(ptr, size, depth) (void) 0
+#define TracyAllocNS(ptr, size, depth, name) (void) 0
+#define TracyFree(ptr) (void) 0
+#define TracyFreeN(ptr, name) (void) 0
 #define TracyFreeS(ptr, depth) (void) 0
+#define TracyFreeNS(ptr, depth, name) (void) 0
 
 // thread
 namespace tracy

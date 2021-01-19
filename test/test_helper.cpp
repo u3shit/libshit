@@ -1,9 +1,7 @@
-#define DOCTEST_CONFIG_IMPLEMENT
-#include <libshit/doctest.hpp>
-
 #include <libshit/except.hpp>
 #include <libshit/function.hpp>
 #include <libshit/options.hpp>
+#include <libshit/platform.hpp>
 #include <libshit/utils.hpp>
 
 #include <algorithm>
@@ -17,6 +15,12 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+
+#if LIBSHIT_OS_IS_WINDOWS
+#  include <crtdbg.h> // doctest doesn't include this with libc++
+#endif
+#define DOCTEST_CONFIG_IMPLEMENT
+#include <libshit/doctest.hpp>
 
 using namespace std::string_literals;
 

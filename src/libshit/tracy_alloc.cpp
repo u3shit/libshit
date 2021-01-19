@@ -1,21 +1,17 @@
-#include "libshit/platform.hpp"
-
-// unfortunately asan on linux creates link errors if we try to override global
-// alloc funcs
-#if !LIBSHIT_HAS_ASAN
+#include "libshit/tracy_alloc.hpp"
 
 #include <Tracy.hpp>
 
-#include <cstdlib>
 #include <new>
 
-// Experimental, only supported on Linux.
-#define OVERRIDE_MALLOC 0
-
 // Set to true if you want zones around new/delete
-static constexpr const bool ZONES = false;
+static constexpr const bool ZONES = true;
 
-#if OVERRIDE_MALLOC && LIBSHIT_OS_IS_LINUX
+#define NOT_ALLOCD_DEBUG 0
+
+using namespace Libshit; // we're placing shit into the global namespace here...
+
+#if LIBSHIT_HAS_OVERRIDE_MALLOC
 #include <dlfcn.h>
 #include <malloc.h>
 
@@ -41,8 +37,6 @@ static bool LoadIfNeeded()
   loaded = true;
   return true;
 }
-
-#define NOT_ALLOCD_DEBUG 0
 
 #if NOT_ALLOCD_DEBUG
 static constexpr std::size_t MAX_ALLOCS = 1024 * 100;
@@ -206,15 +200,15 @@ ALLOC_LIKE(valloc, (size_t size), (size), size);
 ALLOC_LIKE(memalign, (size_t align, size_t size), (align, size), size);
 ALLOC_LIKE(pvalloc, (size_t size), (size), size);
 #undef ALLOC_LIKE
+#endif
 
-#else
-
+#if LIBSHIT_HAS_OVERRIDE_NEW
 void* operator new(std::size_t count)
 {
   void* ptr;
   {
     ZoneNamedNC(x, "new", 0x330000, ZONES); ZoneValueV(x, count);
-    ptr = std::malloc(count);
+    ptr = orig_malloc(count);
   }
   if (!ptr) throw std::bad_alloc{};
 
@@ -227,19 +221,19 @@ void* operator new(std::size_t count, const std::nothrow_t&) noexcept
   void* ptr;
   {
     ZoneNamedNC(x, "new", 0x330000, ZONES); ZoneValueV(x, count);
-    ptr = std::malloc(count);
+    ptr = orig_malloc(count);
   }
   TracyAllocS(ptr, count, 5);
   return ptr;
 }
 
-
+#if !LIBSHIT_OS_IS_WINDOWS
 void* operator new(std::size_t count, std::align_val_t al)
 {
   void* ptr;
   {
     ZoneNamedNC(x, "new", 0x330000, ZONES); ZoneValueV(x, count);
-    if (posix_memalign(&ptr, static_cast<std::size_t>(al), count))
+    if (orig_posix_memalign(&ptr, static_cast<std::size_t>(al), count))
       throw std::bad_alloc{};
   }
   TracyAllocS(ptr, count, 5);
@@ -252,26 +246,37 @@ void* operator new(std::size_t count, std::align_val_t al,
   void* ptr;
   {
     ZoneNamedNC(x, "new", 0x330000, ZONES); ZoneValueV(x, count);
-    if (posix_memalign(&ptr, static_cast<std::size_t>(al), count))
+    if (orig_posix_memalign(&ptr, static_cast<std::size_t>(al), count))
       return nullptr;
   }
   TracyAllocS(ptr, count, 5);
   return ptr;
 }
+#endif
 
 
 void operator delete(void* ptr) noexcept
 {
   TracyFreeS(ptr, 5);
   ZoneNamedNC(x, "delete", 0x003300, ZONES);
-  std::free(ptr);
+  orig_free(ptr);
 }
 
+#if !LIBSHIT_OS_IS_WINDOWS
 void operator delete(void* ptr, std::align_val_t al) noexcept
 {
   TracyFreeS(ptr, 5);
   ZoneNamedNC(x, "delete", 0x003300, ZONES);
-  std::free(ptr);
+  orig_free(ptr);
 }
 #endif
+
+void operator delete(void* ptr, std::size_t size) noexcept;
+void operator delete(void* ptr, std::size_t size) noexcept
+{
+  TracyFreeS(ptr, 5);
+  ZoneNamedNC(x, "delete", 0x003300, ZONES);
+  orig_free(ptr);
+}
+
 #endif

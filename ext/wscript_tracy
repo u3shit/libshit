@@ -1,5 +1,8 @@
 # -*- python -*-
 
+from waflib import Context
+defs = getattr(Context.g_module, 'TRACY_DEFINES', [])
+
 def options(ctx):
     ctx.with_opt('tracy', ['bundle', 'none'], 'none')
 
@@ -31,8 +34,6 @@ def build(ctx):
     ctx.objects(idx     = 51500,
                 source  = ['tracy/TracyClient.cpp'],
                 use     = 'TRACY DL PTHREAD EXECINFO',
-                # https://github.com/wolfpld/tracy/issues/73
-                # https://archive.is/sHOKy
-                defines = ['TRACY_DELAYED_INIT'],
+                defines = defs,
                 target  = 'tracy',
                 uselib  = 'EXT')

@@ -330,7 +330,8 @@ def build_libshit(ctx, pref):
     ctx.objects(idx      = 50000 + (len(pref)>0),
                 source   = src,
                 uselib   = app,
-                use      = 'BOOST BRIGAND DOCTEST DL LUA TRACY lua tracy',
+                use      = ['BOOST', 'BRIGAND', 'DOCTEST', 'DL', 'LUA', 'TRACY',
+                            pref+'lua', pref+'tracy'],
                 includes = 'src',
                 export_includes = 'src',
                 target   = pref+'libshit')
