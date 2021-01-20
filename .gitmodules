@@ -6,10 +6,10 @@
 	url = ../ljclang.git
 [submodule "ext/brigand"]
 	path = ext/brigand
-	url = git://github.com/edouarda/brigand.git
+	url = https://github.com/edouarda/brigand.git
 [submodule "ext/doctest"]
 	path = ext/doctest
-	url = git://github.com/onqtam/doctest.git
+	url = https://github.com/onqtam/doctest.git
 [submodule "ext/libcxx"]
 	path = ext/libcxx
 	url = ../libcxx.git
@@ -18,4 +18,4 @@
 	url = https://github.com/llvm-mirror/libcxxabi
 [submodule "ext/tracy"]
 	path = ext/tracy
-	url = git://github.com/wolfpld/tracy.git
+	url = https://github.com/wolfpld/tracy.git
