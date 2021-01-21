@@ -1,0 +1,202 @@
+# -*- python -*-
+# against v0.8.0 57a4ca5af5a7f55b768a9d9d6655250bffb1257f
+
+def options(ctx):
+    ctx.system_opt('capnproto')
+
+def configure(ctx):
+    def system_capnproto(ctx):
+        ctx.check_cfg(package='capnp', args='--cflags --libs',
+                      global_define=True)
+        ctx.undefine('HAVE_CAPNP')
+
+        ctx.find_program('capnpc', var='CAPNPC')
+        ctx.find_program('capnpc-c++', var='CAPNPC_CPP')
+    def bundle_capnproto(ctx):
+        ctx.env.append_value('DEFINES_CAPNPROTO', 'CAPNP_LITE')
+    ctx.with_chk('capnproto',
+                 {'system': system_capnproto, 'bundle': bundle_capnproto})
+
+def build(ctx):
+    if ctx.env.WITH_CAPNPROTO != 'bundle': return
+
+    src = [
+        'capnproto/c++/src/kj/arena.c++',
+        'capnproto/c++/src/kj/array.c++',
+        'capnproto/c++/src/kj/common.c++',
+        'capnproto/c++/src/kj/debug.c++',
+        'capnproto/c++/src/kj/encoding.c++', # only needed on windows
+        'capnproto/c++/src/kj/exception.c++',
+        'capnproto/c++/src/kj/hash.c++',
+        'capnproto/c++/src/kj/io.c++',
+        'capnproto/c++/src/kj/main.c++',
+        'capnproto/c++/src/kj/memory.c++',
+        'capnproto/c++/src/kj/mutex.c++',
+        'capnproto/c++/src/kj/string.c++',
+        'capnproto/c++/src/kj/table.c++',
+        'capnproto/c++/src/kj/test-helpers.c++',
+        'capnproto/c++/src/kj/thread.c++',
+        'capnproto/c++/src/kj/units.c++',
+
+        'capnproto/c++/src/capnp/any.c++',
+        'capnproto/c++/src/capnp/arena.c++',
+        'capnproto/c++/src/capnp/blob.c++',
+        'capnproto/c++/src/capnp/c++.capnp.c++',
+        'capnproto/c++/src/capnp/layout.c++',
+        'capnproto/c++/src/capnp/list.c++',
+        'capnproto/c++/src/capnp/message.c++',
+        'capnproto/c++/src/capnp/schema.capnp.c++',
+        'capnproto/c++/src/capnp/serialize-packed.c++',
+        'capnproto/c++/src/capnp/serialize.c++',
+    ]
+
+    src_heavy = src + [
+        # src has #ifdef guard around correct os so we can compile both
+        'capnproto/c++/src/kj/filesystem-disk-unix.c++',
+        'capnproto/c++/src/kj/filesystem-disk-win32.c++',
+        'capnproto/c++/src/kj/filesystem.c++',
+        'capnproto/c++/src/kj/parse/char.c++',
+        'capnproto/c++/src/kj/refcount.c++',
+        'capnproto/c++/src/kj/string-tree.c++',
+        'capnproto/c++/src/kj/time.c++',
+
+        'capnproto/c++/src/capnp/compat/json.c++',
+        'capnproto/c++/src/capnp/compat/json.capnp.c++',
+        'capnproto/c++/src/capnp/dynamic.c++',
+        'capnproto/c++/src/capnp/schema-loader.c++',
+        'capnproto/c++/src/capnp/schema.c++',
+        'capnproto/c++/src/capnp/stream.capnp.c++',
+        'capnproto/c++/src/capnp/stringify.c++',
+    ]
+
+    ctx.stlib(idx             = 51600,
+              source          = src,
+              includes        = 'capnproto/c++/src',
+              export_includes = 'capnproto/c++/src',
+              target          = 'capnp',
+              uselib          = 'CAPNPROTO EXT')
+
+    def build_capnp_tool(ctx, pref):
+        # breaks with -fsanitize unless -fno-rtti is also used
+        # todo: figure out how to disable -fsanitize for this as it produces
+        # shittons of errors
+        ctx.stlib(idx             = 51601,
+                  source          = src_heavy,
+                  includes        = 'capnproto/c++/src',
+                  export_includes = 'capnproto/c++/src',
+                  target          = 'capnp_heavy',
+                  uselib          = 'EXT',
+                  cxxflags        = '-fno-rtti')
+
+        src = [
+            'capnproto/c++/src/capnp/compiler/capnp.c++',
+            'capnproto/c++/src/capnp/compiler/compiler.c++',
+            'capnproto/c++/src/capnp/compiler/error-reporter.c++',
+            'capnproto/c++/src/capnp/compiler/grammar.capnp.c++',
+            'capnproto/c++/src/capnp/compiler/lexer.c++',
+            'capnproto/c++/src/capnp/compiler/lexer.capnp.c++',
+            'capnproto/c++/src/capnp/compiler/module-loader.c++',
+            'capnproto/c++/src/capnp/compiler/node-translator.c++',
+            'capnproto/c++/src/capnp/compiler/parser.c++',
+            'capnproto/c++/src/capnp/compiler/type-id.c++',
+            'capnproto/c++/src/capnp/schema-parser.c++',
+            'capnproto/c++/src/capnp/serialize-text.c++',
+        ]
+
+        ctx.program(idx      = 51602,
+                    source   = src,
+                    use      = 'capnp_heavy',
+                    uselib   = 'EXT',
+                    target   = 'capnpc',
+                    cxxflags = '-fno-rtti')
+        ctx.program(idx      = 51603,
+                    source   = 'capnproto/c++/src/capnp/compiler/capnpc-c++.c++',
+                    use      = 'capnp_heavy',
+                    uselib   = 'EXT',
+                    target   = 'capnpc-c++',
+                    cxxflags = '-fno-rtti')
+    ctx.in_host_env(build_capnp_tool)
+
+import re
+from waflib import Task
+
+proto_re = re.compile('_([a-z0-9])')
+import_re = re.compile('import +"([^\\"]*)\.o"')
+cpp_re = re.compile('( |::)(get|set|has|is|init|adopt|disown|as)([A-Z])')
+include_re = re.compile(r'^(#include ".*)\.o\.h"$', re.MULTILINE)
+sys_include_re = re.compile(r'^(#include <.*>)$', re.MULTILINE)
+undef_guard = '''
+#pragma GCC diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wundef"
+\\1
+#pragma GCC diagnostic pop
+'''
+
+class capnp(Task.Task):
+    color = 'BLUE'
+
+    def run(self):
+        inp = self.inputs[0]
+        data = inp.read()
+        data = proto_re.sub(lambda x: x.group(1).upper(), data)
+        out_proto = inp.change_ext('.capnp.o')
+        out_proto.write(data)
+
+        ret = self.exec_command(
+            [self.capnpc,
+             *self.flags,
+             '-o%s:%s' % (self.capnpc_cpp, self.outputs[0].parent.abspath()),
+             '--src-prefix=%s' % out_proto.parent.abspath(),
+             out_proto.abspath()])
+        if ret != 0: return ret
+
+        def fix(inp, out):
+            data = inp.read()
+            data = include_re.sub(r'\1.hpp"', data)
+            data = sys_include_re.sub(undef_guard, data)
+            data = cpp_re.sub(lambda x: x.group(1) + x.group(2).title() + x.group(3), data)
+            out.write(data)
+        fix(self.outputs[0].change_ext('.o.c++'), self.outputs[0])
+        fix(self.outputs[1].change_ext('.o.h'),   self.outputs[1])
+
+    # parse 'import "foo.capnp.o";' things
+    # ideally we would only need to depend on the preprocessor step and
+    # automatically add the .o extension, but whatever
+    def scan(self):
+        inp = self.inputs[0]
+        data = inp.read()
+
+        dep = []
+        missing = []
+        for i in import_re.findall(data):
+            r = inp.parent.find_resource(i+'.hpp')
+            if r:
+                dep.append(r)
+            else:
+                missing.append(i)
+        return (dep, missing)
+
+from waflib.TaskGen import extension
+@extension('.capnp')
+def compile_capnp(self, node):
+    out_cpp = node.change_ext('.capnp.cpp')
+    out_hpp = node.change_ext('.capnp.hpp')
+    tsk = self.create_task('capnp', node, [out_cpp, out_hpp])
+
+    if self.env.WITH_CAPNPROTO == 'bundle':
+        capnpc = self.bld.get_tgen_by_name('capnpc').link_task.outputs[0]
+        capnpc_cpp_tsk = self.bld.get_tgen_by_name('capnpc-c++')
+        capnpc_cpp = capnpc_cpp_tsk.link_task.outputs[0]
+        inc = capnpc_cpp_tsk.compiled_tasks[0].inputs[0].find_node('../../..')
+
+        tsk.capnpc = capnpc.abspath()
+        tsk.capnpc_cpp = capnpc_cpp.abspath()
+        tsk.flags = ['--no-standard-import', '-I%s' % inc.abspath()]
+        tsk.dep_nodes += [capnpc, capnpc_cpp]
+    else:
+        tsk.capnpc = self.env.CAPNPC[0]
+        tsk.capnpc_cpp = self.env.CAPNPC_CPP[0]
+        tsk.flags = [] # todo
+    self.source.append(out_cpp)

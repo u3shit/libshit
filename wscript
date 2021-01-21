@@ -7,6 +7,7 @@
 # 513xx lua53
 # 514xx libc++
 # 515xx tracy
+# 516xx capnproto
 
 import subprocess
 try:
