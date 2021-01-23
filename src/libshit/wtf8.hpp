@@ -5,6 +5,7 @@
 #include "libshit/nonowning_string.hpp"
 #include "libshit/except.hpp"
 
+#include <cstdint>
 #include <stdexcept>
 #include <string>
 
@@ -22,6 +23,13 @@ namespace Libshit
   // replaces invalid surrogate pairs with replacement char
   std::string Utf16ToUtf8(Libshit::U16StringView in);
   std::string Utf16LEToUtf8(Libshit::U16StringView in);
+
+  // on windows, also support wchar_t
+#if WCHAR_MAX == 65535
+  std::wstring Wtf8ToWtf16Wstr(Libshit::StringView in);
+  std::string Wtf16ToWtf8(Libshit::WStringView in);
+  std::string Utf16ToUtf8(Libshit::WStringView in);
+#endif
 
 }
 

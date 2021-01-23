@@ -80,10 +80,10 @@ namespace Libshit
   std::string Utf16LEToUtf8(Libshit::U16StringView in)
   { return GenWtf16ToWtf8<boost::endian::little_to_native>(in, true); }
 
-  template <std::uint16_t (*Conv)(std::uint16_t)>
-  std::u16string GenWtf8ToWtf16(Libshit::StringView in)
+  template <typename Out, std::uint16_t (*Conv)(std::uint16_t)>
+  Out GenWtf8ToWtf16(Libshit::StringView in)
   {
-    std::u16string out;
+    Out out;
     out.reserve(in.size());
 
 #define P(len, extra) (len) | ((extra) << 3)
@@ -132,10 +132,25 @@ namespace Libshit
   }
 
   std::u16string Wtf8ToWtf16(Libshit::StringView in)
-  { return GenWtf8ToWtf16<NoConv>(in); }
+  { return GenWtf8ToWtf16<std::u16string, NoConv>(in); }
 
   std::u16string Wtf8ToWtf16LE(Libshit::StringView in)
-  { return GenWtf8ToWtf16<boost::endian::native_to_little>(in); }
+  { return GenWtf8ToWtf16<std::u16string, boost::endian::native_to_little>(in); }
+
+#if WCHAR_MAX == 65535
+  std::wstring Wtf8ToWtf16Wstr(Libshit::StringView in)
+  { return GenWtf8ToWtf16<std::wstring, NoConv>(in); }
+  std::string Wtf16ToWtf8(Libshit::WStringView in)
+  {
+    return GenWtf16ToWtf8<NoConv>({
+        reinterpret_cast<const char16_t*>(in.data()), in.size()}, false);
+  }
+  std::string Utf16ToUtf8(Libshit::WStringView in)
+  {
+    return GenWtf16ToWtf8<NoConv>({
+        reinterpret_cast<const char16_t*>(in.data()), in.size()}, true);
+  }
+#endif
 
   TEST_CASE("Conversion")
   {

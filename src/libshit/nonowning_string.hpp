@@ -57,8 +57,8 @@ namespace Libshit
 
     constexpr BaseBasicNonowningString() noexcept : str{nullptr}, len{0} {}
 
-    BaseBasicNonowningString(const_pointer str) noexcept : str{str}
-    { len = str ? Traits::length(str) : 0; }
+    constexpr BaseBasicNonowningString(const_pointer str) noexcept
+      : str{str}, len{str ? Traits::length(str) : 0} {}
 
     BaseBasicNonowningString(unsigned_const_pointer str) noexcept
       : BaseBasicNonowningString{reinterpret_cast<const_pointer>(str)} {}

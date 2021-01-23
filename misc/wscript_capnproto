@@ -14,6 +14,9 @@ def configure(ctx):
         ctx.find_program('capnpc-c++', var='CAPNPC_CPP')
     def bundle_capnproto(ctx):
         ctx.env.append_value('DEFINES_CAPNPROTO', 'CAPNP_LITE')
+        ctx.env.append_value('SYSTEM_INCLUDES_CAPNPROTO',
+                             ctx.path.find_dir('capnproto/c++/src').abspath())
+
     ctx.with_chk('capnproto',
                  {'system': system_capnproto, 'bundle': bundle_capnproto})
 
@@ -36,6 +39,7 @@ def build(ctx):
         'capnproto/c++/src/kj/table.c++',
         'capnproto/c++/src/kj/test-helpers.c++',
         'capnproto/c++/src/kj/thread.c++',
+        'capnproto/c++/src/kj/time.c++', # only needed on windows
         'capnproto/c++/src/kj/units.c++',
 
         'capnproto/c++/src/capnp/any.c++',
@@ -58,7 +62,6 @@ def build(ctx):
         'capnproto/c++/src/kj/parse/char.c++',
         'capnproto/c++/src/kj/refcount.c++',
         'capnproto/c++/src/kj/string-tree.c++',
-        'capnproto/c++/src/kj/time.c++',
 
         'capnproto/c++/src/capnp/compat/json.c++',
         'capnproto/c++/src/capnp/compat/json.capnp.c++',
@@ -72,7 +75,6 @@ def build(ctx):
     ctx.stlib(idx             = 51600,
               source          = src,
               includes        = 'capnproto/c++/src',
-              export_includes = 'capnproto/c++/src',
               target          = 'capnp',
               uselib          = 'CAPNPROTO EXT')
 
@@ -83,7 +85,6 @@ def build(ctx):
         ctx.stlib(idx             = 51601,
                   source          = src_heavy,
                   includes        = 'capnproto/c++/src',
-                  export_includes = 'capnproto/c++/src',
                   target          = 'capnp_heavy',
                   uselib          = 'EXT',
                   cxxflags        = '-fno-rtti')
@@ -105,12 +106,14 @@ def build(ctx):
 
         ctx.program(idx      = 51602,
                     source   = src,
+                    includes = 'capnproto/c++/src',
                     use      = 'capnp_heavy',
                     uselib   = 'EXT',
                     target   = 'capnpc',
                     cxxflags = '-fno-rtti')
         ctx.program(idx      = 51603,
                     source   = 'capnproto/c++/src/capnp/compiler/capnpc-c++.c++',
+                    includes = 'capnproto/c++/src',
                     use      = 'capnp_heavy',
                     uselib   = 'EXT',
                     target   = 'capnpc-c++',
