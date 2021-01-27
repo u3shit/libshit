@@ -13,8 +13,8 @@ def configure(ctx):
         ctx.find_program('capnpc', var='CAPNPC')
         ctx.find_program('capnpc-c++', var='CAPNPC_CPP')
     def bundle_capnproto(ctx):
-        ctx.env.append_value('DEFINES_CAPNPROTO', 'CAPNP_LITE')
-        ctx.env.append_value('SYSTEM_INCLUDES_CAPNPROTO',
+        ctx.env.append_value('DEFINES_CAPNP', 'CAPNP_LITE')
+        ctx.env.append_value('SYSTEM_INCLUDES_CAPNP',
                              ctx.path.find_dir('capnproto/c++/src').abspath())
 
     ctx.with_chk('capnproto',
@@ -76,7 +76,7 @@ def build(ctx):
               source          = src,
               includes        = 'capnproto/c++/src',
               target          = 'capnp',
-              uselib          = 'CAPNPROTO EXT')
+              uselib          = 'CAPNP EXT')
 
     def build_capnp_tool(ctx, pref):
         # breaks with -fsanitize unless -fno-rtti is also used
