@@ -75,6 +75,10 @@ namespace Libshit
       unsigned_const_pointer str, size_type len) noexcept
       : BaseBasicNonowningString{reinterpret_cast<const_pointer>(str), len} {}
 
+    // c++20 iterator ctor light: there's no contiguous_iterator_tag
+    constexpr BaseBasicNonowningString(
+      const_iterator begin, const_iterator end) noexcept
+      : BaseBasicNonowningString{begin, static_cast<size_type>(end-begin)} {}
 
     template <typename Allocator>
     BaseBasicNonowningString(
@@ -83,7 +87,8 @@ namespace Libshit
 
     template <size_t N>
     constexpr BaseBasicNonowningString(const Char (&str)[N]) noexcept
-      : str{str}, len{N-1} {}
+      : str{str}, len{N-1}
+    { if (CString) LIBSHIT_ASSERT(str[len] == '\0'); }
 
     constexpr const_iterator  begin() const noexcept { return str; }
     constexpr const_iterator cbegin() const noexcept { return str; }
