@@ -21,7 +21,10 @@
             '<boost/container/flat_map.hpp>', public]
 - include: ['<boost/container/vector.hpp>', public,
             '<boost/container/flat_map.hpp>', public]
+
 - include: ['@<boost/spirit/home/x3/.*>', public,
+            '<boost/spirit/home/x3.hpp>', public]
+- include: ['<boost/spirit/home/support/char_encoding/standard.hpp>', public,
             '<boost/spirit/home/x3.hpp>', public]
 
 - include: ['<boost/iterator/iterator_traits.hpp>', public,
@@ -29,6 +32,25 @@
 
 - include: ['@<boost/stacktrace/.*>', private,
             '<boost/stacktrace.hpp>', public]
+
+- include: ['<boost/algorithm/string/detail/finder.hpp>', private,
+            '<boost/algorithm/string/finder.hpp>', public]
+- include: ['<boost/iterator/iterator_facade.hpp>', public,
+            '<boost/algorithm/string/find_iterator.hpp>', public]
+- include: ['<boost/iterator/transform_iterator.hpp>', public,
+            '<boost/algorithm/string/case_conv.hpp>', public]
+- include: ['<boost/iterator/transform_iterator.hpp>', public,
+            '<boost/algorithm/string/iter_find.hpp>', public]
+- include: ['<boost/algorithm/string/compare.hpp>', public,
+           '<boost/algorithm/string/find.hpp>', public]
+- include: ['<boost/algorithm/string/compare.hpp>', public,
+           '<boost/algorithm/string/replace.hpp>', public]
+- include: ['<boost/algorithm/string/compare.hpp>', public,
+           '<boost/algorithm/string/predicate.hpp>', public]
+- include: ['<boost/algorithm/string/compare.hpp>', public,
+           '<boost/algorithm/string/split.hpp>', public]
+- include: ['<boost/algorithm/string/compare.hpp>', public,
+           '<boost/algorithm/string/finder.hpp>', public]
 
 # token_functions errors if I directly include it
 - include: ['<boost/token_functions.hpp>', private,
