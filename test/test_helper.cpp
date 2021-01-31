@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <boost/algorithm/string/replace.hpp>
 #include <chrono>
-#include <cstdlib>
 #include <fstream> // IWYU pragma: keep
 #include <iostream>
 #include <regex>
@@ -264,7 +263,7 @@ namespace Libshit
   }
 
   static Option opt{
-    OptionParser::GetTestingOptions(), "test", std::size_t(-1), "ARGS...",
+    OptionParser::GetTestingOptions(), "test", Option::ALL_ARGS, "ARGS...",
     "Run doctest tests (\"--test --help\" for details)\n\t"
     "Remaining arguments will be passed to doctest", FUNC<Fun>};
 }

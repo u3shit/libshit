@@ -15,14 +15,18 @@
 #include <cstddef>
 #include <functional>
 #include <iterator>
+#include <limits>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 #include <boost/intrusive/intrusive_fwd.hpp> // IWYU pragma: keep
+#include <boost/intrusive/options.hpp>
 #include <boost/intrusive/set.hpp>
 #include <boost/intrusive/set_hook.hpp>
+
+// IWYU pragma: no_forward_declare boost::intrusive::tag
 
 namespace Libshit
 {
@@ -38,8 +42,10 @@ namespace Libshit
 
   struct OrderedMapItem : public Libshit::RefCounted, public OrderedMapItemHook
   {
+    static constexpr const std::size_t NO_INDEX =
+      std::numeric_limits<std::size_t>::max();
   private:
-    std::size_t vector_index = static_cast<std::size_t>(-1);
+    std::size_t vector_index = NO_INDEX;
     template <typename T, typename KeyOfValue, typename Compare>
     friend class OrderedMap;
   };
@@ -408,13 +414,15 @@ namespace Libshit
     void FixupIndex(typename VectorType::iterator b) noexcept
     { for (; b != vect.end(); ++b) VectorIndex(**b) = b - vect.begin(); }
 
-    void RemoveItem(T& t) noexcept { VectorIndex(t) = size_type(-1); }
+    void RemoveItem(T& t) noexcept
+    { VectorIndex(t) = OrderedMapItem::NO_INDEX; }
 
     template <typename Checker, typename U>
     std::pair<iterator, bool> InsertGen(const_iterator p, U&& t)
     {
-      LIBSHIT_CHECK(ItemAlreadyAdded, VectorIndex(*t) == size_type(-1),
-                    "Item alread added to an OrderedMap");
+      LIBSHIT_CHECK(
+        ItemAlreadyAdded, VectorIndex(*t) == OrderedMapItem::NO_INDEX,
+        "Item alread added to an OrderedMap");
 
       typename SetType::insert_commit_data data{};
       auto itp = set.insert_check(Traits{}(*t), data);

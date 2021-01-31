@@ -110,11 +110,8 @@ namespace Libshit
   void Exception::EnsureInfo()
   {
     if (!info)
-    {
       info.reset(new ExceptionInfo);
-      return;
-    }
-    if (info->refcount != 1)
+    else if (info->refcount != 1)
       info.reset(new ExceptionInfo{*info});
   }
 
@@ -187,7 +184,7 @@ namespace Libshit
 #define RETHROW(ex)                                            \
     catch (const ex& e)                                        \
     {                                                          \
-      throw AddInfos(EnableErrorInfo<ex>{e}, "Rethrown type", \
+      throw AddInfos(EnableErrorInfo<ex>{e}, "Rethrown type",  \
                      boost::core::demangle(typeid(e).name())); \
     }
     RETHROW(std::range_error)

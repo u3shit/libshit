@@ -156,7 +156,7 @@ namespace Libshit
         if (!opt) throw InvalidParam{"Unknown option"};
 
         std::vector<const char*> args;
-        if (opt->args_count == std::size_t(-1))
+        if (opt->args_count == Option::ALL_ARGS)
         {
           args.reserve(argc-1+1);
           if (ptr[1]) args.push_back(ptr+1);

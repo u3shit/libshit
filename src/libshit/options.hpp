@@ -8,6 +8,7 @@
 
 #include <cstddef>
 #include <iosfwd>
+#include <limits>
 #include <stdexcept>
 #include <vector>
 
@@ -53,6 +54,8 @@ namespace Libshit
 
     const char* const name;
     const char short_name;
+    static constexpr const std::size_t ALL_ARGS =
+      std::numeric_limits<std::size_t>::max();
     const std::size_t args_count;
 
     const char* const args_help;
