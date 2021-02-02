@@ -4,6 +4,7 @@
 
 #include "libshit/assert.hpp"
 #include "libshit/except.hpp"
+#include "libshit/utils.hpp"
 
 #include <algorithm> // std::min
 #include <cstddef>
@@ -259,6 +260,14 @@ namespace Libshit
   {
     thiz.append(view.data(), view.size());
     return thiz;
+  }
+
+  template <typename T, bool B, typename Traits, typename Alloc>
+  inline std::basic_string<T, Traits, Alloc> operator+(
+    std::basic_string<T, Traits, Alloc>&& thiz, BasicNonowningString<T, B> view)
+  {
+    thiz.append(view.data(), view.size());
+    return Libshit::Move(thiz);
   }
 
   template <typename T, bool B>
