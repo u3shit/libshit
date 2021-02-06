@@ -9,11 +9,11 @@
 #include <boost/config.hpp>
 #include <boost/smart_ptr/intrusive_ptr.hpp>
 
+#include <errno.h>
 #include <functional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <system_error>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -190,14 +190,41 @@ namespace Libshit
   }
 
   LIBSHIT_GEN_EXCEPTION_TYPE(DecodeError,    std::runtime_error);
-  LIBSHIT_GEN_EXCEPTION_TYPE(OutOfRange,     std::out_of_range);
-  LIBSHIT_GEN_EXCEPTION_TYPE(SystemError,    std::system_error);
   /// Virtual method not implemented
   LIBSHIT_GEN_EXCEPTION_TYPE(NotImplemented, std::logic_error);
 
 #define LIBSHIT_VALIDATE_FIELD(msg, x)                                    \
   while (!(x)) LIBSHIT_THROW(Libshit::DecodeError, msg ": invalid data",  \
                              "Failed Expression", #x)
+
+  // std::system_error is a mess (just look at this page:
+  // https://stackoverflow.com/questions/28746372/system-error-categories-and-standard-system-error-codes)
+  // libc++ implementation doesn't know about winapi error codes at all and
+  // implementing it normally is needlessly complicated, so here's a lightweight
+  // alternative to it
+  LIBSHIT_GEN_EXCEPTION_TYPE(SystemError, std::runtime_error);
+  struct ErrnoError : SystemError
+  {
+    int err_code;
+    ErrnoError(int err_code);
+  };
+
+  // ...: api_function_name, other_params...
+#define LIBSHIT_THROW_ERRNO(...) \
+  LIBSHIT_THROW(Libshit::ErrnoError, errno, "API function", __VA_ARGS__)
+
+
+#if LIBSHIT_OS_IS_WINDOWS
+  struct WindowsError : SystemError
+  {
+    unsigned long /*DWORD*/ err_code;
+    WindowsError(unsigned long err_code);
+  };
+
+#define LIBSHIT_THROW_WINERROR(...)                    \
+  LIBSHIT_THROW(Libshit::WindowsError, GetLastError(), \
+                "API function", __VA_ARGS__)
+#endif
 
 }
 

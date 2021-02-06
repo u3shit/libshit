@@ -1,6 +1,7 @@
 #include "libshit/except.hpp"
 
 #include "libshit/assert.hpp"
+#include "libshit/doctest.hpp"
 #include "libshit/platform.hpp"
 
 // do not use, unless you have to: very slow (executes addr2line for *each*
@@ -16,12 +17,23 @@
 #include <atomic>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <iomanip>
 #include <map>
 #include <memory>
 #include <new>
+#include <optional>
+#include <system_error>
 #include <typeinfo>
 #include <variant>
+
+#if LIBSHIT_OS_IS_WINDOWS
+#  include "libshit/wtf8.hpp"
+
+#  define WIN32_LEAN_AND_MEAN
+#  define NOMINMAX
+#  include <windows.h>
+#endif
 
 #define LIBSHIT_LOG_NAME "except"
 #include "libshit/logger_helper.hpp"
@@ -31,6 +43,8 @@ extern "C" void _assert(const char* msg, const char* file, unsigned line);
 
 namespace Libshit
 {
+  TEST_SUITE_BEGIN("Libshit::Except");
+
   static void PrintStacktrace(
     std::ostream& os, const boost::stacktrace::stacktrace& trace, bool color)
   {
@@ -196,7 +210,7 @@ namespace Libshit
     RETHROW(std::system_error)
     RETHROW(std::runtime_error)
 
-    //RETHROW(std::bad_optional_access) no optional in vc12
+    RETHROW(std::bad_optional_access)
 
     RETHROW(std::domain_error)
     RETHROW(std::invalid_argument)
@@ -314,4 +328,67 @@ namespace Libshit
       std::abort();
     }
   }
+
+#if LIBSHIT_OS_IS_WINDOWS
+  // no strerror_r but strerror is claimed to be thread safe
+  static std::string GetStrError(int err_code)
+  {
+    auto ptr = strerror(err_code);
+    return ptr ? ptr : "Unknown error";
+  }
+#else
+  // workaround that fucking strerror_r mess that the fucking glibc did
+  [[maybe_unused]]
+  static std::string GetStrError2(int, const char* str) { return str; }
+  [[maybe_unused]]
+  static std::string GetStrError2(const char* str0, const char* str1)
+  { return str0 ? str0 : str1; }
+
+  static std::string GetStrError(int err_code)
+  {
+    char buf[1024] = "Unknown error";
+    return GetStrError2(strerror_r(err_code, buf, 1024), buf);
+  }
+#endif
+
+  TEST_CASE("ErrnoError")
+  {
+    CHECK(GetStrError(ENOENT) != "Unknown error");
+  }
+
+  ErrnoError::ErrnoError(int err_code)
+    : SystemError{GetStrError(err_code)}, err_code{err_code} {}
+
+#if LIBSHIT_OS_IS_WINDOWS
+  static std::string GetWindowsError(unsigned long err_code)
+  {
+    wchar_t* msg;
+    if (!FormatMessageW(
+      FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+      // it's a security error to call this function without this...
+      // https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-formatmessage
+      // https://archive.vn/sDYHh
+      FORMAT_MESSAGE_IGNORE_INSERTS,
+      nullptr, err_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+      reinterpret_cast<wchar_t*>(&msg), 0, nullptr))
+      return "Unknown error";
+    AtScopeExit x{[&]() { LocalFree(msg); }};
+    auto res = Wtf16ToWtf8(msg);
+    // windows likes to place a \r\n at the end of the string just because
+    if (!res.empty() && res.back() == '\n') res.pop_back();
+    if (!res.empty() && res.back() == '\r') res.pop_back();
+    return res;
+  }
+
+  TEST_CASE("WindowsError")
+  {
+    // TODO: can we depend on this?
+    CHECK(GetWindowsError(ERROR_ACCESS_DENIED) == "Access denied.");
+  }
+
+  WindowsError::WindowsError(unsigned long err_code)
+    : SystemError{GetWindowsError(err_code)}, err_code{err_code} {}
+#endif
+
+  TEST_SUITE_END();
 }

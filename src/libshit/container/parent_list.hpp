@@ -6,7 +6,6 @@
 
 #include "libshit/assert.hpp"
 #include "libshit/check.hpp"
-#include "libshit/except.hpp" /* IWYU pragma: keep */ // OutOfRange
 #include "libshit/meta.hpp"
 #include "libshit/lua/type_traits.hpp"
 #include "libshit/lua/dynamic_object.hpp"
@@ -14,6 +13,7 @@
 #include <cstddef>
 #include <functional>
 #include <iterator>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 
@@ -247,7 +247,7 @@ namespace Libshit
     template <typename Checker = Libshit::Check::Assert>           \
     void pop_##name() noexcept(Checker::IS_NOEXCEPT)               \
     {                                                              \
-      LIBSHIT_CHECK(Libshit::OutOfRange, !empty(),                 \
+      LIBSHIT_CHECK(std::out_of_range, !empty(),                   \
                     "ParentList::pop_" #name);                     \
       auto node = node_traits::get_dir(GetRoot());                 \
       ListAlgo::unlink(node);                                      \
@@ -261,7 +261,7 @@ namespace Libshit
     template <typename Checker = Libshit::Check::Assert>                  \
     ret name() opt_const noexcept(Checker::IS_NOEXCEPT)                   \
     {                                                                     \
-      LIBSHIT_CHECK(Libshit::OutOfRange, !empty(), "ParentList::" #name); \
+      LIBSHIT_CHECK(std::out_of_range, !empty(), "ParentList::" #name);   \
       return *Traits::to_value_ptr(node_traits::fun(GetRoot()));          \
     }
     LIBSHIT_GEN(reference, front, , get_next)
