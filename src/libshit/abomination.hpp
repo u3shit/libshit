@@ -9,11 +9,13 @@
 #include "libshit/platform.hpp"
 
 #include <cstdio> // IWYU pragma: export
+#include <cstdlib> // IWYU pragma: export
 #include <fstream> // IWYU pragma: export
-#include <stdlib.h> // IWYU pragma: export
 
 #if LIBSHIT_OS_IS_WINDOWS
 #  include "libshit/wtf8.hpp"
+#else
+#  include <unistd.h> // IWYU pragma: export
 #endif
 
 namespace Libshit::Abomination
@@ -32,6 +34,9 @@ namespace Libshit::Abomination
     return _wfreopen(Wtf8ToWtf16Wstr(fname).c_str(),
                      Wtf8ToWtf16Wstr(mode).c_str(), f);
   }
+
+  inline int unlink(const char* fname)
+  { return _wunlink(Wtf8ToWtf16Wstr(fname).c_str()); }
 
   // rage time: there's no setenv on windows, only the horrible putenv. There's
   // also GetEnvironmentVariable and SetEnvironmentVariable winapi functions.
@@ -68,6 +73,7 @@ namespace Libshit::Abomination
 #else
   using std::fopen;
   using std::freopen;
+  using ::unlink;
   using ::getenv;
   using ::setenv;
   using ::unsetenv;
