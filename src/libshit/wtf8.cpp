@@ -27,8 +27,7 @@ namespace Libshit
   static void GenWtf16ToWtf8(
     std::string& out, Libshit::U16StringView in, bool replace)
   {
-    out.clear();
-    out.reserve(in.size() * 3);
+    out.reserve(out.size() + in.size() * 3);
 
     for (std::size_t i = 0; i < in.size(); ++i)
     {
@@ -81,8 +80,7 @@ namespace Libshit
   template <std::uint16_t (*Conv)(std::uint16_t), typename Out>
   void GenWtf8ToWtf16(Out& out, Libshit::StringView in)
   {
-    out.clear();
-    out.reserve(in.size());
+    out.reserve(out.size() + in.size());
 
 #define P(len, extra) (len) | ((extra) << 3)
     static constexpr uint8_t buf[32] = {
@@ -102,7 +100,7 @@ namespace Libshit
     char32_t cp;
     for (char cc : in)
     {
-      unsigned char c = static_cast<unsigned char>(cc);
+      auto c = static_cast<unsigned char>(cc);
       if (rem_chars == 0)
       {
         st = buf[c >> 3];

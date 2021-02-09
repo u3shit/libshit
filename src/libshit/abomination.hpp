@@ -49,6 +49,7 @@ namespace Libshit::Abomination
     static thread_local std::string buf;
     auto res = _wgetenv(Wtf8ToWtf16Wstr(name).c_str());
     if (!res) return nullptr;
+    buf.clear();
     Wtf16ToWtf8(buf, res);
     return buf.data();
   }
