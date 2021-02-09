@@ -383,7 +383,9 @@ namespace Libshit
   TEST_CASE("WindowsError")
   {
     // TODO: can we depend on this?
-    CHECK(GetWindowsError(ERROR_ACCESS_DENIED) == "Access denied.");
+    auto ec = GetWindowsError(ERROR_ACCESS_DENIED);
+    CAPTURE(ec);
+    CHECK((ec == "Access denied." || ec == "Access is denied."));
   }
 
   WindowsError::WindowsError(unsigned long err_code)

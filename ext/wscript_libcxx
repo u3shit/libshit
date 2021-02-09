@@ -119,6 +119,7 @@ def build(ctx):
         'NDEBUG', '_LIBCPP_BUILDING_LIBRARY',
         '_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER',
         '__STDC_CONSTANT_MACROS', '__STDC_FORMAT_MACROS', '__STDC_LIMIT_MACROS',
+        '_WIN32_WINNT=_WIN32_WINNT_WIN7', # no win8 only shit
     ]
     if use_libcxxabi(ctx): defines += ['LIBCXX_BUILDING_LIBCXXABI']
 
