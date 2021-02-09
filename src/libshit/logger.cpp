@@ -243,6 +243,23 @@ namespace Libshit::Logger
     223, 224, 225, 226, 227, 228, 229, 230, 231
   };
 
+#if LIBSHIT_OS_IS_WINDOWS
+#  define DUP(a) a, FOREGROUND_INTENSITY | (a)
+  static int win_rand_colors[] = {
+    FOREGROUND_INTENSITY,
+    DUP(FOREGROUND_RED),
+    DUP(FOREGROUND_GREEN),
+    DUP(FOREGROUND_BLUE),
+
+    DUP(FOREGROUND_RED | FOREGROUND_GREEN),
+    DUP(FOREGROUND_RED | FOREGROUND_BLUE),
+    DUP(FOREGROUND_GREEN | FOREGROUND_BLUE),
+
+    DUP(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE),
+#  undef DUP
+  };
+#endif
+
   static size_t max_name = 16;
   static size_t max_file = 42, max_fun = 20;
 
@@ -324,7 +341,7 @@ namespace Libshit::Logger
         return 0;
       }
 
-      std::uint32_t GetTracyColor()
+      std::uint32_t GetTracyColor() const
       {
         switch (level)
         {
@@ -335,7 +352,7 @@ namespace Libshit::Logger
         }
       }
 
-      void WriteBegin()
+      void WriteBegin() const
       {
 #if LIBSHIT_OS_IS_WINDOWS
         HANDLE h;
@@ -344,8 +361,6 @@ namespace Libshit::Logger
         auto win_col = HasWinColor();
         if (win_col)
         {
-
-          os.flush();
           h = GetStdHandle(STD_ERROR_HANDLE);
           switch (level)
           {
@@ -356,7 +371,6 @@ namespace Libshit::Logger
             color = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
             break;
           }
-          SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | color);
         }
 #endif
 
@@ -375,6 +389,13 @@ namespace Libshit::Logger
             default:      os << "\033[0;1m";    break;
             }
           }
+#if LIBSHIT_OS_IS_WINDOWS
+          if (win_col)
+          {
+            os.flush();
+            SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | color);
+          }
+#endif
         };
         print_col();
 
@@ -393,10 +414,19 @@ namespace Libshit::Logger
           auto i = std::hash<std::string>{}(name) % std::size(rand_colors);
           os << "\033[22;38;5;" << unsigned(rand_colors[i]) << 'm';
         }
+#if LIBSHIT_OS_IS_WINDOWS
+        if (win_col)
+        {
+          os.flush();
+          auto i = std::hash<std::string>{}(name) % std::size(win_rand_colors);
+          SetConsoleTextAttribute(h, win_rand_colors[i]);
+        }
+#endif
         os << std::setw(max_name) << name;
         print_col();
         os << ']';
 
+        if (ansi_col) os << "\033[22m";
 #if LIBSHIT_OS_IS_WINDOWS
         if (win_col)
         {
@@ -404,7 +434,6 @@ namespace Libshit::Logger
           SetConsoleTextAttribute(h, color);
         }
 #endif
-        if (ansi_col) os << "\033[22m";
 
         if (file)
         {
@@ -420,7 +449,7 @@ namespace Libshit::Logger
         os << ": ";
       }
 
-      void WriteEnd()
+      void WriteEnd() const
       {
 #if LIBSHIT_OS_IS_WINDOWS
         if (HasWinColor())
