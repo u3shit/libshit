@@ -295,6 +295,7 @@ def build_libshit(ctx, pref):
         'src/libshit/char_utils.cpp',
         'src/libshit/except.cpp',
         'src/libshit/logger.cpp',
+        'src/libshit/low_io.cpp',
         'src/libshit/options.cpp',
         'src/libshit/wtf8.cpp',
     ]
