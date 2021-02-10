@@ -184,6 +184,9 @@ namespace Libshit
     LIBSHIT_UNREACHABLE("Invalid mode");
   }
 
+#if LIBSHIT_OS_IS_VITA
+#  define O_CLOEXEC 0 // no exec on vita...
+#endif
   LowIo::LowIo(const char* fname, Permission perm, Mode mode)
     : fd{open(
       fname, Perm2Flags(perm) | Mode2Flags(mode) | O_CLOEXEC | O_NOCTTY, 0666)}
@@ -191,7 +194,12 @@ namespace Libshit
 
   LowIo LowIo::OpenStdOut()
   {
+#if LIBSHIT_OS_IS_VITA
+    // TODO: does this even work?!
+    int fd = dup(STDOUT_FILENO);
+#else
     int fd = fcntl(STDOUT_FILENO, F_DUPFD_CLOEXEC, 3);
+#endif
     if (fd == -1) LIBSHIT_THROW_ERRNO("dup");
     return LowIo{fd};
   }

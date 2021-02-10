@@ -329,8 +329,9 @@ namespace Libshit
     }
   }
 
-#if LIBSHIT_OS_IS_WINDOWS
-  // no strerror_r but strerror is claimed to be thread safe
+#if LIBSHIT_OS_IS_WINDOWS || LIBSHIT_OS_IS_VITA
+  // windows: no strerror_r but strerror is claimed to be thread safe
+  // vita: no strerror_r and I have no freakin idea what strerror does
   static std::string GetStrError(int err_code)
   {
     auto ptr = strerror(err_code);

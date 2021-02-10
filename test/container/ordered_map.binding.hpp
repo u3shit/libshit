@@ -93,17 +93,17 @@ namespace Libshit::Lua
       static_cast<void (*)(::om_item_test &, ::Libshit::Lua::Skip) noexcept>(::Libshit::OrderedMapLua<::Libshit::Test::OMItemTest, ::Libshit::Test::OMItemTestTraits>::get)
     >("get");
     bld.AddFunction<
-      static_cast<std::tuple<bool, ::size_t> (*)(::om_item_test &, ::size_t, ::Libshit::OrderedMapLua<::Libshit::Test::OMItemTest, ::Libshit::Test::OMItemTestTraits, ::std::less<::std::basic_string<char> > >::NotNullPtr &&)>(::Libshit::OrderedMapLua<::Libshit::Test::OMItemTest, ::Libshit::Test::OMItemTestTraits>::insert)
+      static_cast<std::tuple<bool, ::size_t> (*)(::om_item_test &, ::size_t, ::Libshit::OrderedMapLua<::Libshit::Test::OMItemTest, ::Libshit::Test::OMItemTestTraits, ::std::less<::std::basic_string<char, ::std::char_traits<char>, ::std::allocator<char> > > >::NotNullPtr &&)>(::Libshit::OrderedMapLua<::Libshit::Test::OMItemTest, ::Libshit::Test::OMItemTestTraits>::insert)
     >("insert");
     bld.AddFunction<
       static_cast<::size_t (*)(::om_item_test &, ::size_t, ::size_t)>(::Libshit::OrderedMapLua<::Libshit::Test::OMItemTest, ::Libshit::Test::OMItemTestTraits>::erase),
       static_cast<::size_t (*)(::om_item_test &, ::size_t)>(::Libshit::OrderedMapLua<::Libshit::Test::OMItemTest, ::Libshit::Test::OMItemTestTraits>::erase)
     >("erase");
     bld.AddFunction<
-      static_cast<::Libshit::OrderedMapLua<::Libshit::Test::OMItemTest, ::Libshit::Test::OMItemTestTraits, ::std::less<::std::basic_string<char> > >::NotNullPtr (*)(::om_item_test &, ::size_t)>(::Libshit::OrderedMapLua<::Libshit::Test::OMItemTest, ::Libshit::Test::OMItemTestTraits>::remove)
+      static_cast<::Libshit::OrderedMapLua<::Libshit::Test::OMItemTest, ::Libshit::Test::OMItemTestTraits, ::std::less<::std::basic_string<char, ::std::char_traits<char>, ::std::allocator<char> > > >::NotNullPtr (*)(::om_item_test &, ::size_t)>(::Libshit::OrderedMapLua<::Libshit::Test::OMItemTest, ::Libshit::Test::OMItemTestTraits>::remove)
     >("remove");
     bld.AddFunction<
-      static_cast<std::tuple<bool, ::size_t> (*)(::om_item_test &, ::Libshit::OrderedMapLua<::Libshit::Test::OMItemTest, ::Libshit::Test::OMItemTestTraits, ::std::less<::std::basic_string<char> > >::NotNullPtr &&)>(::Libshit::OrderedMapLua<::Libshit::Test::OMItemTest, ::Libshit::Test::OMItemTestTraits>::push_back)
+      static_cast<std::tuple<bool, ::size_t> (*)(::om_item_test &, ::Libshit::OrderedMapLua<::Libshit::Test::OMItemTest, ::Libshit::Test::OMItemTestTraits, ::std::less<::std::basic_string<char, ::std::char_traits<char>, ::std::allocator<char> > > >::NotNullPtr &&)>(::Libshit::OrderedMapLua<::Libshit::Test::OMItemTest, ::Libshit::Test::OMItemTestTraits>::push_back)
     >("push_back");
     bld.AddFunction<
       static_cast<::Libshit::Lua::RetNum (*)(::Libshit::Lua::StateRef, ::om_item_test &, const typename ::om_item_test::key_type &)>(::Libshit::OrderedMapLua<::Libshit::Test::OMItemTest, ::Libshit::Test::OMItemTestTraits>::find)

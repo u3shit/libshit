@@ -1,0 +1,9 @@
+// -*- c++ -*-
+#pragma once
+
+#include <xmemory0>
+
+#define traits_type traits_type; \
+  constexpr _Elem* data() noexcept { return _Myptr(); }
+#include_next <xstring>
+#undef traits_type
