@@ -17,6 +17,11 @@ local vr = cl.ChildVisitResult
 local args = {
   "-DLIBSHIT_BINDING_GENERATOR",
   "-DLIBSHIT_WITH_LUA=1",
+  "-nostdinc++",
+  "-isystem", "ext/libcxx/include",
+  "-isystem", "libshit/ext/libcxx/include",
+  "-isystem", "ext/libcxxabi/include",
+  "-isystem", "libshit/ext/libcxxabi/include",
   "-Isrc",
   "-Iext/boost",
   "-Iext/ljx/src",
@@ -28,7 +33,6 @@ local args = {
   "-Ilibshit/ext/doctest/doctest",
   "-Ilibshit/ext/brigand/include",
   "-std=c++17",
-  "-stdlib=libc++", -- probably better c++1* support than random gcc headers
   "-Wno-undefined-inline", "-Wno-undefined-internal", -- skip function bodies
   "-Wno-assume"
 }
