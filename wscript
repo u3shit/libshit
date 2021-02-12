@@ -165,6 +165,7 @@ def configure_variant(ctx):
         '-Wall', '-Wextra', '-pedantic', '-Wdouble-promotion',
         '-Wno-parentheses', '-Wno-assume', '-Wno-attributes',
         '-Wimplicit-fallthrough', '-Wno-dangling-else', '-Wno-unused-parameter',
+        '-Wno-extra-semi', # warns on valid ; in structs
         # I don't even know what this warning supposed to mean, gcc. how can you
         # not set a parameter?
         '-Wno-unused-but-set-parameter',

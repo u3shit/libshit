@@ -5,6 +5,8 @@
 #include "libshit/assert.hpp"
 #include "libshit/except.hpp"
 
+#include <Tracy.hpp>
+
 #include <cstdlib>
 
 #if LIBSHIT_OS_IS_WINDOWS
@@ -75,10 +77,19 @@ namespace Libshit
     return LowIo{ret};
   }
 
-  LowIo::~LowIo() noexcept
+  void LowIo::Reset() noexcept
   {
-    CloseHandle(mmap_fd);
-    if (owning) CloseHandle(fd);
+    if (mmap_fd != INVALID_FD)
+    {
+      CloseHandle(mmap_fd);
+      mmap_fd = INVALID_FD;
+    }
+
+    if (owning && fd != INVALID_FD)
+    {
+      CloseHandle(fd);
+      fd = INVALID_FD; owning = false;
+    }
   }
 
   LowIo::FilePosition LowIo::GetSize() const
@@ -110,18 +121,27 @@ namespace Libshit
     if (mmap_fd == nullptr) LIBSHIT_THROW_WINERROR("CreateFileMapping");
   }
 
-  void* LowIo::Mmap(FilePosition offs, std::size_t size, bool write) const
+  LowIo::MmapPtr LowIo::Mmap(
+    FilePosition offs, std::size_t size, bool write) const
   {
     auto ret = MapViewOfFile(mmap_fd, write ? FILE_MAP_WRITE : FILE_MAP_READ,
                              offs >> 16 >> 16, offs, size);
     if (ret == nullptr)
       LIBSHIT_THROW_WINERROR(
         "MapViewOfFile", "Mmap offset", offs, "Mmap size", size);
-    return ret;
+    TracyAllocNS(ret, size, 5, "mmap");
+    return {ret};
   }
 
-  void LowIo::Munmap(void* ptr, std::size_t size)
-  { if (!UnmapViewOfFile(ptr)) std::abort(); }
+  void LowIo::MmapPtr::Reset() noexcept
+  {
+    if (ptr)
+    {
+      if (!UnmapViewOfFile(ptr)) std::abort();
+      TracyFreeNS(ptr, 5, "mmap");
+      ptr = nullptr;
+    }
+  }
 
   void LowIo::Pread(void* buf, std::size_t len, FilePosition offs) const
   {
@@ -184,12 +204,10 @@ namespace Libshit
     LIBSHIT_UNREACHABLE("Invalid mode");
   }
 
-#if LIBSHIT_OS_IS_VITA
-#  define O_CLOEXEC 0 // no exec on vita...
-#endif
   LowIo::LowIo(const char* fname, Permission perm, Mode mode)
     : fd{open(
-      fname, Perm2Flags(perm) | Mode2Flags(mode) | O_CLOEXEC | O_NOCTTY, 0666)}
+      fname, Perm2Flags(perm) | Mode2Flags(mode)
+      LIBSHIT_OS_NOT_VITA(| O_CLOEXEC | O_NOCTTY), 0666)}
   { if (fd == -1) LIBSHIT_THROW_ERRNO("open"); }
 
   LowIo LowIo::OpenStdOut()
@@ -204,10 +222,13 @@ namespace Libshit
     return LowIo{fd};
   }
 
-  LowIo::~LowIo() noexcept
+  void LowIo::Reset() noexcept
   {
-    if (owning && fd != -1 && close(fd) != 0)
-      perror("close");
+    if (owning && fd != INVALID_FD)
+    {
+      if (close(fd)) perror("close");
+      fd = INVALID_FD; owning = false;
+    }
   }
 
   LowIo::FilePosition LowIo::GetSize() const
@@ -224,7 +245,8 @@ namespace Libshit
 
   void LowIo::PrepareMmap(bool) {}
 
-  void* LowIo::Mmap(FilePosition offs, std::size_t size, bool write) const
+  LowIo::MmapPtr LowIo::Mmap(
+    FilePosition offs, std::size_t size, bool write) const
   {
 #if LIBSHIT_OS_IS_VITA
     errno = ENOSYS;
@@ -234,18 +256,23 @@ namespace Libshit
       nullptr, size, write ? PROT_WRITE : PROT_READ,
       write ? MAP_SHARED : MAP_PRIVATE, fd, offs);
     if (ptr == MAP_FAILED) LIBSHIT_THROW_ERRNO("mmap");
-    return ptr;
+    TracyAllocNS(ptr, size, 5, "mmap");
+    return {ptr, size};
 #endif
   }
 
-  void LowIo::Munmap(void* ptr, std::size_t len)
+  void LowIo::MmapPtr::Reset() noexcept
   {
 #if !LIBSHIT_OS_IS_VITA
-    if (munmap(ptr, len) != 0)
+    if (!ptr) return;
+    TracyFreeNS(ptr, 5, "mmap");
+    if (munmap(ptr, size))
     {
       perror("munmap");
       std::abort();
     }
+    ptr = nullptr;
+    size = 0;
 #endif
   }
 
