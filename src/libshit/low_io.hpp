@@ -25,12 +25,17 @@ namespace Libshit
     enum class Permission { READ_ONLY, WRITE_ONLY, READ_WRITE };
     enum class Mode { OPEN_ONLY, CREATE_ONLY, OPEN_OR_CREATE, TRUNC_OR_CREATE };
 
-    LIBSHIT_OS_WINDOWS(LowIo(const wchar_t* fname, Permission perm, Mode mode));
     LowIo(const char* fname, Permission perm, Mode mode);
     ~LowIo() noexcept { Reset(); }
     void Reset() noexcept;
 
+    bool TryOpen(const char* fname, Permission perm, Mode mode);
     static LowIo OpenStdOut();
+
+#if LIBSHIT_OS_IS_WINDOWS
+    LowIo(const wchar_t* fname, Permission perm, Mode mode);
+    bool TryOpen(const wchar_t* fname, Permission perm, Mode mode);
+#endif
 
     LowIo(LowIo&& o) noexcept
       : fd{o.fd}, LIBSHIT_OS_WINDOWS(mmap_fd{o.mmap_fd},) owning{o.owning}

@@ -55,15 +55,21 @@ namespace Libshit
   }
 
   LowIo::LowIo(const wchar_t* fname, Permission perm, Mode mode)
-    : fd{CreateFileW(
-        fname, Perm2Access(perm), FILE_SHARE_DELETE | FILE_SHARE_READ, nullptr,
-        Mode2Disposition(mode), 0, nullptr)}
+  { if (!TryOpen(fname, perm, mode)) LIBSHIT_THROW_WINERROR("CreateFile"); }
+
+  bool LowIo::TryOpen(const wchar_t* fname, Permission perm, Mode mode)
   {
-    if (fd == INVALID_HANDLE_VALUE) LIBSHIT_THROW_WINERROR("CreateFile");
+    fd = CreateFileW(
+        fname, Perm2Access(perm), FILE_SHARE_DELETE | FILE_SHARE_READ, nullptr,
+        Mode2Disposition(mode), 0, nullptr);
+    return fd != INVALID_HANDLE_VALUE;
   }
 
   LowIo::LowIo(const char* fname, Permission perm, Mode mode)
     : LowIo{Wtf8ToWtf16Wstr(fname).c_str(), perm, mode} {}
+
+  bool LowIo::TryOpen(const char* fname, Permission perm, Mode mode)
+  { return TryOpen(Wtf8ToWtf16Wstr(fname).c_str(), perm, mode); }
 
   LowIo LowIo::OpenStdOut()
   {
@@ -205,10 +211,15 @@ namespace Libshit
   }
 
   LowIo::LowIo(const char* fname, Permission perm, Mode mode)
-    : fd{open(
+  { if (!TryOpen(fname, perm, mode)) LIBSHIT_THROW_ERRNO("open"); }
+
+  bool LowIo::TryOpen(const char* fname, Permission perm, Mode mode)
+  {
+    fd = open(
       fname, Perm2Flags(perm) | Mode2Flags(mode)
-      LIBSHIT_OS_NOT_VITA(| O_CLOEXEC | O_NOCTTY), 0666)}
-  { if (fd == -1) LIBSHIT_THROW_ERRNO("open"); }
+      LIBSHIT_OS_NOT_VITA(| O_CLOEXEC | O_NOCTTY), 0666);
+    return fd != -1;
+  }
 
   LowIo LowIo::OpenStdOut()
   {
