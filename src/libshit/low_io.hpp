@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
+#include <utility>
 
 namespace Libshit
 {
@@ -29,12 +30,30 @@ namespace Libshit
     ~LowIo() noexcept { Reset(); }
     void Reset() noexcept;
 
-    bool TryOpen(const char* fname, Permission perm, Mode mode);
     static LowIo OpenStdOut();
+
+    enum class OpenError
+    {
+      OK,
+      ACCESS, // (maybe) perm related errors
+      EXISTS, NOT_EXISTS, // (maybe) mode related errors
+      UNKNOWN // not mapped error
+    };
+    using ErrorCode = std::conditional_t<
+      LIBSHIT_OS_IS_WINDOWS, unsigned int, int>;
+    std::pair<OpenError, ErrorCode> TryOpen(
+      const char* fname, Permission perm, Mode mode);
 
 #if LIBSHIT_OS_IS_WINDOWS
     LowIo(const wchar_t* fname, Permission perm, Mode mode);
-    bool TryOpen(const wchar_t* fname, Permission perm, Mode mode);
+    std::pair<OpenError, ErrorCode> TryOpen(
+      const wchar_t* fname, Permission perm, Mode mode);
+
+#  define LIBSHIT_LOWIO_RETHROW_OPEN_ERROR(code) \
+    LIBSHIT_THROW(::Libshit::WindowsError, code, "API function", "CreateFile")
+#else
+#  define LIBSHIT_LOWIO_RETHROW_OPEN_ERROR(code) \
+    LIBSHIT_THROW(::Libshit::ErrnoError, code, "API function", "open")
 #endif
 
     LowIo(LowIo&& o) noexcept

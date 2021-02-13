@@ -17,6 +17,7 @@
 #  include <windows.h>
 #else
 #  include <cstdio>
+#  include <errno.h>
 #  include <fcntl.h>
 #  include <sys/stat.h>
 #  include <unistd.h>
@@ -55,20 +56,32 @@ namespace Libshit
   }
 
   LowIo::LowIo(const wchar_t* fname, Permission perm, Mode mode)
-  { if (!TryOpen(fname, perm, mode)) LIBSHIT_THROW_WINERROR("CreateFile"); }
+  {
+    if (auto [err, werr] = TryOpen(fname, perm, mode); err != OpenError::OK)
+      LIBSHIT_LOWIO_RETHROW_OPEN_ERROR(werr);
+  }
 
-  bool LowIo::TryOpen(const wchar_t* fname, Permission perm, Mode mode)
+  std::pair<LowIo::OpenError, LowIo::ErrorCode> LowIo::TryOpen(
+    const wchar_t* fname, Permission perm, Mode mode)
   {
     fd = CreateFileW(
         fname, Perm2Access(perm), FILE_SHARE_DELETE | FILE_SHARE_READ, nullptr,
         Mode2Disposition(mode), 0, nullptr);
-    return fd != INVALID_HANDLE_VALUE;
+    if (fd != INVALID_HANDLE_VALUE) return { OpenError::OK, 0 };
+    switch (auto err = GetLastError())
+    {
+    case ERROR_ACCESS_DENIED:  return { OpenError::ACCESS, err };
+    case ERROR_FILE_EXISTS:    return { OpenError::EXISTS, err };
+    case ERROR_FILE_NOT_FOUND: return { OpenError::NOT_EXISTS, err };
+    default: return { OpenError::UNKNOWN, err };
+    }
   }
 
   LowIo::LowIo(const char* fname, Permission perm, Mode mode)
     : LowIo{Wtf8ToWtf16Wstr(fname).c_str(), perm, mode} {}
 
-  bool LowIo::TryOpen(const char* fname, Permission perm, Mode mode)
+  std::pair<LowIo::OpenError, LowIo::ErrorCode> LowIo::TryOpen(
+    const char* fname, Permission perm, Mode mode)
   { return TryOpen(Wtf8ToWtf16Wstr(fname).c_str(), perm, mode); }
 
   LowIo LowIo::OpenStdOut()
@@ -211,14 +224,27 @@ namespace Libshit
   }
 
   LowIo::LowIo(const char* fname, Permission perm, Mode mode)
-  { if (!TryOpen(fname, perm, mode)) LIBSHIT_THROW_ERRNO("open"); }
+  {
+    if (auto [error, errno_sav] = TryOpen(fname, perm, mode);
+        error != OpenError::OK)
+      LIBSHIT_LOWIO_RETHROW_OPEN_ERROR(errno_sav);
+  }
 
-  bool LowIo::TryOpen(const char* fname, Permission perm, Mode mode)
+  std::pair<LowIo::OpenError, LowIo::ErrorCode> LowIo::TryOpen(
+    const char* fname, Permission perm, Mode mode)
   {
     fd = open(
       fname, Perm2Flags(perm) | Mode2Flags(mode)
       LIBSHIT_OS_NOT_VITA(| O_CLOEXEC | O_NOCTTY), 0666);
-    return fd != -1;
+    if (fd != -1) return { OpenError::OK, 0 };
+
+    switch (errno)
+    {
+    case EACCES: return { OpenError::ACCESS, EACCES };
+    case EEXIST: return { OpenError::EXISTS, EEXIST };
+    case ENOENT: return { OpenError::NOT_EXISTS, ENOENT };
+    default: return { OpenError::UNKNOWN, errno };
+    }
   }
 
   LowIo LowIo::OpenStdOut()
