@@ -1,6 +1,7 @@
 # -*- yaml -*-
 
 # boost
+- ref: "iwyu_boost_pp.imp"
 - include: ['@<boost/config/.*>', private, '<boost/config.hpp>', public]
 - include: ['<boost/smart_ptr/detail/operator_bool.hpp>', private,
             '<boost/smart_ptr/intrusive_ptr.hpp>', public]
@@ -51,6 +52,11 @@
            '<boost/algorithm/string/split.hpp>', public]
 - include: ['<boost/algorithm/string/compare.hpp>', public,
            '<boost/algorithm/string/finder.hpp>', public]
+
+- include: ['@<boost/fusion/adapted/struct/detail/.*>', private,
+            '<boost/fusion/adapted/struct/adapt_struct.hpp>', public]
+- include: ['@<boost/fusion/adapted/struct/detail/.*>', private,
+            '<boost/fusion/adapted/struct/adapt_struct_named.hpp>', public]
 
 # token_functions errors if I directly include it
 - include: ['<boost/token_functions.hpp>', private,
