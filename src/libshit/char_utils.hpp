@@ -4,7 +4,9 @@
 
 #include "libshit/assert.hpp"
 
+#include <initializer_list>
 #include <iosfwd>
+#include <string>
 #include <string_view>
 
 namespace Libshit
@@ -22,6 +24,8 @@ namespace Libshit
   inline std::ostream& operator<<(std::ostream& os, QuotedString q)
   { DumpBytes(os, q.view); return os; }
   inline QuotedString Quoted(std::string_view view) { return {view}; }
+
+  std::string Cat(std::initializer_list<std::string_view> lst);
 
   namespace Ascii
   {

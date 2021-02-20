@@ -11,7 +11,6 @@ base_dir="${base_dir-$dir}"
 base_dir_escaped="$(sed 's/[[*?\]/\\\0/g' <<<"$base_dir")"
 
 flags+=(
-    -x c++
     -std=c++17
     -nostdinc++
     -isystem "$dir/ext/libcxx/include"

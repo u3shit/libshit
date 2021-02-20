@@ -205,6 +205,7 @@ def configure_variant(ctx):
         '-Wno-microsoft-enum-value', '-Wno-shift-count-overflow', # ljx
         '-Wno-varargs',
         '-Wno-string-plus-int', # lua53
+        '-Wno-deprecated-declarations', '-Wno-ignored-qualifiers', # capnp
     ])
 
     if ctx.check_cxx(cxxflags=['-isystem', '.'],

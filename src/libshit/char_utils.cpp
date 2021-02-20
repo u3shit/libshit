@@ -2,6 +2,7 @@
 
 #include <cctype>
 #include <climits>
+#include <cstddef>
 #include <iomanip>
 #include <sstream> // IWYU pragma: keep
 
@@ -99,6 +100,16 @@ namespace Libshit
     CHK(std::string_view("\t12\n34\0", 7), R"("\t12\n34\x00")");
     CHK("\x7f\x9b\x66oo\xf3", R"("\x7f\x9b\x66oo\xf3")");
 #undef CHK
+  }
+
+  std::string Cat(std::initializer_list<std::string_view> lst)
+  {
+    std::size_t n = 0;
+    for (const auto& x : lst) n += x.size();
+    std::string res;
+    res.reserve(n);
+    for (const auto& x : lst) res.append(x);
+    return res;
   }
 
   // no std:: because there's no std::isascii
