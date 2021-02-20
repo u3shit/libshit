@@ -17,7 +17,6 @@ namespace Libshit::Lua
 #else
 
 #include "libshit/lua/base.hpp" // IWYU pragma: export
-#include "libshit/nonowning_string.hpp"
 #include "libshit/nullable.hpp"
 #include "libshit/platform.hpp"
 #include "libshit/utils.hpp"
@@ -28,6 +27,7 @@ namespace Libshit::Lua
 #include <optional>
 #include <ostream>
 #include <string>
+#include <string_view>
 #include <type_traits>
 
 // IWYU pragma: no_forward_declare Libshit::Lua::TypeTraits
@@ -174,8 +174,7 @@ namespace Libshit::Lua
   template <typename T>
   struct TypeTraits<T, std::enable_if_t<
     std::is_same_v<T, std::string> ||
-    std::is_same_v<T, NonowningString> ||
-    std::is_same_v<T, StringView>>>
+    std::is_same_v<T, std::string_view>>>
   {
     template <bool Unsafe>
     static T Get(StateRef vm, bool arg, int idx)

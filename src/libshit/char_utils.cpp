@@ -1,10 +1,9 @@
 #include "libshit/char_utils.hpp"
 
+#include <cctype>
 #include <climits>
-#include <cstddef>
-#include <ctype.h>
 #include <iomanip>
-#include <ostream>
+#include <sstream> // IWYU pragma: keep
 
 #include "libshit/doctest.hpp"
 
@@ -76,12 +75,11 @@ namespace Libshit
   }
 
 
-  void DumpBytes(std::ostream& os, Libshit::StringView data)
+  void DumpBytes(std::ostream& os, std::string_view data)
   {
     os << '"';
     bool hex = false;
-    for (std::size_t i = 0; i < data.length(); ++i)
-      hex = DumpByte(os, data[i], hex);
+    for (char i : data) hex = DumpByte(os, i, hex);
     os << '"';
   }
 
@@ -98,7 +96,7 @@ namespace Libshit
     CHK("123foo", R"("123foo")");
     CHK("123  foo", R"("123  foo")");
     CHK("12\n34", R"("12\n34")");
-    CHK(StringView("\t12\n34\0", 7), R"("\t12\n34\x00")");
+    CHK(std::string_view("\t12\n34\0", 7), R"("\t12\n34\x00")");
     CHK("\x7f\x9b\x66oo\xf3", R"("\x7f\x9b\x66oo\xf3")");
 #undef CHK
   }
