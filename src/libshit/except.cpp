@@ -332,7 +332,7 @@ namespace Libshit
 #if LIBSHIT_OS_IS_WINDOWS || LIBSHIT_OS_IS_VITA
   // windows: no strerror_r but strerror is claimed to be thread safe
   // vita: no strerror_r and I have no freakin idea what strerror does
-  static std::string GetStrError(int err_code)
+  std::string GetErrnoError(int err_code)
   {
     auto ptr = strerror(err_code);
     return ptr ? ptr : "Unknown error";
@@ -340,28 +340,28 @@ namespace Libshit
 #else
   // workaround that fucking strerror_r mess that the fucking glibc did
   [[maybe_unused]]
-  static std::string GetStrError2(int, const char* str) { return str; }
+  static std::string GetStrError(int, const char* str) { return str; }
   [[maybe_unused]]
-  static std::string GetStrError2(const char* str0, const char* str1)
+  static std::string GetStrError(const char* str0, const char* str1)
   { return str0 ? str0 : str1; }
 
-  static std::string GetStrError(int err_code)
+  std::string GetErrnoError(int err_code)
   {
     char buf[1024] = "Unknown error";
-    return GetStrError2(strerror_r(err_code, buf, 1024), buf);
+    return GetStrError(strerror_r(err_code, buf, 1024), buf);
   }
 #endif
 
   TEST_CASE("ErrnoError")
   {
-    CHECK(GetStrError(ENOENT) != "Unknown error");
+    CHECK(GetErrnoError(ENOENT) != "Unknown error");
   }
 
   ErrnoError::ErrnoError(int err_code)
-    : SystemError{GetStrError(err_code)}, err_code{err_code} {}
+    : SystemError{GetErrnoError(err_code)}, err_code{err_code} {}
 
 #if LIBSHIT_OS_IS_WINDOWS
-  static std::string GetWindowsError(unsigned long err_code)
+  std::string GetWindowsError(unsigned long err_code)
   {
     wchar_t* msg;
     if (!FormatMessageW(

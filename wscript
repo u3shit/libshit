@@ -165,7 +165,6 @@ def configure_variant(ctx):
         '-Wall', '-Wextra', '-pedantic', '-Wdouble-promotion',
         '-Wno-parentheses', '-Wno-assume', '-Wno-attributes',
         '-Wimplicit-fallthrough', '-Wno-dangling-else', '-Wno-unused-parameter',
-        '-Wno-extra-semi', # warns on valid ; in structs
         # I don't even know what this warning supposed to mean, gcc. how can you
         # not set a parameter?
         '-Wno-unused-but-set-parameter',
@@ -182,6 +181,7 @@ def configure_variant(ctx):
         # unfortunately pragma disabling this warning in the binding files does
         # not work. see also https://gcc.gnu.org/bugzilla/show_bug.cgi?id=51440
         '-Wno-subobject-linkage', '-Wno-sign-compare',
+        '-Wno-extra-semi', # warns on valid ; in structs
     ])
 
     # gcc is a piece of crap: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53431

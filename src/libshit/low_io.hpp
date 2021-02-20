@@ -102,6 +102,12 @@ namespace Libshit
       void* Get() const noexcept { return ptr; }
 
       void Reset() noexcept;
+      void* Release()
+      {
+        auto res = ptr;
+        ptr = nullptr;
+        return res;
+      }
 
     private:
 #if LIBSHIT_OS_IS_WINDOWS
@@ -121,6 +127,7 @@ namespace Libshit
     void Truncate(FilePosition size) const;
     void PrepareMmap(bool write);
     MmapPtr Mmap(FilePosition offs, std::size_t size, bool write) const;
+    static void Munmap(void* ptr, std::size_t size);
 
     void Pread(void* buf, std::size_t len, FilePosition offs) const;
     void Read(void* buf, std::size_t len) const;

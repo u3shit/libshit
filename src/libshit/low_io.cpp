@@ -26,6 +26,9 @@
 #  endif
 #endif
 
+#define LIBSHIT_LOG_NAME "low_io"
+#include "libshit/logger_helper.hpp"
+
 namespace Libshit
 {
 
@@ -152,14 +155,30 @@ namespace Libshit
     return {ret};
   }
 
+  void LowIo::Munmap(void* ptr, std::size_t size)
+  {
+    if (!UnmapViewOfFile(ptr))
+    {
+      auto err = GetLastError();
+      ERR << "UnmapViewOfFile failed, aborting: "
+          << Libshit::GetWindowsError(err) << std::endl;
+      std::abort();
+    }
+    TracyFreeNS(ptr, 5, "mmap");
+  }
+
   void LowIo::MmapPtr::Reset() noexcept
   {
-    if (ptr)
+    if (!ptr) return;
+    if (!UnmapViewOfFile(ptr))
     {
-      if (!UnmapViewOfFile(ptr)) std::abort();
-      TracyFreeNS(ptr, 5, "mmap");
-      ptr = nullptr;
+      auto err = GetLastError();
+      ERR << "UnmapViewOfFile failed, aborting: "
+          << Libshit::GetWindowsError(err) << std::endl;
+      std::abort();
     }
+    TracyFreeNS(ptr, 5, "mmap");
+    ptr = nullptr;
   }
 
   void LowIo::Pread(void* buf, std::size_t len, FilePosition offs) const
@@ -298,6 +317,20 @@ namespace Libshit
 #endif
   }
 
+  void LowIo::Munmap(void* ptr, std::size_t size)
+  {
+#if !LIBSHIT_OS_IS_VITA
+    TracyFreeNS(ptr, 5, "mmap");
+    if (munmap(ptr, size))
+    {
+      auto err = errno;
+      ERR << "munmap failed, aborting: " << Libshit::GetErrnoError(err)
+          << std::endl;
+      std::abort();
+    }
+#endif
+  }
+
   void LowIo::MmapPtr::Reset() noexcept
   {
 #if !LIBSHIT_OS_IS_VITA
@@ -305,7 +338,9 @@ namespace Libshit
     TracyFreeNS(ptr, 5, "mmap");
     if (munmap(ptr, size))
     {
-      perror("munmap");
+      auto err = errno;
+      ERR << "munmap failed, aborting: " << Libshit::GetErrnoError(err)
+          << std::endl;
       std::abort();
     }
     ptr = nullptr;

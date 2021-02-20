@@ -203,6 +203,7 @@ namespace Libshit
   // implementing it normally is needlessly complicated, so here's a lightweight
   // alternative to it
   LIBSHIT_GEN_EXCEPTION_TYPE(SystemError, std::runtime_error);
+  std::string GetErrnoError(int err_code);
   struct ErrnoError : SystemError
   {
     int err_code;
@@ -215,6 +216,7 @@ namespace Libshit
 
 
 #if LIBSHIT_OS_IS_WINDOWS
+  std::string GetWindowsError(unsigned long err_code);
   struct WindowsError : SystemError
   {
     unsigned long /*DWORD*/ err_code;
