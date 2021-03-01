@@ -28,10 +28,10 @@ namespace Libshit
 
   static std::string xml_file;
   static Option xml_file_opt{
-    OptionParser::GetTestingOptions(), "xml-output", 1, "FILE",
+    OptionGroup::GetTesting(), "xml-output", 1, "FILE",
     "Save xml output to this file\n"
     "\t(run as \"--xml-output <filename> --test --reporters=libshit-junit\")",
-    [](auto&& args) { xml_file = Move(args.front()); }};
+    [](auto& parser, auto&& args) { xml_file = Move(args.front()); }};
 
   namespace
   {
@@ -126,7 +126,7 @@ namespace Libshit
 
       // called when a query should be reported (listing test cases, printing
       // the version, etc.)
-      virtual void report_query(const doctest::QueryData& dat) override {}
+      void report_query(const doctest::QueryData& dat) override {}
 
       // called when the whole test run starts
       void test_run_start() override
@@ -201,8 +201,7 @@ namespace Libshit
       }
 
       // called when an exception is thrown from the test case (or it crashes)
-      virtual void test_case_exception(
-        const doctest::TestCaseException& exc) override
+      void test_case_exception(const doctest::TestCaseException& exc) override
       {
         ss.str("");
         conrep.test_case_exception(exc);
@@ -252,18 +251,21 @@ namespace Libshit
   REGISTER_EXCEPTION_TRANSLATOR(const Libshit::Exception& e)
   { return Libshit::ExceptionToString(e, false).c_str(); }
 
-  static void Fun(std::vector<const char*>&& args)
+  static void Fun(OptionParser& parser, std::vector<const char*>&& args)
   {
+    parser.CommandTriggered();
     doctest::Context ctx;
 
     ctx.setOption("exit", true);
+    args.insert(args.begin(), parser.GetArgv0());
     ctx.applyCommandLine(args.size(), args.data());
     auto ret = ctx.run();
     if (ctx.shouldExit()) throw Exit{!ret};
   }
 
   static Option opt{
-    OptionParser::GetTestingOptions(), "test", Option::ALL_ARGS, "ARGS...",
-    "Run doctest tests (\"--test --help\" for details)\n\t"
-    "Remaining arguments will be passed to doctest", FUNC<Fun>};
+    OptionGroup::GetCommands(), "test", Option::ALL_ARGS, "ARGS...",
+    "Run doctest tests\n\t"
+    "Remaining arguments will be passed to doctest. You must pass any doctest "
+    "option AFTER \"--test\" and every other option BEFORE!", FUNC<Fun>};
 }

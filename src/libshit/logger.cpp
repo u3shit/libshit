@@ -118,7 +118,7 @@ namespace Libshit::Logger
   static Option show_fun_opt{
     GetOptionGroup(), "show-functions", 0, nullptr,
     "Show function signatures in log when available",
-    [](auto&&) { show_fun = true; }};
+    [](auto&, auto&&) { show_fun = true; }};
 
   static int ParseLevel(const char* str)
   {
@@ -153,7 +153,7 @@ namespace Libshit::Logger
     " - non-debug build, most of them will be missing"
 #endif
     ")\n\tDefault level: info",
-    [](auto&& args)
+    [](auto& parser, auto&& args)
     {
       boost::char_separator<char> sep{","};
       auto arg = args.front();
@@ -191,7 +191,8 @@ namespace Libshit::Logger
   bool HasAnsiColor() noexcept { return GetGlobal().ansi_colors; }
   bool HasWinColor() noexcept { return GetGlobal().win_colors; }
 
-  static void EnableAnsiColors(std::vector<const char*>&&) noexcept
+  static void EnableAnsiColors(
+    OptionParser& parser, std::vector<const char*>&&) noexcept
   {
 #if LIBSHIT_OS_IS_WINDOWS
 #  ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
@@ -213,12 +214,12 @@ namespace Libshit::Logger
 
   static Option ansi_colors_opt{
     GetOptionGroup(), "ansi-colors", 0, nullptr,
-    "Force output colorization with ASCII escape sequences",
+    "Force output colorization with ANSI escape sequences",
     FUNC<EnableAnsiColors>};
   static Option no_colors_opt{
     GetOptionGroup(), "no-colors", 0, nullptr,
     "Disable output colorization",
-    [](auto&&)
+    [](auto&, auto&&)
     {
       GetGlobal().win_colors = false;
       GetGlobal().ansi_colors = false;
@@ -226,7 +227,7 @@ namespace Libshit::Logger
   static Option print_time_opt{
     GetOptionGroup(), "print-time", 0, nullptr,
     "Print timestamps before log messages",
-    [](auto&&) { GetGlobal().print_time = true; }};
+    [](auto&, auto&&) { GetGlobal().print_time = true; }};
 
   static std::uint8_t rand_colors[] = {
     4,5,6, 12,13,14,

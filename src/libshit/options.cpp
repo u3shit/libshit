@@ -4,7 +4,6 @@
 #include <array>
 #include <climits>
 #include <cstring>
-#include <functional>
 #include <iostream>
 #include <iterator>
 #include <map>
@@ -58,16 +57,49 @@ namespace Libshit
   OptionGroup::OptionGroup(
     OptionParser& parser, const char* name, const char* help)
     : name{name}, help{help}
-  { parser.groups.push_back(this); }
+  { parser.AddOptionGroup(*this); }
+
+  OptionGroup& OptionGroup::GetCommands()
+  {
+    static OptionGroup inst{OptionParser::GetGlobal(), "Commands",
+      "You can only specify one of these. "
+      "Run \"--<command> --help\" for details\n"};
+    return inst;
+  }
+
+  OptionGroup& OptionGroup::GetTesting()
+  {
+    static OptionGroup inst{OptionParser::GetGlobal(), "Testing options"};
+    return inst;
+  }
+
+
+  Option::ArgVector ArgsToVector(int argc, const char** argv)
+  {
+    std::vector<const char*> res;
+    res.reserve(argc);
+    for (int i = 0; i < argc; ++i) res.push_back(argv[i]);
+    return res;
+  }
+
+  TEST_CASE("ArgsToVector")
+  {
+    const char* argv[] = { "foo", "bar", "asd", nullptr };
+    auto v = ArgsToVector(3, argv);
+    REQUIRE(v.size() == 3);
+    CHECK_STREQ(v[0], "foo");
+    CHECK_STREQ(v[1], "bar");
+    CHECK_STREQ(v[2], "asd");
+  }
 
   OptionParser::OptionParser()
     : help_version{*this, "General options"},
       help_option{
         help_version, "help", 'h', 0, nullptr, "Show this help message",
-        [this](auto&&) { this->ShowHelp(); throw Exit{true}; }},
+        [this](auto&, auto&&) { this->ShowHelp(); throw Exit{true}; }},
       version_option{
         help_version, "version", 0, nullptr, "Show program version",
-        [this](auto&&) { *os << version << std::endl; throw Exit{true}; }},
+        [this](auto&, auto&&) { *os << version << std::endl; throw Exit{true}; }},
       os{&std::clog}
   {
     version_option.enabled = false;
@@ -144,8 +176,9 @@ namespace Libshit
     };
   }
 
-  static size_t ParseShort(const std::array<Option*, 256>& short_opts,
-                           size_t argc, size_t i, const char** argv)
+  static size_t ParseShort(
+    OptionParser& parser, const std::array<Option*, 256>& short_opts,
+    size_t argc, size_t i, const char** argv)
   {
     auto ptr = argv[i];
     return AddInfo([&]() -> size_t
@@ -158,11 +191,11 @@ namespace Libshit
         std::vector<const char*> args;
         if (opt->args_count == Option::ALL_ARGS)
         {
-          args.reserve(argc-1+1);
+          args.reserve(argc-i);
           if (ptr[1]) args.push_back(ptr+1);
-          std::copy(argv+i, argv+argc, std::back_inserter(args));
-          opt->func(Move(args));
-          return argc - i;
+          std::copy(argv+i+1, argv+argc, std::back_inserter(args));
+          opt->func(parser, Move(args));
+          return argc - i - 1;
         }
 
         if (opt->args_count)
@@ -184,17 +217,18 @@ namespace Libshit
             args.push_back(argv[i+j]);
           }
 
-          opt->func(Move(args));
+          opt->func(parser, Move(args));
           return count;
         }
 
-        opt->func(Move(args));
+        opt->func(parser, Move(args));
       }
       return 0;
     }, [&](auto& e) { AddInfos(e, "Processed option", std::string{'-', *ptr}); });
   }
 
   static size_t ParseLong(
+    OptionParser& parser,
     const std::map<const char*, Option*, OptCmp>& long_opts,
     size_t argc, size_t i, const char** argv)
   {
@@ -222,13 +256,13 @@ namespace Libshit
 
     auto count = opt->args_count;
     std::vector<const char*> args;
-    if (count == std::size_t(-1))
+    if (count == Option::ALL_ARGS)
     {
-      args.reserve(argc-1+1);
+      args.reserve(argc-i);
       if (arg) args.push_back(arg+1);
-      std::copy(argv+i, argv+argc, std::back_inserter(args));
-      opt->func(Move(args));
-      return argc - i;
+      std::copy(argv+i+1, argv+argc, std::back_inserter(args));
+      opt->func(parser, Move(args));
+      return argc - i - 1;
     }
 
     args.reserve(count);
@@ -248,15 +282,15 @@ namespace Libshit
       args.push_back(argv[i+j]);
     }
 
-    opt->func(Move(args));
+    opt->func(parser, Move(args));
     return count;
   }
 
-  void OptionParser::Run_(int& argc, const char** argv)
+  void OptionParser::Run_(int& argc, const char** argv, bool has_argv0)
   {
-    argv0 = argv[0];
-    int endp = 1;
-    if (argc == 1)
+    if (has_argv0) argv0 = argv[0];
+    int endp = has_argv0;
+    if (argc == has_argv0)
     {
       if (no_opts_help || (validate_fun && !validate_fun(argc, argv)))
       {
@@ -266,27 +300,36 @@ namespace Libshit
       else return;
     }
 
-    std::array<Option*, 256> short_opts{};
+    std::array<Option*, 256> short_opts;
     static_assert(CHAR_BIT == 8);
     std::map<const char*, Option*, OptCmp> long_opts;
 
-    for (auto g : groups)
-      for (auto o : g->GetOptions())
-      {
-        if (!o->enabled) continue;
-        if (o->short_name)
+    std::size_t old_len = 0;
+    auto gen_opts = [&]()
+    {
+      if (old_len == groups.size()) return;
+      old_len = groups.size();
+
+      short_opts = {};
+      long_opts.clear();
+      for (auto g : groups)
+        for (auto o : g->GetOptions())
         {
-          if (short_opts[static_cast<unsigned char>(o->short_name)])
-            LIBSHIT_THROW(std::logic_error, "Duplicate short option");
-          short_opts[static_cast<unsigned char>(o->short_name)] = o;
+          if (!o->enabled) continue;
+          if (o->short_name)
+          {
+            if (short_opts[static_cast<unsigned char>(o->short_name)])
+              LIBSHIT_THROW(std::logic_error, "Duplicate short option");
+            short_opts[static_cast<unsigned char>(o->short_name)] = o;
+          }
+
+          auto x = long_opts.emplace(o->name, o);
+          if (!x.second)
+            LIBSHIT_THROW(std::logic_error, "Duplicate long option");
         }
+    };
 
-        auto x = long_opts.emplace(o->name, o);
-        if (!x.second)
-          LIBSHIT_THROW(std::logic_error, "Duplicate long option");
-      }
-
-    for (int i = 1; i < argc; ++i)
+    for (int i = has_argv0; i < argc; ++i)
     {
       // option: "--"something, "-"something
       // non option: something, "-"
@@ -300,11 +343,12 @@ namespace Libshit
       }
       else
       {
+        gen_opts();
         if (argv[i][1] != '-') // short
-          i += ParseShort(short_opts, argc, i, argv);
+          i += ParseShort(*this, short_opts, argc, i, argv);
         else if (argv[i][1] == '-' && argv[i][2] != '\0') // long
           i += AddInfo(
-            std::bind(ParseLong, long_opts, argc, i, argv),
+            [&] { return ParseLong(*this, long_opts, argc, i, argv); },
             [=](auto& e) { AddInfos(e, "Processed option", argv[i]); });
         else // --: end of args
         {
@@ -329,9 +373,23 @@ namespace Libshit
     }
   }
 
-  void OptionParser::Run(int& argc, const char** argv)
+  void OptionParser::Run(int& argc, const char** argv, bool has_argv0)
   {
-    try { Run_(argc, argv); }
+    try { Run_(argc, argv, has_argv0); }
+    catch (const InvalidParam& p)
+    {
+      *os << p["Processed option"] << ": " << p.what() << std::endl;
+      throw Exit{false};
+    }
+  }
+
+  void OptionParser::Run(Option::ArgVector& args, bool has_argv0)
+  {
+    int size = args.size();
+    AtScopeExit x{[&]() { args.resize(size); }};
+    args.push_back(nullptr);
+
+    try { Run_(size, args.data(), has_argv0); }
     catch (const InvalidParam& p)
     {
       *os << p["Processed option"] << ": " << p.what() << std::endl;
@@ -364,6 +422,13 @@ namespace Libshit
     }
   }
 
+  void OptionParser::CommandTriggered()
+  {
+    if (was_command)
+      throw InvalidParam{"Multiple commands specified"};
+    was_command = true;
+  }
+
   TEST_CASE_FIXTURE(TestFixture, "basic option parsing")
   {
     OptionGroup grp{parser, "Foo", "Description of foo"};
@@ -371,12 +436,14 @@ namespace Libshit
     bool b1 = false, b2 = false;
     const char* b3 = nullptr, *b40 = nullptr, *b41 = nullptr;
 
-    Option test1{grp, "test-1", 't', 0, nullptr, "foo", [&](auto){ b1 = true; }};
-    Option test2{grp, "test-2", 'T', 0, nullptr, "bar", [&](auto){ b2 = true; }};
+    Option test1{grp, "test-1", 't', 0, nullptr, "foo",
+      [&](auto&, auto&&){ b1 = true; }};
+    Option test2{grp, "test-2", 'T', 0, nullptr, "bar",
+      [&](auto&, auto&&){ b2 = true; }};
     Option test3{grp, "test-3", 1, "STRING", "Blahblah",
-        [&](auto v){ REQUIRE(v.size() == 1); b3 = v[0]; }};
+      [&](auto&, auto&& v){ REQUIRE(v.size() == 1); b3 = v[0]; }};
     Option test4{grp, "test-4", 'c', 2, "FOO BAR", nullptr,
-        [&](auto v){ REQUIRE(v.size() == 2); b40 = v[0]; b41 = v[1]; }};
+      [&](auto&, auto&& v){ REQUIRE(v.size() == 2); b40 = v[0]; b41 = v[1]; }};
 
     bool e1 = false, e2 = false;
     const char* e3 = nullptr, *e40 = nullptr, *e41 = nullptr;
@@ -549,7 +616,7 @@ namespace Libshit
       SUBCASE("valid") { valid = true; }
       SUBCASE("invalid") { valid = false; }
 
-      parser.SetValidateNonArgsFun(
+      parser.SetValidateFun(
         [valid](int argc, const char** argv)
         {
           REQUIRE(argc == 4);
@@ -639,8 +706,10 @@ namespace Libshit
 
     bool b1 = false, b2 = false;
 
-    Option test1{grp, "foo",     0, nullptr, "foo", [&](auto){ b1 = true; }};
-    Option test2{grp, "foo-bar", 0, nullptr, "bar", [&](auto){ b2 = true; }};
+    Option test1{grp, "foo",     0, nullptr, "foo",
+      [&](auto&, auto&&){ b1 = true; }};
+    Option test2{grp, "foo-bar", 0, nullptr, "bar",
+      [&](auto&, auto&&){ b2 = true; }};
 
     int argc = 2;
     const char* argv[] = { "foo", "--foo", nullptr };
@@ -658,8 +727,10 @@ namespace Libshit
     const char* b1 = nullptr;
     bool b2 = false;
 
-    Option test1{grp, "foo",     1, nullptr, "foo", [&](auto a){ b1 = a.front(); }};
-    Option test2{grp, "foo-bar", 0, nullptr, "bar", [&](auto){ b2 = true; }};
+    Option test1{grp, "foo",     1, nullptr, "foo",
+      [&](auto&, auto&& a){ b1 = a.front(); }};
+    Option test2{grp, "foo-bar", 0, nullptr, "bar",
+      [&](auto&, auto&&){ b2 = true; }};
 
     int argc;
     const char* argv[4] = {"foo"};
@@ -679,6 +750,126 @@ namespace Libshit
     CHECK(ss.str() == "");
     CHECK_STREQ(b1, "bar");
     CHECK(b2 == false);
+  }
+
+  TEST_CASE_FIXTURE(TestFixture, "command like usage")
+  {
+    parser.FailOnNonArg();
+    OptionGroup grp{parser, "Commands"};
+
+    bool b1x = false, b1y = false, b2x = false;
+    OptionGroup cmd1_grp{"Command 1 shit"};
+    Option cmd1_x{cmd1_grp, "foo", 0, nullptr, "foo",
+      [&](auto&, auto&&) { b1x = true; }};
+    Option cmd1_y{cmd1_grp, "bar", 0, nullptr, "baz",
+      [&](auto&, auto&&) { b1y = true; }};
+
+    Option cmd1{grp, "cmd1", 0, nullptr, "cmd1", [&](OptionParser& p, auto&& args)
+    {
+      CHECK(&p == &parser);
+      CHECK(args.size() == 0);
+      p.CommandTriggered();
+      p.AddOptionGroup(cmd1_grp);
+    }};
+
+    OptionGroup cmd2_grp{"Command 2 shit"};
+    Option cmd2_x{cmd2_grp, "foo", 0, nullptr, "foo2",
+      [&](auto&, auto&&) { b2x = true; }};
+
+    bool was_validator = false;
+    Option cmd2{grp, "cmd2", 0, nullptr, "cmd2", [&](OptionParser& p, auto&&)
+    {
+      p.CommandTriggered();
+      p.AddOptionGroup(cmd2_grp);
+      p.SetNonArgHandler({});
+      p.SetValidateFun([&](int argc, const char** argv)
+      {
+        was_validator = true;
+        CHECK(argc == 2);
+        CHECK_STREQ(argv[0], "cmd_name");
+        CHECK_STREQ(argv[1], "booboo");
+        return true;
+      });
+    }};
+
+    int argc = 1;
+    const char* argv[4] = {"cmd_name"};
+    std::string base_help_text =
+      "General options:\n"
+      " -h --help\n"
+      "\tShow this help message\n\n"
+      "Commands:\n"
+      "    --cmd1\n\tcmd1\n"
+      "    --cmd2\n\tcmd2\n";
+
+    SUBCASE("normal help")
+    {
+      argv[argc++] = "--help";
+      argv[argc++] = "--cmd1"; // ignored
+      Run(argc, argv, true);
+      CHECK(ss.str() == base_help_text);
+    }
+    SUBCASE("help inside cmd1")
+    {
+      argv[argc++] = "--cmd1";
+      argv[argc++] = "--help";
+      Run(argc, argv, true);
+      CHECK(ss.str() == base_help_text + "\n"
+        "Command 1 shit:\n"
+        "    --foo\n\tfoo\n"
+        "    --bar\n\tbaz\n");
+    }
+    SUBCASE("help inside cmd2")
+    {
+      argv[argc++] = "--cmd2";
+      argv[argc++] = "--help";
+      Run(argc, argv, true);
+      CHECK(ss.str() == base_help_text + "\n"
+        "Command 2 shit:\n"
+        "    --foo\n\tfoo2\n");
+    }
+
+    SUBCASE("foo")
+    {
+      bool b1x_exp = false, b2x_exp = false;
+      SUBCASE("cmd1") { argv[argc++] = "--cmd1"; b1x_exp = true; }
+      SUBCASE("cmd2") { argv[argc++] = "--cmd2"; b2x_exp = true; }
+      argv[argc++] = "--foo";
+      if (b2x_exp) argv[argc++] = "booboo";
+      parser.Run(argc, argv);
+      CHECK(ss.str() == "");
+      CHECK(b1x == b1x_exp);
+      CHECK(b1y == false);
+      CHECK(b2x == b2x_exp);
+    }
+
+    SUBCASE("bar in cmd1")
+    {
+      argv[argc++] = "--cmd1";
+      argv[argc++] = "--bar";
+      parser.Run(argc, argv);
+      CHECK(ss.str() == "");
+      CHECK(b1x == false);
+      CHECK(b1y == true);
+      CHECK(b2x == false);
+    }
+    SUBCASE("foo in cmd2")
+    {
+      argv[argc++] = "--cmd2";
+      argv[argc++] = "--bar";
+      argv[argc++] = "booboo";
+      Run(argc, argv, false);
+      CHECK(ss.str() == "--bar: Unknown option\n");
+    }
+
+    SUBCASE("dup command invalid")
+    {
+      SUBCASE("cmd1") argv[argc++] = "--cmd1";
+      SUBCASE("cmd2") argv[argc++] = "--cmd2";
+      argv[argc++] = "--cmd2";
+      Run(argc, argv, false);
+      CHECK(ss.str() == "--cmd2: Multiple commands specified\n");
+    }
   }
 
   TEST_SUITE_END();
