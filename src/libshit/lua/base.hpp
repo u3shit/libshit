@@ -18,8 +18,6 @@
 #include <utility>
 #include <vector>
 
-#include <boost/config.hpp>
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wundef"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -60,7 +58,7 @@ namespace Libshit::Lua
   public:
     constexpr StateRef(lua_State* vm) noexcept : vm{vm} {}
 
-    BOOST_NORETURN void ToLuaException();
+    [[noreturn]] void ToLuaException();
 
     /**
      * Catch and translate lua errors to C++ exceptions.
@@ -159,9 +157,9 @@ namespace Libshit::Lua
 
     constexpr operator lua_State*() noexcept { return vm; }
 
-    BOOST_NORETURN
+    [[noreturn]]
     void TypeError(bool arg, const char* expected, int idx);
-    BOOST_NORETURN
+    [[noreturn]]
     void GetError(bool arg, int idx, const char* msg);
 
     struct RawLen01Ret
@@ -221,7 +219,7 @@ namespace Libshit::Lua
     static int SEHFilter(lua_State* vm, unsigned code,
                          const char** error_msg, std::size_t* error_len);
 #else
-    BOOST_NORETURN void HandleDotdotdotCatch();
+    [[noreturn]] void HandleDotdotdotCatch();
 #endif
   };
 

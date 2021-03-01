@@ -6,10 +6,9 @@
 
 #include "libshit/platform.hpp"
 
-#include <boost/config.hpp>
 #include <boost/smart_ptr/intrusive_ptr.hpp>
 
-#include <errno.h>
+#include <cerrno>
 #include <functional>
 #include <sstream>
 #include <stdexcept>
@@ -137,7 +136,7 @@ namespace Libshit
 #define LIBSHIT_THROW(type, ...) \
   (throw LIBSHIT_GET_EXCEPTION(type, __VA_ARGS__))
 
-  BOOST_NORETURN void RethrowException();
+  [[noreturn]] void RethrowException();
   std::string ExceptionToString(bool color);
   std::string ExceptionToString(const Exception& e, bool color);
 

@@ -19,6 +19,8 @@
   const auto& CCAPTURE_NAME(__LINE__) = (x); \
   DOCTEST_INFO(#x " = " << CCAPTURE_NAME(__LINE__))
 
+#  define LIBSHIT_TEST_FUN
+
 #else
 
 // doctest is braindead and removes checks in disabled mode, leading to warnings
@@ -41,7 +43,9 @@
 #  define DOCTEST_CHECK_THROWS_AS(expr, ...) \
   try { expr; } catch (const __VA_ARGS__&) {}
 
-#define CCAPTURE(x) (true ? ((void) 0) : ((void) (x)))
+#  define CCAPTURE(x) (true ? ((void) 0) : ((void) (x)))
+
+#  define LIBSHIT_TEST_FUN [[maybe_unused]]
 
 #endif
 #endif
