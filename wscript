@@ -54,7 +54,7 @@ libshit_cross = getattr(Context.g_module, 'LIBSHIT_CROSS', False)
 
 def options(opt):
     opt.load('with_selector', tooldir='.')
-    opt.load('compiler_c compiler_cxx')
+    opt.load('compiler_c compiler_cxx clang_compilation_database')
     grp = opt.get_option_group('configure options')
 
     grp.add_option('--optimize', action='store_true', default=False,
@@ -104,7 +104,6 @@ def configure(cfg):
     cfg.env.CROSS = cross
     cfg.environ = environ
 
-    cfg.load('clang_compilation_database')
     configure_variant(cfg)
 
     if cfg.env.DEST_OS == 'win32':

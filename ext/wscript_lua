@@ -36,7 +36,6 @@ def configure(ctx):
         ctx.env.WITH_LUA = 'none'
     ctx.only_host_env(no_lua)
 
-    wlua = ctx.options.with_lua
     ctx.env.LUAC_MODE = ctx.options.luac_mode
 
     def check_none(ctx):
@@ -150,7 +149,7 @@ from waflib.TaskGen import extension
 @extension('.lua')
 def lua_to_h(self, node):
     if not self.env.WITH_LUA:
-        self.fatal('Trying to compile .lua in build with no lua')
+        self.bld.fatal('Trying to compile .lua in build with no lua')
 
     out = node.change_ext('.lua.h')
     if self.env.LUAC_MODE == 'copy':

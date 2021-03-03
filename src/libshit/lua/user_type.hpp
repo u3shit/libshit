@@ -150,10 +150,7 @@ namespace Libshit::Lua
 
     template <typename... Args>
     static void MultiRegister(StateRef vm)
-    {
-      using Swallow = int[];
-      (void) Swallow{ 0, (Register<Args>(vm), lua_pop(vm, 1), 0)... };
-    }
+    { ((Register<Args>(vm), lua_pop(vm, 1)), ...); }
 
     template <typename... Classes>
     struct StateRegister : State::Register
