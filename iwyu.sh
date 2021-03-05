@@ -17,6 +17,8 @@ flags+=(
     -isystem "$dir/ext/libcxxabi/include"
     -Xiwyu --mapping_file="$dir/iwyu.imp"
     -Xiwyu --max_line_length=200
+    -Xiwyu --cxx17ns
+    -DLIBSHIT_INSIDE_IWYU=1
     -I"$dir/src"
     -I"$dir/build/src"
     -I"$dir/../build/clang-debug/libshit/src"
