@@ -49,7 +49,7 @@ namespace Libshit
     constexpr Span(pointer ptr, index_type size) noexcept
       : ptr{ptr}, psize{size} {}
     constexpr Span(pointer begin, pointer end) noexcept
-      : ptr{begin}, psize{end-begin} {}
+      : ptr{begin}, psize(end-begin) {}
 
     template <auto N>
     constexpr Span(element_type (&ary)[N]) noexcept
