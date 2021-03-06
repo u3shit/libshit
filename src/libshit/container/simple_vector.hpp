@@ -95,7 +95,7 @@ namespace Libshit
       }
       return *this;
     }
-    SimpleVector& operator=(SimpleVector&& o)
+    SimpleVector& operator=(SimpleVector&& o) noexcept
     {
       if (this != &o)
       {
@@ -288,8 +288,43 @@ namespace Libshit
 
     // modifiers
     void clear() noexcept { clear_to_end(begin_ptr); }
-    // todo insert
-    // todo emplace
+
+    // todo insert range
+    iterator insert(const_iterator cit, const T& val)
+    { return emplace(cit, val); }
+    iterator insert(const_iterator cit, T&& val)
+    { return emplace(cit, Move(val)); }
+
+    template <typename... Args>
+    iterator emplace(const_iterator cit, Args&&... args)
+    {
+      LIBSHIT_ASSERT(cit >= begin_ptr && cit <= end_ptr);
+      if (cit == end_ptr)
+        return std::addressof(emplace_back(std::forward<Args>(args)...));
+      LIBSHIT_ASSERT(!empty());
+
+      auto it = const_cast<iterator>(cit);
+      if (end_ptr == capacity_ptr)
+      {
+        iterator res;
+        resize_capacity(get_grow_size(), it, [&](pointer& q)
+        {
+          res = q;
+          AllocTraits::construct(
+            static_cast<Allocator&>(*this), std::addressof(*q),
+            std::forward<Args>(args)...);
+          ++q; // only inc if succeeded
+        });
+        return res;
+      }
+      else
+      {
+        emplace_back(Libshit::Move(back()));
+        std::move_backward(it, end_ptr-2, end_ptr-1);
+        *it = T(std::forward<Args>(args)...);
+        return it;
+      }
+    }
 
     // vector::erase has the basic exception safety guarantee
     // https://stackoverflow.com/a/28139567
@@ -330,21 +365,13 @@ namespace Libshit
     }
 
     reference push_back(const T& t) { return emplace_back(t); }
-    reference push_back(T&& t) { return emplace_back(Libshit::Move(t)); }
+    reference push_back(T&& t) { return emplace_back(Move(t)); }
     template <typename... Args>
     reference emplace_back(Args&&... args)
     {
       if (end_ptr == capacity_ptr)
-      {
-        auto max = max_size();
-        if (capacity_ptr - begin_ptr >= max)
-          LIBSHIT_THROW(std::length_error, "Vector::emplace_back");
-        auto size = size_type(end_ptr - begin_ptr);
-        if (size >= max / 3) // this will result in a sudden 3x growth factor...
-          resize_capacity(max);
-        else
-          resize_capacity(std::max(size_type(4), size * 3 / 2));
-      }
+        resize_capacity(get_grow_size());
+
       asan_annotate(end_ptr, 0, end_ptr, 1);
       try
       {
@@ -409,7 +436,22 @@ namespace Libshit
 #endif
     }
 
+    size_type get_grow_size()
+    {
+      auto max = max_size();
+      LIBSHIT_ASSERT(capacity_ptr - begin_ptr <= max);
+      auto size = size_type(end_ptr - begin_ptr);
+      if (size >= max / 3) // this will result in a sudden 3x growth factor...
+        return max;
+
+      return std::max(size_type(4), size * 3 / 2);
+    }
+
     void resize_capacity(size_type n)
+    { resize_capacity(n, nullptr, [](auto){}); }
+
+    template <typename Fun>
+    void resize_capacity(size_type n, pointer split_at, Fun split_fun)
     {
       // TODO: this is not optimal for NPOT sizes < 2*sizeof(void*)
       n = (n+(ALIGN-1))/ALIGN*ALIGN;
@@ -419,7 +461,13 @@ namespace Libshit
       auto q = new_beg;
       try
       {
-        for (auto p = begin_ptr; p != end_ptr; ++p, ++q)
+        auto p = begin_ptr;
+        for (; p != end_ptr && p != split_at; ++p, ++q)
+          AllocTraits::construct(
+            static_cast<Allocator&>(*this), std::addressof(*q),
+            std::move_if_noexcept(*p));
+        split_fun(q);
+        for (; p != end_ptr; ++p, ++q)
           AllocTraits::construct(
             static_cast<Allocator&>(*this), std::addressof(*q),
             std::move_if_noexcept(*p));

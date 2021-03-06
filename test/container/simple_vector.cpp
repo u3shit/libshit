@@ -201,6 +201,42 @@ namespace Libshit::Test
         CHECK(v.capacity() > 0);
       }
 
+      SUBCASE("insert with enough space")
+      {
+        v.reserve(v.size() + 4);
+        v.insert(v.begin(), 10);
+        v.insert(v.end(), 11);
+        v.insert(v.begin() + 2, 12);
+        CHECK(v == Libshit::SimpleVector<T>{10, 0, 12, 1, 2, 3, 11});
+      }
+
+      SUBCASE("insert with resize begin")
+      {
+        v.shrink_to_fit(); CHECK(v.size() == v.capacity());
+        v.insert(v.begin(), 10);
+        CHECK(v == Libshit::SimpleVector<T>{10, 0, 1, 2, 3});
+      }
+      SUBCASE("insert with resize end")
+      {
+        v.shrink_to_fit(); CHECK(v.size() == v.capacity());
+        v.insert(v.end(), 11);
+        CHECK(v == Libshit::SimpleVector<T>{0, 1, 2, 3, 11});
+      }
+      SUBCASE("insert with resize middle")
+      {
+        v.shrink_to_fit(); CHECK(v.size() == v.capacity());
+        v.insert(v.begin() + 2, 12);
+        CHECK(v == Libshit::SimpleVector<T>{0, 1, 12, 2, 3});
+      }
+
+      SUBCASE("emplace")
+      {
+        v.emplace(v.begin(), 10);
+        v.emplace(v.end(), 11);
+        v.emplace(v.begin() + 2, 12);
+        CHECK(v == Libshit::SimpleVector<T>{10, 0, 12, 1, 2, 3, 11});
+      }
+
       SUBCASE("erase")
       {
         v.erase(v.end() - 1);
@@ -243,6 +279,8 @@ namespace Libshit::Test
 
       SUBCASE("push_back/emplace_back/pop_back")
       {
+        v.shrink_to_fit(); CHECK(v.size() == v.capacity());
+        // one realloc push_back, one no alloc emplace_back
         v.push_back(7);
         v.emplace_back(8);
         CHECK(v == Libshit::SimpleVector<T>{0, 1, 2, 3, 7, 8});
@@ -254,8 +292,12 @@ namespace Libshit::Test
       {
         v.resize(7);
         CHECK(v == Libshit::SimpleVector<T>{0, 1, 2, 3, 0, 0, 0});
+        CHECK(v.capacity() < 9); // will realloc
         v.resize(9, 9);
         CHECK(v == Libshit::SimpleVector<T>{0, 1, 2, 3, 0, 0, 0, 9, 9});
+        CHECK(v.capacity() >= 12); // no realloc
+        v.resize(12, -1);
+        CHECK(v == Libshit::SimpleVector<T>{0, 1, 2, 3, 0, 0, 0, 9, 9, -1, -1, -1});
         v.resize(2, 42);
         CHECK(v == Libshit::SimpleVector<T>{0, 1});
       }
