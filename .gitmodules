@@ -4,9 +4,6 @@
 [submodule "ext/ljclang"]
 	path = ext/ljclang
 	url = ../ljclang.git
-[submodule "ext/brigand"]
-	path = ext/brigand
-	url = https://github.com/edouarda/brigand.git
 [submodule "ext/doctest"]
 	path = ext/doctest
 	url = https://github.com/onqtam/doctest.git

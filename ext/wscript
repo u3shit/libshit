@@ -4,7 +4,6 @@ from waflib import Context
 libshit_cross = getattr(Context.g_module, 'LIBSHIT_CROSS', False)
 
 def options(ctx):
-    ctx.system_opt('brigand', cross=libshit_cross)
     ctx.system_opt('doctest', cross=libshit_cross)
 
     ctx.recurse('.', name='options', wscript='wscript_boost', once=False)
@@ -15,14 +14,6 @@ def options(ctx):
 def configure(ctx):
     # start with libcxx, other c++ libs depend on it
     ctx.recurse('.', name='configure', wscript='wscript_libcxx', once=False)
-
-    def system_brigand(ctx):
-        ctx.check_cfg(package='libbrigand', args='--cflags',
-                      uselib_store='BRIGAND',
-                      define_name='', add_have_to_env=False)
-    ctx.with_chk(
-        'brigand', {'system': system_brigand, 'bundle': 'brigand/include'},
-        cross=libshit_cross)
 
     def system_doctest(ctx):
         ctx.check_cxx(header_name='doctest.h', uselib_store='DOCTEST',

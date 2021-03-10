@@ -24,7 +24,6 @@ flags+=(
     -I"$dir/../build/clang-debug/libshit/src"
     -I"$dir/../build/libshit/src"
     -isystem "$dir/ext/boost"
-    -isystem "$dir/ext/brigand/include"
     -isystem "$dir/ext/doctest/doctest"
     -isystem "$dir/ext/lua-5.3.5/src"
     -isystem "$dir/ext/tracy"

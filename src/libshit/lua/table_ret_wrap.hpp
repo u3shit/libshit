@@ -8,7 +8,8 @@
 #include "libshit/lua/function_call_types.hpp"
 #include "libshit/meta_utils.hpp"
 
-#include <brigand/sequences/list.hpp>
+#include <boost/mp11/list.hpp>
+
 #include <cstddef>
 #include <functional>
 #include <utility>
@@ -26,7 +27,7 @@ namespace Libshit::Lua
   struct TableRetWrap;
 
   template <auto Fun, typename... Args>
-  struct TableRetWrap<Fun, brigand::list<Args...>>
+  struct TableRetWrap<Fun, boost::mp11::mp_list<Args...>>
   {
     static RetNum Wrap(StateRef vm, Args&&... args)
     {

@@ -26,12 +26,10 @@ local args = {
   "-Iext/boost",
   "-Iext/ljx/src",
   "-Iext/doctest/doctest",
-  "-Iext/brigand/include",
   "-Ilibshit/src",
   "-Ilibshit/ext/boost",
   "-Ilibshit/ext/ljx/src",
   "-Ilibshit/ext/doctest/doctest",
-  "-Ilibshit/ext/brigand/include",
   "-std=c++17",
   "-Wno-undefined-inline", "-Wno-undefined-internal", -- skip function bodies
   "-Wno-assume"

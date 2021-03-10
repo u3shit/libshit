@@ -7,7 +7,8 @@
 #include "libshit/meta_utils.hpp"
 #include "libshit/shared_ptr.hpp"
 
-#include <brigand/sequences/list.hpp>
+#include <boost/mp11/list.hpp>
+
 #include <functional>
 #include <type_traits>
 #include <utility>
@@ -19,7 +20,7 @@ namespace Libshit::Lua
   struct OwnedSharedPtrWrap;
 
   template <auto Fun, typename Class, typename... Args>
-  struct OwnedSharedPtrWrap<Fun, brigand::list<Class, Args...>>
+  struct OwnedSharedPtrWrap<Fun, boost::mp11::mp_list<Class, Args...>>
   {
     using OrigRet = std::remove_reference_t<FunctionReturn<decltype(Fun)>>;
     using NewRet = NotNullSharedPtr<OrigRet>;

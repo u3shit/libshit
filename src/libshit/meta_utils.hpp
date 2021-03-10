@@ -2,7 +2,7 @@
 #define UUID_EA2FC01F_70AB_4D47_AB3B_D3EF94DA7AB5
 #pragma once
 
-#include <brigand/sequences/list.hpp>
+#include <boost/mp11/list.hpp>
 
 #include <cstddef>
 #include <utility>
@@ -49,7 +49,7 @@ namespace Libshit
   template <typename Ret, typename... Args> struct FunctionTraits<Ret(Args...)>
   {
     using Return = Ret;
-    using Arguments = brigand::list<Args...>;
+    using Arguments = boost::mp11::mp_list<Args...>;
   };
 
   template <typename Ret, typename... Args>

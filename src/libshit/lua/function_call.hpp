@@ -6,11 +6,11 @@
 
 #include "libshit/lua/function_call_types.hpp" // IWYU pragma: export
 #include "libshit/lua/type_traits.hpp"
-
 #include "libshit/meta_utils.hpp" // IWYU pragma: keep
 
+#include <boost/mp11/list.hpp>
+
 #include <boost/config.hpp>
-#include <brigand/sequences/list.hpp>
 #include <cstddef>
 #include <functional>
 #include <limits>
@@ -21,6 +21,7 @@
 #include <utility>
 
 // IWYU pragma: no_forward_declare Libshit::Lua::TupleLike
+// IWYU pragma: no_include <boost/mp11/integral.hpp> // namespace alias...
 
 namespace Libshit::Lua
 {
@@ -46,6 +47,7 @@ namespace Libshit::Lua
 
   namespace Detail
   {
+    namespace mp = boost::mp11;
 
     inline constexpr std::size_t IDX_VARARG =
       std::size_t{1} << (std::numeric_limits<std::size_t>::digits-1);
@@ -105,7 +107,7 @@ namespace Libshit::Lua
       static constexpr bool Is(StateRef, int) noexcept { return true; }
       static void Print(bool, std::ostream&) {}
 
-      using type = brigand::list<>;
+      using type = mp::mp_list<>;
       template <typename Val>
       static constexpr const bool IS = true;
     };
@@ -174,24 +176,24 @@ namespace Libshit::Lua
     struct GenArgSequence;
 
     template <std::size_t N, typename... Seq, typename Head, typename... Args>
-    struct GenArgSequence<N, brigand::list<Seq...>, brigand::list<Head, Args...>>
+    struct GenArgSequence<N, mp::mp_list<Seq...>, mp::mp_list<Head, Args...>>
     {
       using Type = typename GenArgSequence<
         GetArg<Head>::template NEXT_IDX<N>,
-        brigand::list<Seq..., Arg<N, Head>>,
-        brigand::list<Args...>>::Type;
+        mp::mp_list<Seq..., Arg<N, Head>>,
+        mp::mp_list<Args...>>::Type;
     };
     template <std::size_t N, typename Seq>
-    struct GenArgSequence<N, Seq, brigand::list<>>
+    struct GenArgSequence<N, Seq, mp::mp_list<>>
     { using Type = ArgSeq<N-1, Seq>; };
 
     template <auto Fun>
     using ArgSequence = typename GenArgSequence<
-      1, brigand::list<>, FunctionArguments<decltype(Fun)>>::Type;
+      1, mp::mp_list<>, FunctionArguments<decltype(Fun)>>::Type;
 
     template <typename Args>
     using ArgSequenceFromArgs = typename GenArgSequence<
-      1, brigand::list<>, Args>::Type;
+      1, mp::mp_list<>, Args>::Type;
 
 
 
@@ -248,7 +250,7 @@ namespace Libshit::Lua
     struct WrapFunGen;
 
     template <auto Fun, bool Unsafe, typename Ret, std::size_t N, typename... Args>
-    struct WrapFunGen<Fun, Unsafe, Ret, ArgSeq<N, brigand::list<Args...>>>
+    struct WrapFunGen<Fun, Unsafe, Ret, ArgSeq<N, mp::mp_list<Args...>>>
     {
       static int Func(lua_State* l)
       {
@@ -261,7 +263,7 @@ namespace Libshit::Lua
     };
 
     template <auto Fun, bool Unsafe, std::size_t N, typename... Args>
-    struct WrapFunGen<Fun, Unsafe, void, ArgSeq<N, brigand::list<Args...>>>
+    struct WrapFunGen<Fun, Unsafe, void, ArgSeq<N, mp::mp_list<Args...>>>
     {
       static int Func(lua_State* l)
       {
@@ -287,7 +289,7 @@ namespace Libshit::Lua
 
     template <typename Args> struct OverloadCheck;
     template <std::size_t N, typename... Args>
-    struct OverloadCheck<ArgSeq<N, brigand::list<Args...>>>
+    struct OverloadCheck<ArgSeq<N, mp::mp_list<Args...>>>
     {
       static bool Is(StateRef vm)
       {
@@ -316,7 +318,7 @@ namespace Libshit::Lua
 
     template <typename Args> struct PrintOverload;
     template <std::size_t N, typename... Args>
-    struct PrintOverload<ArgSeq<N, brigand::list<Args...>>>
+    struct PrintOverload<ArgSeq<N, mp::mp_list<Args...>>>
     {
       static void Print(std::ostream& os)
       {

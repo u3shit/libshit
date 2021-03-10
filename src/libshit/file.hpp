@@ -4,75 +4,123 @@
 
 #include "libshit/meta_utils.hpp" // IWYU pragma: export
 
-#include <brigand/algorithms/fold.hpp>
-#include <brigand/algorithms/split.hpp>
-#include <brigand/sequences/append.hpp>
-#include <brigand/sequences/back.hpp>
-#include <brigand/sequences/list.hpp>
-#include <brigand/types/args.hpp>
-#include <brigand/types/integral_constant.hpp>
+#include <boost/mp11/algorithm.hpp>
+#include <boost/mp11/list.hpp>
 
-namespace Libshit
+#include <type_traits>
+
+// IWYU pragma: no_include <boost/mp11/integral.hpp> // namespace alias...
+
+namespace Libshit::FileTools
 {
+  namespace mp = boost::mp11;
 
-  namespace FileTools
+  template <char Val> using C = std::integral_constant<char, Val>;
+  template <char... Vals> using CL = mp::mp_list_c<char, Vals...>;
+
+  // TODO https://github.com/boostorg/mp11/issues/59
+  // Do it like how brigand did so far.
+  // Do not add L as the first parameter to SplitImpl, because GCC will choke on
+  // ambigous parameters when called with Sep, Sep. (WTF?)
+  // Leave the no Rest specializations, because it speeds up compilation
+  template <typename Out, typename Cur,
+            typename Sep, typename... Rest>
+  struct SplitImpl;
+
+  template <template <typename...> typename L, typename... Out, typename Cur,
+            typename Sep>
+  struct SplitImpl<L<Out...>, Cur, Sep>
+  { using Type = L<Out..., Cur>; };
+
+  template <template <typename...> typename L, typename... Out, typename... Cur,
+            typename Sep, typename... Rest>
+  struct SplitImpl<L<Out...>, L<Cur...>, Sep, Sep, Rest...>
   {
+    using Type = typename SplitImpl<
+      L<Out..., L<Cur...>>, L<>, Sep, Rest...>::Type;
+  };
 
-    template <char Val> using C = brigand::integral_constant<char, Val>;
-    template <char... Vals> using CL = brigand::integral_list<char, Vals...>;
+  template <template <typename...> typename L, typename... Out, typename... Cur,
+            typename Sep>
+  struct SplitImpl<L<Out...>, L<Cur...>, Sep, Sep>
+  { using Type = L<Out..., L<Cur...>>; };
 
-    template <typename Elem, typename State> struct Fold
-    { using type = brigand::push_back<State, Elem>; };
-    // ignore .
-    template <typename State> struct Fold<CL<'.'>, State>
-    { using type = State; };
-    // .. eats a directory
-    template <typename State> struct Fold<CL<'.','.'>, State>
-    { using type = brigand::pop_back<State>; };
-    // except if state already empty
-    template <> struct Fold<CL<'.','.'>, CL<>> { using type = CL<>; };
+  template <template <typename...> typename L, typename... Out, typename... Cur,
+            typename Sep, typename N, typename... Rest>
+  struct SplitImpl<L<Out...>, L<Cur...>, Sep, N, Rest...>
+  {
+    using Type = typename SplitImpl<
+      L<Out...>, L<Cur..., N>, Sep, Rest...>::Type;
+  };
 
-    // ignore everything before src/ext
-    template <typename State> struct Fold<CL<'s','r','c'>, State>
-    { using type = CL<>; };
-    template <typename State> struct Fold<CL<'e','x','t'>, State>
-    { using type = CL<>; };
-
-
-    template <typename List, typename Sep, typename Bld>
-    struct LJoin;
-
-    template <typename List, typename Sep, typename Bld = brigand::list<>>
-    using Join = typename LJoin<List, Sep, Bld>::type;
+  template <template <typename...> typename L, typename... Out, typename... Cur,
+            typename Sep, typename N>
+  struct SplitImpl<L<Out...>, L<Cur...>, Sep, N>
+  {
+    using Type = L<Out..., L<Cur..., N>>;
+  };
 
 
-    template <typename Sep, typename Bld>
-    struct LJoin<brigand::list<>, Sep, Bld>
-    { using type = Bld; };
+  template <typename Lst, typename Sep> struct Split2;
+  template <template <typename...> typename L, typename... In, typename Sep>
+  struct Split2<L<In...>, Sep>
+  { using Type = typename SplitImpl<L<>, L<>, Sep, In...>::Type; };
 
-    template <typename LHead, typename... LTail, typename Sep>
-    struct LJoin<brigand::list<LHead, LTail...>, Sep, brigand::list<>>
-    { using type = Join<brigand::list<LTail...>, Sep, LHead>; };
+  template <typename Lst, typename Sep>
+  using Split = typename Split2<Lst, Sep>::Type;
+  // end todo
 
-    template <typename LHead, typename... LTail, typename Sep, typename Bld>
-    struct LJoin<brigand::list<LHead, LTail...>, Sep, Bld>
-    { using type = Join<brigand::list<LTail...>, Sep,
-                        brigand::append<Bld, Sep, LHead>>; };
+  template <typename State, typename Elem> struct FoldImpl
+  { using type = mp::mp_push_back<State, Elem>; };
+  // ignore .
+  template <typename State> struct FoldImpl<State, CL<'.'>>
+  { using type = State; };
+  // .. eats a directory
+  template <typename State> struct FoldImpl<State, CL<'.','.'>>
+  { using type = mp::mp_pop_back<State>; };
+  // except if state already empty
+  template <> struct FoldImpl<CL<>, CL<'.','.'>> { using type = CL<>; };
+
+  // ignore everything before src/ext
+  template <typename State> struct FoldImpl<State, CL<'s','r','c'>>
+  { using type = CL<>; };
+  template <typename State> struct FoldImpl<State, CL<'e','x','t'>>
+  { using type = CL<>; };
+
+  template <typename State, typename Elem>
+  using Fold = typename FoldImpl<State, Elem>::type;
+
+  template <typename List, typename Sep, typename Bld>
+  struct LJoin;
+
+  template <typename List, typename Sep, typename Bld = mp::mp_list<>>
+  using Join = typename LJoin<List, Sep, Bld>::type;
 
 
-    template <typename X> struct LWrap;
-    template <char... Chars> struct LWrap<CL<Chars...>>
-    { using type = StringContainer<Chars...>; };
+  template <typename Sep, typename Bld>
+  struct LJoin<mp::mp_list<>, Sep, Bld>
+  { using type = Bld; };
 
-    template <typename X> using Wrap = typename LWrap<X>::type;
+  template <typename LHead, typename... LTail, typename Sep>
+  struct LJoin<mp::mp_list<LHead, LTail...>, Sep, mp::mp_list<>>
+  { using type = Join<mp::mp_list<LTail...>, Sep, LHead>; };
 
-    template <char... Args>
-    using FileName =
-      Wrap<Join<brigand::fold<
-                  brigand::split<CL<Args...>, C<'/'>>, CL<>,
-                  Fold<brigand::_element, brigand::_state>>, CL<'/'>>>;
+  template <typename LHead, typename... LTail, typename Sep, typename Bld>
+  struct LJoin<mp::mp_list<LHead, LTail...>, Sep, Bld>
+  { using type = Join<mp::mp_list<LTail...>, Sep,
+                      mp::mp_append<Bld, Sep, LHead>>; };
 
-  }
+
+  template <typename X> struct LWrap;
+  template <char... Chars> struct LWrap<CL<Chars...>>
+  { using type = StringContainer<Chars...>; };
+
+  template <typename X> using Wrap = typename LWrap<X>::type;
+
+  template <char... Args>
+  using FileName =
+    Wrap<Join<mp::mp_fold<
+                Split<CL<Args...>, C<'/'>>, CL<>, Fold>, CL<'/'>>>;
 }
 
 #define LIBSHIT_FILE \

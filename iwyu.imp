@@ -58,6 +58,10 @@
 - include: ['@<boost/fusion/adapted/struct/detail/.*>', private,
             '<boost/fusion/adapted/struct/adapt_struct_named.hpp>', public]
 
+- symbol: ['boost::mp11::mp_append', private, '<boost/mp11/list.hpp>', public]
+- symbol: ['boost::mp11::mp_fold', private, '<boost/mp11/algorithm.hpp>', public]
+- symbol: ['boost::mp11::mp_list', private, '<boost/mp11/list.hpp>', public]
+
 # token_functions errors if I directly include it
 - include: ['<boost/token_functions.hpp>', private,
             '<boost/tokenizer.hpp>', public]
