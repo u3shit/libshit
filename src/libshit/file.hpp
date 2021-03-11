@@ -22,7 +22,6 @@ namespace Libshit::FileTools
   // Do it like how brigand did so far.
   // Do not add L as the first parameter to SplitImpl, because GCC will choke on
   // ambigous parameters when called with Sep, Sep. (WTF?)
-  // Leave the no Rest specializations, because it speeds up compilation
   template <typename Out, typename Cur,
             typename Sep, typename... Rest>
   struct SplitImpl;
@@ -41,23 +40,11 @@ namespace Libshit::FileTools
   };
 
   template <template <typename...> typename L, typename... Out, typename... Cur,
-            typename Sep>
-  struct SplitImpl<L<Out...>, L<Cur...>, Sep, Sep>
-  { using Type = L<Out..., L<Cur...>>; };
-
-  template <template <typename...> typename L, typename... Out, typename... Cur,
             typename Sep, typename N, typename... Rest>
   struct SplitImpl<L<Out...>, L<Cur...>, Sep, N, Rest...>
   {
     using Type = typename SplitImpl<
       L<Out...>, L<Cur..., N>, Sep, Rest...>::Type;
-  };
-
-  template <template <typename...> typename L, typename... Out, typename... Cur,
-            typename Sep, typename N>
-  struct SplitImpl<L<Out...>, L<Cur...>, Sep, N>
-  {
-    using Type = L<Out..., L<Cur..., N>>;
   };
 
 
@@ -72,6 +59,9 @@ namespace Libshit::FileTools
 
   template <typename State, typename Elem> struct FoldImpl
   { using type = mp::mp_push_back<State, Elem>; };
+  // ignore empty components (a//b or absolute path). shouldn't really happen.
+  template <typename State> struct FoldImpl<State, CL<>>
+  { using type = State; };
   // ignore .
   template <typename State> struct FoldImpl<State, CL<'.'>>
   { using type = State; };
