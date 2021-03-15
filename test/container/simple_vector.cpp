@@ -295,9 +295,9 @@ namespace Libshit::Test
         CHECK(v.capacity() < 9); // will realloc
         v.resize(9, 9);
         CHECK(v == Libshit::SimpleVector<T>{0, 1, 2, 3, 0, 0, 0, 9, 9});
-        CHECK(v.capacity() >= 12); // no realloc
-        v.resize(12, -1);
-        CHECK(v == Libshit::SimpleVector<T>{0, 1, 2, 3, 0, 0, 0, 9, 9, -1, -1, -1});
+        CHECK(v.capacity() >= 10); // no realloc
+        v.resize(10, -1);
+        CHECK(v == Libshit::SimpleVector<T>{0, 1, 2, 3, 0, 0, 0, 9, 9, -1});
         v.resize(2, 42);
         CHECK(v == Libshit::SimpleVector<T>{0, 1});
       }
@@ -354,3 +354,5 @@ namespace Libshit::Test
 
   TEST_SUITE_END();
 }
+
+TYPE_TO_STRING(Libshit::Test::X);
