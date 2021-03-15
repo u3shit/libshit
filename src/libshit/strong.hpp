@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <iosfwd>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -91,6 +92,12 @@ namespace Libshit
   private:
     T t;
   };
+
+  template <typename T, typename Tag>
+  std::ostream& operator<<(std::ostream& os, const StrongTypedef<T, Tag>& o)
+  {
+    return os << static_cast<const T&>(o);
+  }
 
   template <typename T, typename Index> class StrongPointer;
 
