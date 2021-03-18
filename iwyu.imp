@@ -81,6 +81,8 @@
 # stl/libc++
 - include: ['<exception>', public, '<stdexcept>', public]
 - include: ['<__tuple>', private, '<tuple>', public]
+- include: ['<__tree>', private, '<set>', public]
+- include: ['<__tree>', private, '<map>', public]
 - symbol: ['std::errc', private, '<system_error>', public]
 - symbol: ['std::errc', private, '<charconv>', public]
 # don't require #include <utility> when a map should already include it...
