@@ -29,7 +29,8 @@ namespace Libshit
    * stl implementations, this doesn't choke if size_type/difference_type is
    * only explicit constructible from ints, so it's usable with StrongAllocator.
    */
-  template <typename T, typename Allocator = std::allocator<T>>
+  template <
+    typename T, typename Allocator = std::allocator<std::remove_const_t<T>>>
   class SimpleVector : private Allocator
   {
   private:
@@ -39,6 +40,8 @@ namespace Libshit
     constexpr static inline auto ALIGN =
       std::max(std::size_t(1), (2*sizeof(void*)) / sizeof(T));
 
+    using MutT = std::remove_const_t<T>;
+    using MutPtr = MutT*;
   public:
     using value_type = T;
     using allocator_type = Allocator;
@@ -46,7 +49,9 @@ namespace Libshit
     using difference_type = typename AllocTraits::difference_type;
     using reference = T&;
     using const_reference = const T&;
-    using pointer = typename AllocTraits::pointer;
+    using pointer = std::conditional_t<
+      std::is_const_v<T>, typename AllocTraits::const_pointer,
+      typename AllocTraits::pointer>;
     using const_pointer = typename AllocTraits::const_pointer;
 
     using iterator = pointer;
@@ -292,7 +297,7 @@ namespace Libshit
     // todo insert range
     iterator insert(const_iterator cit, const T& val)
     { return emplace(cit, val); }
-    iterator insert(const_iterator cit, T&& val)
+    iterator insert(const_iterator cit, MutT&& val)
     { return emplace(cit, Move(val)); }
 
     template <typename... Args>
@@ -303,11 +308,11 @@ namespace Libshit
         return std::addressof(emplace_back(std::forward<Args>(args)...));
       LIBSHIT_ASSERT(!empty());
 
-      auto it = const_cast<iterator>(cit);
+      auto it = const_cast<MutT*>(cit);
       if (end_ptr == capacity_ptr)
       {
         iterator res;
-        resize_capacity(get_grow_size(), it, [&](pointer& q)
+        resize_capacity(get_grow_size(), it, [&](MutPtr& q)
         {
           res = q;
           AllocTraits::construct(
@@ -319,7 +324,7 @@ namespace Libshit
       }
       else
       {
-        emplace_back(Libshit::Move(back()));
+        emplace_back(Libshit::Move(end_ptr[-1]));
         std::move_backward(it, end_ptr-2, end_ptr-1);
         *it = T(std::forward<Args>(args)...);
         return it;
@@ -331,8 +336,8 @@ namespace Libshit
     iterator erase(const_iterator cit)
     {
       LIBSHIT_ASSERT(cit >= begin_ptr && cit < end_ptr);
-      auto it = const_cast<iterator>(cit);
-      std::move(it+1, end(), it);
+      auto it = const_cast<MutT*>(cit);
+      std::move(it+1, end_ptr, it);
       pop_back();
       return it;
     }
@@ -340,8 +345,8 @@ namespace Libshit
     iterator erase(const_iterator cfirst, const_iterator clast)
     {
       LIBSHIT_ASSERT(begin_ptr <= cfirst && cfirst <= clast && clast <= end_ptr);
-      auto first = const_cast<iterator>(cfirst);
-      auto last = const_cast<iterator>(clast);
+      auto first = const_cast<MutT*>(cfirst);
+      auto last = const_cast<MutT*>(clast);
       std::move(last, end_ptr, first);
 
       auto new_end = end_ptr - (last-first);
@@ -358,14 +363,14 @@ namespace Libshit
       noexcept(std::is_nothrow_move_assignable_v<T>)
     {
       LIBSHIT_ASSERT(cit >= begin_ptr && cit < end_ptr);
-      auto it = const_cast<iterator>(cit);
-      if (it != &back()) *it = Move(back());
+      auto it = const_cast<MutT*>(cit);
+      if (it != end_ptr-1) *it = Move(end_ptr[-1]);
       pop_back();
       return it;
     }
 
     reference push_back(const T& t) { return emplace_back(t); }
-    reference push_back(T&& t) { return emplace_back(Move(t)); }
+    reference push_back(MutT&& t) { return emplace_back(Move(t)); }
     template <typename... Args>
     reference emplace_back(Args&&... args)
     {
@@ -423,7 +428,7 @@ namespace Libshit
     bool operator==(const SimpleVector& o) const { return !(*this != o); }
 
   private:
-    pointer begin_ptr = nullptr, end_ptr = nullptr, capacity_ptr = nullptr;
+    MutPtr begin_ptr = nullptr, end_ptr = nullptr, capacity_ptr = nullptr;
 
     void asan_annotate(
       const pointer& old_end, int old_offs, const pointer& new_end, int new_offs)
@@ -532,7 +537,7 @@ namespace Libshit
       end_ptr = new_end;
     }
 
-    void clear_to_end(pointer new_end)
+    void clear_to_end(MutPtr new_end)
     {
       for (auto p = new_end; p != end_ptr; ++p)
         AllocTraits::destroy(static_cast<Allocator&>(*this), std::addressof(*p));

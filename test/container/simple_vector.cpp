@@ -50,8 +50,11 @@ namespace Libshit::Test
     { return os << "X{" << x.i << '}'; }
   }
 
-  TEST_CASE_TEMPLATE("basic test", T, int, X)
+  TEST_CASE_TEMPLATE("basic test", T, int, X, const int)
   {
+    constexpr const bool is_const = std::is_const_v<T>;
+    using NoConst = std::remove_const_t<T>;
+
     Libshit::SimpleVector<T> v;
     CHECK(v.empty());
     CHECK(v.size() == 0);
@@ -105,7 +108,7 @@ namespace Libshit::Test
     {
       SUBCASE("empty") {}
       SUBCASE("not empty") { v.push_back(1); }
-      std::vector<T> v2{4,5,6};
+      std::vector<NoConst> v2{4,5,6};
       v.assign(v2.begin(), v2.end());
       CHECK(!v.empty());
       CHECK(v.size() == 3);
@@ -128,11 +131,15 @@ namespace Libshit::Test
       SUBCASE("simple accessors")
       {
         CHECK(v.at(1) == 1);
-        v.at(1) = 9;
+        // that const cast would work even in non-const case, but test that
+        // assignment works normally when members are not const
+        if constexpr (is_const) const_cast<NoConst&>(v.at(1)) = 9;
+        else v.at(1) = 9;
         CHECK(v.at(1) == 9);
         CHECK(std::as_const(v).at(2) == 2);
         CHECK(v[2] == 2);
-        v[2] = 8;
+        if constexpr (is_const) const_cast<NoConst&>(v[2]) = 8;
+        else v[2] = 8;
         CHECK(v[2] == 8);
         CHECK(std::as_const(v)[2] == 8);
         CHECK(v == Libshit::SimpleVector<T>{0, 9, 8, 3});
@@ -142,10 +149,12 @@ namespace Libshit::Test
 
         CHECK(v.front() == 0);
         CHECK(std::as_const(v).front() == 0);
-        v.front() = 5;
+        if constexpr (is_const) const_cast<NoConst&>(v.front()) = 5;
+        else v.front() = 5;
         CHECK(v.back() == 3);
         CHECK(std::as_const(v).back() == 3);
-        v.back() = 6;
+        if constexpr (is_const) const_cast<NoConst&>(v.back()) = 6;
+        else v.back() = 6;
         CHECK(v == Libshit::SimpleVector<T>{5, 9, 8, 6});
       }
 
@@ -316,7 +325,7 @@ namespace Libshit::Test
         CHECK(v == v2);
         CHECK(!(v != v2));
 
-        v2[2] = 7;
+        const_cast<std::remove_const_t<T>&>(v2[2]) = 7;
         CHECK(v != v2);
         CHECK(!(v == v2));
 
