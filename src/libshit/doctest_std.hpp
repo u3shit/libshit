@@ -49,6 +49,15 @@ namespace doctest
     }
   };
 
+  template <>
+  struct StringMaker<std::nullopt_t>
+  {
+    static String convert(std::nullopt_t)
+    {
+      return "nullopt{}";
+    }
+  };
+
   template <typename T>
   struct StringMaker<std::optional<T>>
   {
