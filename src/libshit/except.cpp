@@ -8,7 +8,9 @@
 // stacktrace line), flaky (has hard coded full path to addr2line)
 // #define BOOST_STACKTRACE_USE_ADDR2LINE
 
-#if LIBSHIT_OS_IS_VITA
+#if LIBSHIT_WITH_LIBBACKTRACE
+#  define BOOST_STACKTRACE_USE_BACKTRACE
+#elif LIBSHIT_OS_IS_VITA
 #  define BOOST_STACKTRACE_USE_NOOP // doesn't work on vita
 #endif
 #include <boost/core/demangle.hpp>

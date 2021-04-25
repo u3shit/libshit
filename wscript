@@ -292,9 +292,17 @@ def build(bld):
     if libshit_cross: bld.only_host_env(build_libshit)
 
 def build_libshit(ctx, pref):
+    ctx.objects(idx      = 50004 + (len(pref)>0),
+                source   = ['src/libshit/except.cpp'],
+                uselib   = ['LIBBACKTRACE', app],
+                use      = ['BOOST', 'DOCTEST', 'DL', 'BACKTRACE', 'LUA',
+                            pref+'lua'],
+                includes = 'src',
+                export_includes = 'src',
+                target   = pref+'libshit-except')
+
     src = [
         'src/libshit/char_utils.cpp',
-        'src/libshit/except.cpp',
         'src/libshit/logger.cpp',
         'src/libshit/low_io.cpp',
         'src/libshit/options.cpp',
@@ -334,10 +342,7 @@ def build_libshit(ctx, pref):
     ctx.objects(idx      = 50000 + (len(pref)>0),
                 source   = src,
                 uselib   = app,
-                use      = ['BOOST', 'DOCTEST', 'DL', 'LUA', 'TRACY',
-                            pref+'lua', pref+'tracy'],
-                includes = 'src',
-                export_includes = 'src',
+                use      = ['TRACY', pref+'tracy', pref+'libshit-except'],
                 target   = pref+'libshit')
 
     if ctx.env.WITH_TESTS and app == 'LIBSHIT':

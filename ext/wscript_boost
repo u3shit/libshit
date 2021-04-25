@@ -6,9 +6,15 @@ libshit_cross = getattr(Context.g_module, 'LIBSHIT_CROSS', False)
 def options(ctx):
     ctx.load('boost')
     ctx.system_opt('boost', cross=libshit_cross)
+    ctx.with_opt('libbacktrace', ['system', 'none'], 'none', cross=libshit_cross)
 
 from waflib import Context
 def configure(ctx):
+    def system_libbacktrace(ctx):
+        ctx.check_cc(lib='backtrace')
+    ctx.with_chk('libbacktrace', {'system': system_libbacktrace, 'none': None},
+                 cross=libshit_cross, define='LIBSHIT_WITH_LIBBACKTRACE')
+
     def system_boost(ctx):
         ctx.check_boost(lib=getattr(Context.g_module, 'BOOST_LIBS', []))
     def bundle_boost(ctx):
