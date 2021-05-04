@@ -74,6 +74,39 @@ namespace Libshit
     }
 
     /**
+     * Generate bool or integer in range [0, mod).
+     * @tparam U integral type
+     * @param mod Return a number modulo mod.
+     */
+    template <typename U>
+    constexpr std::enable_if_t<std::is_integral_v<U>, U>
+    Gen(MakeUnsignedBoolT<U> mod) noexcept
+    {
+      if (mod < 2) return 0;
+      LIBSHIT_ASSERT(mod <= std::numeric_limits<T>::max());
+
+      T div = (std::numeric_limits<T>::max() - (mod-1)) / mod + 1;
+      T g;
+      do
+        g = static_cast<Derived*>(this)->GenBlock();
+      while (g > div * mod - 1);
+
+      return g / div;
+    }
+
+    /**
+     * Generate bool or integer in range [begin, end).
+     * @tparam U integral type
+     */
+    template <typename U>
+    constexpr std::enable_if_t<std::is_integral_v<U>, U>
+    Gen(U begin, U end) noexcept
+    {
+      LIBSHIT_ASSERT(end >= begin);
+      return Gen<U>(end - begin) + begin;
+    }
+
+    /**
      * Generate a random enum (class) value. It expects an enum starting from 0
      * without holes.
      * @tparam mod Number of elements of the enum (probably U::NumElements or
