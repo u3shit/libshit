@@ -148,3 +148,5 @@
 # glibc (old versions)
 - symbol: ['strncasecmp', private, '<strings.h>', public]
 - symbol: ['strcasecmp', private, '<strings.h>', public]
+
+- symbol: ['stat', private, '<sys/stat.h>', public]
