@@ -41,7 +41,7 @@ namespace Libshit
       std::max(std::size_t(1), (2*sizeof(void*)) / sizeof(T));
 
     using MutT = std::remove_const_t<T>;
-    using MutPtr = MutT*;
+    using MutPtr = typename AllocTraits::pointer;
   public:
     using value_type = T;
     using allocator_type = Allocator;
