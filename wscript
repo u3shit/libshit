@@ -248,6 +248,7 @@ def configure_variant(ctx):
         ctx.define('UNICODE', 1)
         ctx.define('_UNICODE', 1)
 
+        ctx.check_cxx(lib='advapi32')
         ctx.check_cxx(lib='kernel32')
         ctx.check_cxx(lib='shell32')
         ctx.check_cxx(lib='user32')
@@ -306,6 +307,7 @@ def build_libshit(ctx, pref):
         'src/libshit/logger.cpp',
         'src/libshit/low_io.cpp',
         'src/libshit/options.cpp',
+        'src/libshit/random.cpp',
         'src/libshit/wtf8.cpp',
     ]
     if ctx.env.DEST_OS == 'vita':
@@ -342,7 +344,9 @@ def build_libshit(ctx, pref):
     ctx.objects(idx      = 50000 + (len(pref)>0),
                 source   = src,
                 uselib   = app,
-                use      = ['TRACY', pref+'tracy', pref+'libshit-except'],
+                use      = ['TRACY',
+                            'ADVAPI32', # windows random
+                            pref+'tracy', pref+'libshit-except'],
                 target   = pref+'libshit')
 
     if ctx.env.WITH_TESTS and app == 'LIBSHIT':
