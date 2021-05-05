@@ -166,27 +166,28 @@ namespace Libshit
    * worldwide. This software is distributed without any warranty.
    * See <http://creativecommons.org/publicdomain/zero/1.0/>.
   */
-  class Xoshiro128p : public RandomGeneratorBase<std::uint32_t, Xoshiro128p>
+  template <typename T, std::size_t Shift, std::size_t Rot>
+  class Xoshirop : public RandomGeneratorBase<T, Xoshirop<T, Shift, Rot>>
   {
   public:
-    Xoshiro128p() noexcept : Xoshiro128p{FillRandom<std::uint32_t, 4>()} {}
+    Xoshirop() noexcept : Xoshirop{FillRandom<T, 4>()} {}
 
     /// The state must be seeded so that it is not everywhere zero.
-    constexpr Xoshiro128p(const std::array<std::uint32_t, 4>& state) noexcept
+    constexpr Xoshirop(const std::array<T, 4>& state) noexcept
       : state{state}
     {
       LIBSHIT_RASSERT(std::all_of(state.begin(), state.end(),
                                   [](auto x) { return x > 0; }));
     }
 
-    Xoshiro128p(const Xoshiro128p&) = delete;
-    void operator=(const Xoshiro128p&) = delete;
+    Xoshirop(const Xoshirop&) = delete;
+    void operator=(const Xoshirop&) = delete;
 
-    constexpr std::uint32_t GenBlock() noexcept
+    constexpr T GenBlock() noexcept
     {
-      const std::uint32_t result_plus = state[0] + state[3];
+      const T result_plus = state[0] + state[3];
 
-      const std::uint32_t t = state[1] << 9;
+      const T t = state[1] << Shift;
 
       state[2] ^= state[0];
       state[3] ^= state[1];
@@ -195,18 +196,20 @@ namespace Libshit
 
       state[2] ^= t;
 
-      state[3] = rotl(state[3], 11);
+      state[3] = rotl(state[3], Rot);
 
       return result_plus;
     }
 
   private:
-    static constexpr inline std::uint32_t rotl(std::uint32_t x, int k) noexcept
-    { return (x << k) | (x >> (32 - k)); }
+    static constexpr inline T rotl(T x, std::size_t k) noexcept
+    { return (x << k) | (x >> (Bits<T>::value - k)); }
 
-    std::array<std::uint32_t, 4> state;
+    std::array<T, 4> state;
   };
 
+  using Xoshiro128p = Xoshirop<std::uint32_t, 9, 11>;
+  using Xoshiro256p = Xoshirop<std::uint64_t, 17, 45>;
 }
 
 #endif
