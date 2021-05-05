@@ -19,41 +19,40 @@ namespace Libshit
   // Functions taking a `& out` will clear `out` but keep the allocation if it's
   // large enough for a worst-case output.
 
-  void Wtf8ToWtf16(std::u16string& out, std::string_view in);
-  inline std::u16string Wtf8ToWtf16(std::string_view in)
-  { std::u16string res; Wtf8ToWtf16(res, in); return res; }
-  void Wtf8ToWtf16LE(std::u16string& out, std::string_view in);
-  inline std::u16string Wtf8ToWtf16LE(std::string_view in)
-  { std::u16string res; Wtf8ToWtf16LE(res, in); return res; }
+#define LIBSHIT_GEN0(a_type, a_name, b_type, b_name)       \
+  void a_name##To##b_name(b_type& out, a_type in);         \
+  inline b_type a_name##To##b_name(a_type in)              \
+  { b_type res; a_name##To##b_name(res, in); return res; }
+#define LIBSHIT_GEN(a_str, a_sv, a_name, b_str, b_sv, b_name) \
+  LIBSHIT_GEN0(a_sv, a_name, b_str, b_name)                  \
+  LIBSHIT_GEN0(b_sv, b_name, a_str, a_name)
 
-  void Wtf16ToWtf8(std::string& out, std::u16string_view in);
-  inline std::string Wtf16ToWtf8(std::u16string_view in)
-  { std::string res; Wtf16ToWtf8(res, in); return res; }
-  void Wtf16LEToWtf8(std::string& out, std::u16string_view in);
-  inline std::string Wtf16LEToWtf8(std::u16string_view in)
-  { std::string res; Wtf16LEToWtf8(res, in); return res; }
+  LIBSHIT_GEN(std::string, std::string_view, Wtf8,
+              std::u16string, std::u16string_view, Wtf16)
+  LIBSHIT_GEN(std::string, std::string_view, Wtf8,
+              std::u16string, std::u16string_view, Wtf16LE)
+
+  LIBSHIT_GEN(std::string, std::string_view, Cesu8,
+              std::u16string, std::u16string_view, Wtf16)
+  LIBSHIT_GEN(std::string, std::string_view, Cesu8,
+              std::u16string, std::u16string_view, Wtf16LE)
+
+  LIBSHIT_GEN(std::string, std::string_view, Wtf8,
+              std::string, std::string_view, Cesu8)
 
   // replaces invalid surrogate pairs with replacement char
-  void Utf16ToUtf8(std::string& out, std::u16string_view in);
-  inline std::string Utf16ToUtf8(std::u16string_view in)
-  { std::string res; Utf16ToUtf8(res, in); return res; }
-  void Utf16LEToUtf8(std::string& out, std::u16string_view in);
-  inline std::string Utf16LEToUtf8(std::u16string_view in)
-  { std::string res; Utf16LEToUtf8(res, in); return res; }
+  LIBSHIT_GEN0(std::u16string_view, Utf16, std::string, Utf8)
+  LIBSHIT_GEN0(std::u16string_view, Utf16LE, std::string, Utf8)
 
   // on windows, also support wchar_t
 #if WCHAR_MAX == 65535
-  void Wtf8ToWtf16Wstr(std::wstring& out, std::string_view in);
-  inline std::wstring Wtf8ToWtf16Wstr(std::string_view in)
-  { std::wstring res; Wtf8ToWtf16Wstr(res, in); return res; }
-  void Wtf16ToWtf8(std::string& out, std::wstring_view in);
-  inline std::string Wtf16ToWtf8(std::wstring_view in)
-  { std::string res; Wtf16ToWtf8(res, in); return res; }
-  void Utf16ToUtf8(std::string& out, std::wstring_view in);
-  inline std::string Utf16ToUtf8(std::wstring_view in)
-  { std::string res; Utf16ToUtf8(res, in); return res; }
+  LIBSHIT_GEN0(std::string_view, Wtf8, std::wstring, Wtf16Wstr)
+  LIBSHIT_GEN0(std::wstring_view, Wtf16, std::string, Wtf8)
+  LIBSHIT_GEN0(std::wstring_view, Utf16, std::string, Utf8)
 #endif
 
+#undef LIBSHIT_GEN
+#undef LIBSHIT_GEN0
 }
 
 #endif
