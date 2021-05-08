@@ -36,7 +36,7 @@ namespace Libshit
   //      0x80..0x7ff    -> 2
   //     0x800..0xffff   -> 3
   //   0x10000..0x10ffff -> 4
-  // CESU-8, WTF-8 mismatched surrogate
+  // CESU-8:
   //   0x10000..0x10ffff -> 6
 
   static std::uint16_t NoConv(std::uint16_t c) { return c; }

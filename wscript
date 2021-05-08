@@ -54,7 +54,7 @@ libshit_cross = getattr(Context.g_module, 'LIBSHIT_CROSS', False)
 
 def options(opt):
     opt.load('with_selector', tooldir='.')
-    opt.load('compiler_c compiler_cxx clang_compilation_database')
+    opt.load('compiler_c compiler_cxx clang_compilation_database md5_tstamp')
     grp = opt.get_option_group('configure options')
 
     grp.add_option('--optimize', action='store_true', default=False,
