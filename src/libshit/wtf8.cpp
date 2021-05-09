@@ -43,24 +43,27 @@ namespace Libshit
 
   namespace
   {
-    template <std::uint16_t (*Conv)(std::uint16_t)>
+    template <std::uint16_t (*Conv)(std::uint16_t), typename Out>
     struct Utf16Parse
     {
-      template <typename Out>
-      struct X
-      {
-        Out out;
-        bool replace;
-        char32_t prev = 0xffffffff;
+      Out out;
+      bool replace;
+      char32_t prev = 0xffffffff;
 
-        void operator()(std::uint32_t c);
-      };
-      template <typename Out> X(Out, bool) -> X<Out>;
+      void operator()(std::uint32_t c);
     };
   }
 
-  template <std::uint16_t (*Conv)(std::uint16_t)> template <typename Out>
-  void Utf16Parse<Conv>::X<Out>::operator()(std::uint32_t c)
+  // You can't partial CTAD in c++, the fucking gcc can't implement the
+  // fucking c++17 standard in fucking 2021, so just make make_xy funcs like
+  // it's 1998
+  // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=79501
+  template <std::uint16_t (*Conv)(std::uint16_t), typename Out>
+  static auto MkUtf16Parse(Out out, bool replace) noexcept
+  { return Utf16Parse<Conv, Out>{out, replace}; }
+
+  template <std::uint16_t (*Conv)(std::uint16_t), typename Out>
+  void Utf16Parse<Conv, Out>::operator()(std::uint32_t c)
   {
     if (prev == 0xffffffff) { prev = c; return; }
     if (prev <= 0xffff && IsLeadSurrogate(prev) && IsTrailSurrogate(c))
@@ -129,7 +132,7 @@ namespace Libshit
     std::string& out, std::u16string_view in, bool replace)
   {
     out.reserve(out.size() + in.size() * 3);
-    typename Utf16Parse<Conv>::X p{Utf8Producer{PushBack{out}, false}, replace};
+    auto p = MkUtf16Parse<Conv>(Utf8Producer{PushBack{out}, false}, replace);
     for (const char16_t c : in) p(c);
     p(0); // flush
   }
@@ -202,22 +205,19 @@ namespace Libshit
 
   namespace
   {
-    template <std::uint16_t (*Conv)(std::uint16_t)>
+    template <std::uint16_t (*Conv)(std::uint16_t), typename Out>
     struct Utf16Producer
     {
-      // workaround missing partial CTAD from c++
-      template <typename Out>
-      struct X
-      {
-        Out out;
-        void operator()(char32_t cp);
-      };
-      template <typename Out> X(Out out) -> X<Out>;
+      Out out;
+      void operator()(char32_t cp);
     };
   }
+  template <std::uint16_t (*Conv)(std::uint16_t), typename Out>
+  static auto MkUtf16Producer(Out out) noexcept
+  { return Utf16Producer<Conv, Out>{out}; }
 
-  template <std::uint16_t (*Conv)(std::uint16_t)> template <typename Out>
-  void Utf16Producer<Conv>::X<Out>::operator()(char32_t cp)
+  template <std::uint16_t (*Conv)(std::uint16_t), typename Out>
+  void Utf16Producer<Conv, Out>::operator()(char32_t cp)
   {
     if (cp >= 0x10000)
     {
@@ -232,7 +232,7 @@ namespace Libshit
   void GenWtf8ToWtf16(Out& out, std::string_view in)
   {
     out.reserve(out.size() + in.size());
-    Utf8Parse(in, typename Utf16Producer<Conv>::X{PushBack{out}});
+    Utf8Parse(in, MkUtf16Producer<Conv>(PushBack{out}));
   }
 
 #define LIBSHIT_GEN(name)                                        \
@@ -249,13 +249,13 @@ namespace Libshit
   void Wtf8ToCesu8(std ::string& out, std ::string_view in)
   {
     out.reserve(out.size() + in.size() * 3 / 2);
-    Utf8Parse(in, Utf16Producer<NoConv>::X{Utf8Producer{PushBack{out}, true}});
+    Utf8Parse(in, MkUtf16Producer<NoConv>(Utf8Producer{PushBack{out}, true}));
   }
 
   void Cesu8ToWtf8(std ::string& out, std ::string_view in)
   {
     out.reserve(out.size() + in.size());
-    typename Utf16Parse<NoConv>::X p{Utf8Producer{PushBack{out}, false}, false};
+    auto p = MkUtf16Parse<NoConv>(Utf8Producer{PushBack{out}, false}, false);
     Utf8Parse(in, std::ref(p));
     p(0); // flush
   }
