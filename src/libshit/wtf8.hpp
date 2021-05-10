@@ -2,12 +2,12 @@
 #define GUARD_EXASPERATINGLY_IMAGABLE_GUNLINE_RATFUCKS_3473
 #pragma once
 
+#include "libshit/nonowning_string.hpp"
 #include "libshit/except.hpp"
 
 #include <cstdint>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 
 namespace Libshit
 {
@@ -27,28 +27,28 @@ namespace Libshit
   LIBSHIT_GEN0(a_sv, a_name, b_str, b_name)                  \
   LIBSHIT_GEN0(b_sv, b_name, a_str, a_name)
 
-  LIBSHIT_GEN(std::string, std::string_view, Wtf8,
-              std::u16string, std::u16string_view, Wtf16)
-  LIBSHIT_GEN(std::string, std::string_view, Wtf8,
-              std::u16string, std::u16string_view, Wtf16LE)
+  LIBSHIT_GEN(std::string, StringView, Wtf8,
+              std::u16string, U16StringView, Wtf16)
+  LIBSHIT_GEN(std::string, StringView, Wtf8,
+              std::u16string, U16StringView, Wtf16LE)
 
-  LIBSHIT_GEN(std::string, std::string_view, Cesu8,
-              std::u16string, std::u16string_view, Wtf16)
-  LIBSHIT_GEN(std::string, std::string_view, Cesu8,
-              std::u16string, std::u16string_view, Wtf16LE)
+  LIBSHIT_GEN(std::string, StringView, Cesu8,
+              std::u16string, U16StringView, Wtf16)
+  LIBSHIT_GEN(std::string, StringView, Cesu8,
+              std::u16string, U16StringView, Wtf16LE)
 
-  LIBSHIT_GEN(std::string, std::string_view, Wtf8,
-              std::string, std::string_view, Cesu8)
+  LIBSHIT_GEN(std::string, StringView, Wtf8,
+              std::string, StringView, Cesu8)
 
   // replaces invalid surrogate pairs with replacement char
-  LIBSHIT_GEN0(std::u16string_view, Utf16, std::string, Utf8)
-  LIBSHIT_GEN0(std::u16string_view, Utf16LE, std::string, Utf8)
+  LIBSHIT_GEN0(U16StringView, Utf16, std::string, Utf8)
+  LIBSHIT_GEN0(U16StringView, Utf16LE, std::string, Utf8)
 
   // on windows, also support wchar_t
 #if WCHAR_MAX == 65535
-  LIBSHIT_GEN0(std::string_view, Wtf8, std::wstring, Wtf16Wstr)
-  LIBSHIT_GEN0(std::wstring_view, Wtf16, std::string, Wtf8)
-  LIBSHIT_GEN0(std::wstring_view, Utf16, std::string, Utf8)
+  LIBSHIT_GEN0(StringView, Wtf8, std::wstring, Wtf16Wstr)
+  LIBSHIT_GEN0(WStringView, Wtf16, std::string, Wtf8)
+  LIBSHIT_GEN0(WStringView, Utf16, std::string, Utf8)
 #endif
 
 #undef LIBSHIT_GEN

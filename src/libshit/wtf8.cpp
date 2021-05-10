@@ -12,7 +12,6 @@
 
 namespace Libshit
 {
-  using namespace std::string_view_literals;
   TEST_SUITE_BEGIN("Libshit::Wtf8");
 
   static constexpr bool IsLeadSurrogate(char16_t c) noexcept
@@ -128,8 +127,7 @@ namespace Libshit
   }
 
   template <std::uint16_t (*Conv)(std::uint16_t)>
-  static void GenWtf16ToWtf8(
-    std::string& out, std::u16string_view in, bool replace)
+  static void GenWtf16ToWtf8(std::string& out, U16StringView in, bool replace)
   {
     out.reserve(out.size() + in.size() * 3);
     auto p = MkUtf16Parse<Conv>(Utf8Producer{PushBack{out}, false}, replace);
@@ -137,8 +135,8 @@ namespace Libshit
     p(0); // flush
   }
 
-#define LIBSHIT_GEN0(a_name, b_name, conv, replace)                 \
-  void a_name##To##b_name(std::string& out, std::u16string_view in) \
+#define LIBSHIT_GEN0(a_name, b_name, conv, replace)           \
+  void a_name##To##b_name(std::string& out, U16StringView in) \
   { GenWtf16ToWtf8<conv>(out, in, replace); }
 #define LIBSHIT_GEN(a_name, b_name, replace)                                 \
   LIBSHIT_GEN0(a_name, b_name, NoConv, replace)                              \
@@ -150,21 +148,21 @@ namespace Libshit
 #undef LIBSHIT_GEN0
 
   template <std::uint16_t (*Conv)(std::uint16_t)>
-  static void GenWtf16ToCesu8(std::string& out, std::u16string_view in)
+  static void GenWtf16ToCesu8(std::string& out, U16StringView in)
   {
     out.reserve(out.size() + in.size() * 3);
     Utf8Producer p{PushBack{out}, true};
     for (const char16_t c : in) p(c);
   }
 
-  void Wtf16ToCesu8(std::string& out, std::u16string_view in)
+  void Wtf16ToCesu8(std::string& out, U16StringView in)
   { GenWtf16ToCesu8<NoConv>(out, in); }
 
-  void Wtf16LEToCesu8(std::string& out, std::u16string_view in)
+  void Wtf16LEToCesu8(std::string& out, U16StringView in)
   { GenWtf16ToCesu8<boost::endian::little_to_native>(out, in); }
 
   template <typename Out>
-  static void Utf8Parse(std::string_view in, Out out)
+  static void Utf8Parse(StringView in, Out out)
   {
 #define P(len, extra) ((len) | ((extra) << 3))
     static constexpr uint8_t buf[32] = {
@@ -229,30 +227,30 @@ namespace Libshit
   }
 
   template <std::uint16_t (*Conv)(std::uint16_t), typename Out>
-  void GenWtf8ToWtf16(Out& out, std::string_view in)
+  void GenWtf8ToWtf16(Out& out, StringView in)
   {
     out.reserve(out.size() + in.size());
     Utf8Parse(in, MkUtf16Producer<Conv>(PushBack{out}));
   }
 
-#define LIBSHIT_GEN(name)                                        \
-  void name##ToWtf16(std::u16string& out, std::string_view in)   \
-  { GenWtf8ToWtf16<NoConv>(out, in); }                           \
-                                                                 \
-  void name##ToWtf16LE(std::u16string& out, std::string_view in) \
+#define LIBSHIT_GEN(name)                                  \
+  void name##ToWtf16(std::u16string& out, StringView in)   \
+  { GenWtf8ToWtf16<NoConv>(out, in); }                     \
+                                                           \
+  void name##ToWtf16LE(std::u16string& out, StringView in) \
   { GenWtf8ToWtf16<boost::endian::native_to_little>(out, in); }
   LIBSHIT_GEN(Wtf8)
   LIBSHIT_GEN(Cesu8)
 #undef LIBSHIT_GEN
 
   // cesu <-> utf8
-  void Wtf8ToCesu8(std ::string& out, std ::string_view in)
+  void Wtf8ToCesu8(std::string& out, StringView in)
   {
     out.reserve(out.size() + in.size() * 3 / 2);
     Utf8Parse(in, MkUtf16Producer<NoConv>(Utf8Producer{PushBack{out}, true}));
   }
 
-  void Cesu8ToWtf8(std ::string& out, std ::string_view in)
+  void Cesu8ToWtf8(std::string& out, StringView in)
   {
     out.reserve(out.size() + in.size());
     auto p = MkUtf16Parse<NoConv>(Utf8Producer{PushBack{out}, false}, false);
@@ -262,14 +260,14 @@ namespace Libshit
 
 
 #if WCHAR_MAX == 65535
-  void Wtf8ToWtf16Wstr(std::wstring& out, std::string_view in)
+  void Wtf8ToWtf16Wstr(std::wstring& out, StringView in)
   { GenWtf8ToWtf16<NoConv>(out, in); }
-  void Wtf16ToWtf8(std::string& out, std::wstring_view in)
+  void Wtf16ToWtf8(std::string& out, WStringView in)
   {
     GenWtf16ToWtf8<NoConv>(out, {
         reinterpret_cast<const char16_t*>(in.data()), in.size()}, false);
   }
-  void Utf16ToUtf8(std::string& out, std::wstring_view in)
+  void Utf16ToUtf8(std::string& out, WStringView in)
   {
     GenWtf16ToWtf8<NoConv>(out, {
         reinterpret_cast<const char16_t*>(in.data()), in.size()}, true);
@@ -279,8 +277,8 @@ namespace Libshit
   TEST_CASE("Conversion")
   {
     auto check = [](
-      std::string_view w8, std::string_view w8r, std::string_view c8,
-      std::u16string_view u16, const char* u16le_raw)
+      StringView w8, StringView w8r, StringView c8, U16StringView u16,
+      const char* u16le_raw)
     {
       CAPTURE(w8);
       CHECK(Wtf16ToWtf8(u16) == w8);
@@ -292,7 +290,7 @@ namespace Libshit
       CHECK(Cesu8ToWtf8(c8) == w8);
       CHECK(Wtf8ToCesu8(w8) == c8);
 
-      std::u16string_view u16le{
+      U16StringView u16le{
         reinterpret_cast<const char16_t*>(u16le_raw), u16.size()};
       CHECK(Wtf16LEToWtf8(u16le) == w8);
       CHECK(Utf16LEToUtf8(u16le) == w8r);
@@ -325,7 +323,7 @@ namespace Libshit
           "\xed\xb2\xa9" "\xed\xa0\xbd\xed\xb2\xa9",  surrogate_end_valid16,
           "\xa9\xdc" "\x3d\xd8\xa9\xdc");
 
-    check("\0xy"sv, "\0xy"sv, "\xc0\x80xy", u"\0xy"sv, "\0\0x\0y\0");
+    check("\0xy"_ns, "\0xy"_ns, "\xc0\x80xy", u"\0xy"_ns, "\0\0x\0y\0");
   }
 
   // skip: very slow in non-optimized builds

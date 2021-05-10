@@ -4,7 +4,7 @@
 #include <climits>
 #include <cstddef>
 #include <iomanip>
-#include <sstream> // IWYU pragma: keep
+#include <ostream>
 
 #include "libshit/doctest.hpp"
 
@@ -76,11 +76,12 @@ namespace Libshit
   }
 
 
-  void DumpBytes(std::ostream& os, std::string_view data)
+  void DumpBytes(std::ostream& os, StringView data)
   {
     os << '"';
     bool hex = false;
-    for (char i : data) hex = DumpByte(os, i, hex);
+    for (std::size_t i = 0; i < data.length(); ++i)
+      hex = DumpByte(os, data[i], hex);
     os << '"';
   }
 
@@ -97,12 +98,12 @@ namespace Libshit
     CHK("123foo", R"("123foo")");
     CHK("123  foo", R"("123  foo")");
     CHK("12\n34", R"("12\n34")");
-    CHK(std::string_view("\t12\n34\0", 7), R"("\t12\n34\x00")");
+    CHK(StringView("\t12\n34\0", 7), R"("\t12\n34\x00")");
     CHK("\x7f\x9b\x66oo\xf3", R"("\x7f\x9b\x66oo\xf3")");
 #undef CHK
   }
 
-  std::string Cat(std::initializer_list<std::string_view> lst)
+  std::string Cat(std::initializer_list<StringView> lst)
   {
     std::size_t n = 0;
     for (const auto& x : lst) n += x.size();

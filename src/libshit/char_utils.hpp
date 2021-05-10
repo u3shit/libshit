@@ -3,11 +3,11 @@
 #pragma once
 
 #include "libshit/assert.hpp"
+#include "libshit/nonowning_string.hpp"
 
 #include <initializer_list>
 #include <iosfwd>
 #include <string>
-#include <string_view>
 
 namespace Libshit
 {
@@ -18,14 +18,14 @@ namespace Libshit
   ///   needed for C, as in Lua `\x` is followed by exactly two hex characters.
   /// @return wheher a hex escape sequence was written
   bool DumpByte(std::ostream& os, char c, bool prev_hex_escape = false);
-  void DumpBytes(std::ostream& os, std::string_view data);
+  void DumpBytes(std::ostream& os, StringView data);
 
-  struct QuotedString { std::string_view view; };
+  struct QuotedString { StringView view; };
   inline std::ostream& operator<<(std::ostream& os, QuotedString q)
   { DumpBytes(os, q.view); return os; }
-  inline QuotedString Quoted(std::string_view view) { return {view}; }
+  inline QuotedString Quoted(StringView view) { return {view}; }
 
-  std::string Cat(std::initializer_list<std::string_view> lst);
+  std::string Cat(std::initializer_list<StringView> lst);
 
   namespace Ascii
   {
