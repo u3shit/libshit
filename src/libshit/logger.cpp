@@ -122,21 +122,16 @@ namespace Libshit::Logger
       return NONE;
     if (!Ascii::CaseCmp(str, "err"_ns) || !Ascii::CaseCmp(str, "error"_ns))
       return ERROR;
-    else if (!Ascii::CaseCmp(str, "warn") || !Ascii::CaseCmp(str, "warning"_ns))
+    else if (!Ascii::CaseCmp(str, "warn"_ns) || !Ascii::CaseCmp(str, "warning"_ns))
       return WARNING;
-    else if (!Ascii::CaseCmp(str, "info"))
+    else if (!Ascii::CaseCmp(str, "info"_ns))
       return INFO;
     else
     {
       int l;
       auto res = std::from_chars(str.begin(), str.end(), l);
       if (res.ec != std::errc() || res.ptr != str.end())
-      {
-        std::stringstream ss;
-        ss << "Invalid log level " << str;
-        throw InvalidParam{ss.str()};
         throw InvalidParam{Cat({"Invalid log level ", str})};
-      }
       return l;
     }
   }
@@ -257,6 +252,15 @@ namespace Libshit::Logger
 #  undef DUP
   };
 #endif
+
+  // 32-bit FNV-1a hash http://www.isthe.com/chongo/tech/comp/fnv/index.html
+  static std::uint32_t Hash(StringView sv)
+  {
+    std::uint32_t res = 0x811c9dc5;
+    for (unsigned char c : sv)
+      res = (res ^ c) * 0x01000193;
+    return res;
+  }
 
   static size_t max_name = 16;
   static size_t max_file = 42, max_fun = 20;
@@ -409,14 +413,14 @@ namespace Libshit::Logger
         os << '[';
         if (ansi_col)
         {
-          auto i = std::hash<std::string>{}(name) % std::size(rand_colors);
+          auto i = Hash(name) % std::size(rand_colors);
           os << "\033[22;38;5;" << unsigned(rand_colors[i]) << 'm';
         }
 #if LIBSHIT_OS_IS_WINDOWS
         if (win_col)
         {
           os.flush();
-          auto i = std::hash<std::string>{}(name) % std::size(win_rand_colors);
+          auto i = Hash(name) % std::size(win_rand_colors);
           SetConsoleTextAttribute(h, win_rand_colors[i]);
         }
 #endif
@@ -539,7 +543,7 @@ namespace Libshit::Logger
 
     auto& os = Log(name, level, file, line, fun);
 
-    size_t len;
+    std::size_t len;
     auto str = luaL_tolstring(vm, 3, &len); // +1
     os.write(str, len);
     lua_pop(vm, 1); // 0
