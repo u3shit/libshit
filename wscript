@@ -303,11 +303,11 @@ def build_libshit(ctx, pref):
                 target   = pref+'libshit-except')
 
     src = [
-        'src/libshit/char_utils.cpp',
         'src/libshit/logger.cpp',
         'src/libshit/low_io.cpp',
         'src/libshit/options.cpp',
         'src/libshit/random.cpp',
+        'src/libshit/string_utils.cpp',
         'src/libshit/wtf8.cpp',
     ]
     if ctx.env.DEST_OS == 'vita':

@@ -1,16 +1,18 @@
-#include "libshit/char_utils.hpp"
+#include "libshit/string_utils.hpp"
 
+#include "libshit/char_utils.hpp"
+#include "libshit/doctest.hpp"
+
+#include <algorithm>
 #include <cctype>
 #include <climits>
 #include <cstddef>
 #include <iomanip>
 #include <ostream>
 
-#include "libshit/doctest.hpp"
-
 namespace Libshit
 {
-  TEST_SUITE_BEGIN("Libshit::CharUtils");
+  TEST_SUITE_BEGIN("Libshit::StringUtils");
 
   bool DumpByte(std::ostream& os, char c, bool prev_hex_escape)
   {
@@ -159,6 +161,57 @@ namespace Libshit
     CHECK(Ascii::FromXDigit(9) == '9');
     CHECK(Ascii::FromXDigit(10) == 'a');
     CHECK(Ascii::FromXDigit(15) == 'f');
+  }
+
+  namespace Ascii
+  {
+    int CaseCmp(StringView a, StringView b) noexcept
+    {
+      for (std::size_t i = 0, n = std::min(a.size(), b.size()); i < n; ++i)
+      {
+        auto la = static_cast<unsigned char>(ToLower(a[i]));
+        auto lb = static_cast<unsigned char>(ToLower(b[i]));
+        if (la != lb) return la - lb;
+      }
+      if (a.size() < b.size()) return -1;
+      if (a.size() == b.size()) return 0;
+      return 1;
+    }
+
+    TEST_CASE("CaseCmp")
+    {
+      CHECK(CaseCmp("abc", "abc") == 0);
+      CHECK(CaseCmp("Abc", "abC") == 0);
+      CHECK(CaseCmp("@", "`") < 0); // off-by-one error in ToLower?
+      CHECK(CaseCmp("[", "{") < 0);
+      CHECK(CaseCmp("abc", "def") < 0);
+      CHECK(CaseCmp("def", "abc") > 0);
+      CHECK(CaseCmp("ab", "abc") < 0);
+      CHECK(CaseCmp("abc", "ab") > 0);
+
+      CHECK(CaseCmp("brütal", "BRÜTAL") > 0); // unicode not supported
+    }
+
+    std::size_t CaseFind(StringView str, StringView to_search) noexcept
+    {
+      if (to_search.size() > str.size()) return StringView::npos;
+      auto n = str.size() - to_search.size() + 1;
+      for (std::size_t i = 0; i < n; ++i)
+        if (!CaseCmp(str.substr(i, to_search.size()), to_search))
+          return i;
+      return StringView::npos;
+    }
+
+    TEST_CASE("CaseFind")
+    {
+      CHECK(CaseFind("abc", "abc") == 0);
+      CHECK(CaseFind("abcd", "abc") == 0);
+      CHECK(CaseFind("Abc", "abC") == 0);
+      CHECK(CaseFind("abc", "bc") == 1);
+      CHECK(CaseFind("abc", "") == 0);
+      CHECK(CaseFind("abc", "x") == StringView::npos);
+      CHECK(CaseFind("abc", "abcd") == StringView::npos);
+    }
   }
 
   TEST_SUITE_END();

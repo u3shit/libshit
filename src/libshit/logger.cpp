@@ -10,7 +10,9 @@
 
 #include "libshit/function.hpp"
 #include "libshit/lua/function_call.hpp"
+#include "libshit/nonowning_string.hpp"
 #include "libshit/options.hpp"
+#include "libshit/string_utils.hpp"
 #include "libshit/utils.hpp"
 
 #if LIBSHIT_WITH_LUA
@@ -21,6 +23,7 @@
 #include <Tracy.hpp>
 
 #include <algorithm>
+#include <charconv>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -34,16 +37,9 @@
 #include <vector>
 
 #if !LIBSHIT_OS_IS_WINDOWS
+#  include <ctime>
 #  include <sys/time.h>
-#  include <time.h>
 #  include <unistd.h>
-#endif
-
-#if LIBSHIT_STDLIB_IS_MSVC
-#  define strncasecmp _strnicmp
-#  define strcasecmp _stricmp
-#else
-#  include <strings.h>
 #endif
 
 namespace Libshit::Logger
@@ -76,7 +72,7 @@ namespace Libshit::Logger
 #elif !LIBSHIT_OS_IS_VITA
         const char* x;
         ansi_colors = isatty(2) &&
-          (x = getenv("TERM")) ? strcmp(x, "dummy") != 0 : false;
+          (x = std::getenv("TERM")) ? std::strcmp(x, "dummy") != 0 : false;
 #endif
       }
 
@@ -120,25 +116,26 @@ namespace Libshit::Logger
     "Show function signatures in log when available",
     [](auto&, auto&&) { show_fun = true; }};
 
-  static int ParseLevel(const char* str)
+  static int ParseLevel(StringView str)
   {
-    if (strcasecmp(str, "none") == 0)
+    if (!Ascii::CaseCmp(str, "none"_ns))
       return NONE;
-    if (strncasecmp(str, "err", 3) == 0)
+    if (!Ascii::CaseCmp(str, "err"_ns) || !Ascii::CaseCmp(str, "error"_ns))
       return ERROR;
-    else if (strncasecmp(str, "warn", 4) == 0)
+    else if (!Ascii::CaseCmp(str, "warn") || !Ascii::CaseCmp(str, "warning"_ns))
       return WARNING;
-    else if (strncasecmp(str, "info", 4) == 0)
+    else if (!Ascii::CaseCmp(str, "info"))
       return INFO;
     else
     {
-      char* end;
-      auto l = std::strtol(str, &end, 10);
-      if (*end)
+      int l;
+      auto res = std::from_chars(str.begin(), str.end(), l);
+      if (res.ec != std::errc() || res.ptr != str.end())
       {
         std::stringstream ss;
         ss << "Invalid log level " << str;
         throw InvalidParam{ss.str()};
+        throw InvalidParam{Cat({"Invalid log level ", str})};
       }
       return l;
     }
@@ -164,10 +161,10 @@ namespace Libshit::Logger
       {
         auto p = tok.find_first_of('=');
         if (p == std::string::npos)
-          global_level = ParseLevel(tok.c_str());
+          global_level = ParseLevel(tok);
         else
         {
-          auto lvl = ParseLevel(tok.c_str() + p + 1);
+          auto lvl = ParseLevel(StringView{tok}.substr(p + 1));
           auto name = tok.substr(0, p);
           auto it = std::find_if(
             g.level_map.begin(), g.level_map.end(),
