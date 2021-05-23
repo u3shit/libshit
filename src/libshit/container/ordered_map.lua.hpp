@@ -54,19 +54,20 @@ namespace Libshit
     static std::tuple<bool, size_t> insert(
       OrderedMap<T, Traits, Compare>& om, size_t i, NotNullPtr&& t)
     {
-      auto r = om.template insert<Throw>(om.nth(i), Move(t));
+      auto r = om.template insert<Throw>(om.checked_nth_end(i), Move(t));
       return {r.second, om.index_of(r.first)};
     }
 
     static size_t erase(OrderedMap<T, Traits, Compare>& om, size_t i, size_t e)
     {
-      return om.index_of(om.template erase<Throw>(om.nth(i), om.nth(e)));
+      return om.index_of(om.template erase<Throw>(
+                           om.checked_nth(i), om.checked_nth_end(e)));
     }
 
     static size_t erase(
       OrderedMap<T, Traits, Compare>& om, size_t i)
     {
-      return om.index_of(om.template erase<Throw>(om.nth(i)));
+      return om.index_of(om.template erase<Throw>(om.checked_nth(i)));
     }
 
     // lua-compat: returns the erased value

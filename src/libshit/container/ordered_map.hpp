@@ -301,7 +301,7 @@ namespace Libshit
     // boost extensions
     // not template checker -> we need 2 different checks...
     LIBSHIT_NOLUA iterator nth(size_type i) noexcept
-    { return iterator{&vect[i]}; }
+    { return iterator{ToPtr(vect.begin() + i)}; }
     LIBSHIT_NOLUA iterator checked_nth(size_type i)
     {
       if (i < size()) return nth(i);
@@ -314,7 +314,7 @@ namespace Libshit
     }
 
     LIBSHIT_NOLUA const_iterator nth(size_type i) const noexcept
-    { return const_iterator{&vect[i]}; }
+    { return const_iterator{ToPtr(vect.begin() + i)}; }
     LIBSHIT_NOLUA const_iterator checked_nth(size_type i) const
     {
       if (i < size()) return nth(i);
@@ -462,10 +462,11 @@ namespace Libshit
     void CheckPtrEnd(ConstVectorPtr ptr) const noexcept(Checker::IS_NOEXCEPT)
     {
       LIBSHIT_CHECK(
-        ItemNotInContainer, ptr >= &*vect.begin() && ptr <= &*vect.end(),
+        ItemNotInContainer,
+        ptr >= ToPtr(vect.begin()) && ptr <= ToPtr(vect.end()),
         "Item not in this OrderedMap");
       LIBSHIT_ASSERT(
-        ptr == &*vect.end() ||
+        ptr == ToPtr(vect.end()) ||
         (VectorIndex(**ptr) < size() && &vect[VectorIndex(**ptr)] == ptr));
     }
 
@@ -489,7 +490,7 @@ namespace Libshit
     iterator ToMaybeEndIt(typename SetType::const_iterator it) const
     {
       if (it == set.end())
-        return iterator{&*vect.end()};
+        return iterator{ToPtr(vect.end())};
       else return iterator{ToPtr(it)};
     }
 
