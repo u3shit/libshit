@@ -28,8 +28,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <iomanip>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <new>
 #include <string>
@@ -67,17 +67,19 @@ namespace Libshit::Logger
         setvbuf(stderr, buf, _IOFBF, 4096);
         std::ios_base::sync_with_stdio(false);
 
+        auto x = std::getenv("TERM");
+        _256_colors = x && std::strstr(x, "256color");
+
 #if LIBSHIT_OS_IS_WINDOWS
         win_colors = _isatty(2);
 #elif !LIBSHIT_OS_IS_VITA
-        const char* x;
-        ansi_colors = isatty(2) &&
-          (x = std::getenv("TERM")) ? std::strcmp(x, "dummy") != 0 : false;
+        ansi_colors = isatty(2) && x ? std::strcmp(x, "dummy") != 0 : false;
 #endif
       }
 
       bool win_colors = false;
       bool ansi_colors = false;
+      bool _256_colors = true;
       bool print_time = false;
 
       std::recursive_mutex log_mutex;
@@ -221,8 +223,8 @@ namespace Libshit::Logger
     "Print timestamps before log messages",
     [](auto&, auto&&) { GetGlobal().print_time = true; }};
 
-  static std::uint8_t rand_colors[] = {
-    4,5,6, 12,13,14,
+  static constexpr std::uint8_t RAND_COLORS[] = {
+    1,2,3,4,5,6,7, 8,9,10,11,12,13,14,15,
 
     // (16..231).select{|i| i-=16; b=i%6; i/=6; g=i%6; i/=6; i+g+b>6}
     33, 38, 39, 43, 44, 45, 48, 49, 50, 51, 63, 68, 69, 73, 74, 75, 78, 79, 80,
@@ -235,21 +237,19 @@ namespace Libshit::Logger
     208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222,
     223, 224, 225, 226, 227, 228, 229, 230, 231
   };
+  static constexpr const std::size_t NON256COL_NUM = 15;
 
 #if LIBSHIT_OS_IS_WINDOWS
-#  define DUP(a) a, FOREGROUND_INTENSITY | (a)
-  static int win_rand_colors[] = {
-    FOREGROUND_INTENSITY,
-    DUP(FOREGROUND_RED),
-    DUP(FOREGROUND_GREEN),
-    DUP(FOREGROUND_BLUE),
+  static std::uint8_t WIN_COLOR_MAP[] = {
+#define C(r,g,b,i)                                                     \
+    (((r) ? FOREGROUND_RED : 0) | ((g) ? FOREGROUND_GREEN : 0) |       \
+     ((b) ? FOREGROUND_BLUE : 0) | ((i) ? FOREGROUND_INTENSITY : 0))
+    C(0,0,0,0), C(1,0,0,0), C(0,1,0,0), C(1,1,0,0), C(0,0,1,0), C(1,0,1,0),
+    C(0,1,1,0), C(1,1,1,0),
 
-    DUP(FOREGROUND_RED | FOREGROUND_GREEN),
-    DUP(FOREGROUND_RED | FOREGROUND_BLUE),
-    DUP(FOREGROUND_GREEN | FOREGROUND_BLUE),
-
-    DUP(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE),
-#  undef DUP
+    C(0,0,0,1), C(1,0,0,1), C(0,1,0,1), C(1,1,0,1), C(0,0,1,1), C(1,0,1,1),
+    C(0,1,1,1), C(1,1,1,1),
+#undef C
   };
 #endif
 
@@ -265,28 +265,36 @@ namespace Libshit::Logger
   static size_t max_name = 16;
   static size_t max_file = 42, max_fun = 20;
 
-  static void PrintTime(std::ostream& os)
+  static void IntToStrPadded(std::string& out, unsigned i, std::size_t to_pad,
+                             char pad_char = '0')
   {
-    auto fill = os.fill();
-    os.fill('0');
-#define F(n) std::setw(n)
+    char buf[128];
+    auto res = std::to_chars(std::begin(buf), std::end(buf), i);
+    auto len = res.ptr - buf;
+    if (to_pad > len) out.append(to_pad-len, pad_char);
+    out.append(buf, len);
+  }
+
+  static void PrintTime(std::string& out)
+  {
+#define F(i, n) IntToStrPadded(out, i, n)
 
 #if LIBSHIT_OS_IS_WINDOWS
     SYSTEMTIME tim;
     GetLocalTime(&tim);
-    os << tim.wYear << '-' << F(2) << tim.wMonth << '-' << F(2) << tim.wDay
-       << ' ' << F(2) << tim.wHour << ':' << F(2) << tim.wMinute
-       << ':' << F(2) << tim.wSecond << '.' << F(3) << tim.wMilliseconds << ' ';
+    F(tim.wYear, 0); out += '-'; F(tim.wMonth, 2); out += '-'; F(tim.wDay, 2);
+    out += ' '; F(tim.wHour, 2); out += ':'; F(tim.wMinute, 2); out += ':';
+    F(tim.wSecond, 2); out += '.'; F(tim.wMilliseconds, 3);
 #else
     struct timeval tv;
     if (gettimeofday(&tv, nullptr) < 0) return;
     char buf[128];
     if (strftime(buf, 128, "%F %H:%M:%S.", localtime(&tv.tv_sec)) == 0) return;
-    os << buf << F(6) << tv.tv_usec << ' ';
+    out.append(buf); F(tv.tv_usec, 6);
 #endif
 
+    out += ' ';
 #undef F
-    os.fill(fill);
   }
 
   namespace
@@ -299,6 +307,7 @@ namespace Libshit::Logger
         auto old_n = n;
         while (n)
         {
+          if (buf.empty()) WriteBegin();
           auto end = std::find(msg, msg+n, '\n');
           if (end == msg+n)
           {
@@ -307,18 +316,20 @@ namespace Libshit::Logger
             return old_n;
           }
 
-          if (!lock.owns_lock()) lock.lock();
-
-          WriteBegin();
-          if (!buf.empty())
-          {
-            TracyMessageC(buf.data(), buf.size(), GetTracyColor());
-            os.write(buf.data(), buf.size());
-            buf.clear();
-          }
-          if (end != msg) TracyMessageC(msg, end-msg, GetTracyColor());
-          os.write(msg, end-msg);
+          buf.append(msg, end-msg);
           WriteEnd();
+          TracyMessageC(buf.data(), buf.size(), GetTracyColor());
+
+          if (!lock.owns_lock()) lock.lock();
+          if (HasAnsiColor())
+            os.write(buf.data(), buf.size());
+#if LIBSHIT_OS_IS_WINDOWS
+          else if (HasWinColor())
+            WinFormat();
+#endif
+          else
+            StripFormat();
+          buf.clear();
 
           ++end; // skip \n -- WriteEnd wrote it
           n -= end-msg;
@@ -326,6 +337,95 @@ namespace Libshit::Logger
         }
         return old_n;
       }
+
+      template <typename Cb>
+      void ProcessAnsi(Cb cb)
+      {
+        enum class State { INIT, ESC, CSI } state = State::INIT;
+        char* csi_start;
+        for (char& c : buf)
+          switch (state)
+          {
+          case State::INIT:
+            if (c == 033) state = State::ESC; else os.put(c); break;
+          case State::ESC:
+            if (c == '[')
+            {
+              state = State::CSI;
+              csi_start = &c+1;
+            }
+            else
+              state = State::INIT;
+            break;
+          case State::CSI:
+            if (c >= 0x40 && c <= 0x7e)
+            {
+              cb({csi_start, &c}, c);
+              state = State::INIT;
+            }
+            break;
+          }
+      }
+
+      void StripFormat() { ProcessAnsi([](StringView, char){}); }
+#if LIBSHIT_OS_IS_WINDOWS
+      void WinFormat()
+      {
+        constexpr const auto reset =
+          FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
+        constexpr const auto color_mask = reset;
+        auto win_attrib = reset;
+        auto fun = [&](StringView csi, char cmd)
+        {
+          if (cmd != 'm') return;
+          os.flush();
+          auto h = GetStdHandle(STD_ERROR_HANDLE);
+
+          if (csi.empty())
+          {
+            SetConsoleTextAttribute(h, reset);
+            return;
+          }
+
+          enum class State { NORMAL, FG0, FG1 } state = State::NORMAL;
+          std::size_t p = 0;
+          for (auto i = csi.find_first_of(';'); p != StringView::npos;
+               i == StringView::npos ? p = i :
+                 (p = i+1, i = csi.find_first_of(';', p)))
+          {
+            unsigned sgr;
+            auto sub = csi.substr(p, i-p);
+            auto res = std::from_chars(sub.begin(), sub.end(), sgr);
+            if (res.ec != std::errc() || res.ptr != sub.end()) continue;
+            switch (state)
+            {
+            case State::NORMAL:
+              switch (sgr)
+              {
+              case 0:  win_attrib = reset; break;
+              case 1:  win_attrib |= FOREGROUND_INTENSITY; break;
+              case 22: win_attrib &= ~FOREGROUND_INTENSITY; break;
+              case 38: state = State::FG0; break;
+              }
+
+              if (sgr >= 30 && sgr <= 37)
+                win_attrib = (win_attrib & ~color_mask) | WIN_COLOR_MAP[sgr-30];
+              break;
+
+            case State::FG0:
+              state = sgr == 5 ? State::FG1 : State::NORMAL; break;
+
+            case State::FG1:
+              if (sgr < std::size(WIN_COLOR_MAP)) win_attrib = WIN_COLOR_MAP[sgr];
+              state = State::NORMAL;
+              break;
+            }
+          }
+          SetConsoleTextAttribute(h, win_attrib);
+        };
+        ProcessAnsi(fun);
+      }
+#endif
 
       int_type overflow(int_type ch) override
       {
@@ -354,125 +454,73 @@ namespace Libshit::Logger
         }
       }
 
-      void WriteBegin() const
+      void WriteBegin()
       {
-#if LIBSHIT_OS_IS_WINDOWS
-        HANDLE h;
-        int color;
+        if (GetGlobal().print_time) PrintTime(buf);
 
-        auto win_col = HasWinColor();
-        if (win_col)
-        {
-          h = GetStdHandle(STD_ERROR_HANDLE);
-          switch (level)
-          {
-          case ERROR:   color = FOREGROUND_RED;                    break;
-          case WARNING: color = FOREGROUND_RED | FOREGROUND_GREEN; break;
-          case INFO:    color = FOREGROUND_GREEN;                  break;
-          default:
-            color = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
-            break;
-          }
-        }
-#endif
-
-        if (GetGlobal().print_time) PrintTime(os);
-
-        auto ansi_col = HasAnsiColor();
         auto print_col = [&]()
         {
-          if (ansi_col)
+          switch (level)
           {
-            switch (level)
-            {
-            case ERROR:   os << "\033[0;1;31m"; break;
-            case WARNING: os << "\033[0;1;33m"; break;
-            case INFO:    os << "\033[0;1;32m"; break;
-            default:      os << "\033[0;1m";    break;
-            }
+          case ERROR:   buf.append("\033[0;1;31m"); break;
+          case WARNING: buf.append("\033[0;1;33m"); break;
+          case INFO:    buf.append("\033[0;1;32m"); break;
+          default:      buf.append("\033[0;1m");    break;
           }
-#if LIBSHIT_OS_IS_WINDOWS
-          if (win_col)
-          {
-            os.flush();
-            SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | color);
-          }
-#endif
         };
         print_col();
 
         switch (level)
         {
-        case ERROR:   os << "ERROR"; break;
-        case WARNING: os << "WARN "; break;
-        case INFO:    os << "info "; break;
-        default:      os << "dbg" << level << ' '; break;
+        case ERROR:   buf.append("ERROR"); break;
+        case WARNING: buf.append("WARN "); break;
+        case INFO:    buf.append("info "); break;
+        default:      buf.append("dbg"); IntToStrPadded(buf, level, 1); break;
         }
 
-        max_name = std::max(max_name, std::strlen(name));
-        os << '[';
-        if (ansi_col)
+        buf += '[';
+        max_name = std::max(max_name, name.size());
+
         {
-          auto i = Hash(name) % std::size(rand_colors);
-          os << "\033[22;38;5;" << unsigned(rand_colors[i]) << 'm';
+          auto i = Hash(name);
+          if (!HasWinColor() && GetGlobal()._256_colors)
+            i %= std::size(RAND_COLORS);
+          else
+            i %= NON256COL_NUM;
+          buf.append("\033[22;38;5;");
+          IntToStrPadded(buf, RAND_COLORS[i], 1);
+          buf += 'm';
         }
-#if LIBSHIT_OS_IS_WINDOWS
-        if (win_col)
-        {
-          os.flush();
-          auto i = Hash(name) % std::size(win_rand_colors);
-          SetConsoleTextAttribute(h, win_rand_colors[i]);
-        }
-#endif
-        os << std::setw(max_name) << name;
+
+        buf.append(max_name - name.size(), ' ').append(name);
         print_col();
-        os << ']';
+        buf.append("]\033[22m");
 
-        if (ansi_col) os << "\033[22m";
-#if LIBSHIT_OS_IS_WINDOWS
-        if (win_col)
+        if (!file.empty())
         {
-          os.flush();
-          SetConsoleTextAttribute(h, color);
+          max_file = std::max(max_file, file.size());
+          buf.append(max_file + 1 - file.size(), ' ').append(file);
+          buf += ':'; IntToStrPadded(buf, line, 3, ' ');
         }
-#endif
-
-        if (file)
+        if (show_fun && !fun.empty())
         {
-          max_file = std::max(max_file, std::strlen(file));
-          os << ' ' << std::setw(max_file) << file << ':'
-             << std::setw(3) << line;
+          max_fun = std::max(max_fun, fun.size());
+          buf.append(max_fun + 1 - fun.size(), ' ').append(fun);
         }
-        if (show_fun && fun)
-        {
-          max_fun = std::max(max_fun, std::strlen(fun));
-          os << ' ' << std::setw(max_fun) << fun;
-        }
-        os << ": ";
+        buf.append(": ");
       }
 
-      void WriteEnd() const
+      void WriteEnd()
       {
-#if LIBSHIT_OS_IS_WINDOWS
-        if (HasWinColor())
-        {
-          os.flush();
-          SetConsoleTextAttribute(
-            GetStdHandle(STD_ERROR_HANDLE),
-            FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-        }
-#endif
-        if (HasAnsiColor()) os << "\033[0m";
-
-        os << '\n';
+        buf.append("\033[0m\n");
       }
 
       std::string buf;
-      const char* name;
+      StringView name;
       int level;
-      const char* file;
+      StringView file;
       unsigned line;
-      const char* fun;
+      StringView fun;
     };
   }
 

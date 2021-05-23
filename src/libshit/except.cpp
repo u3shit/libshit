@@ -283,52 +283,20 @@ namespace Libshit
     const char* expr, const char* msg, const char* file, unsigned line,
     const char* fun)
   {
-    if constexpr (LIBSHIT_OS_IS_WINDOWS)
-    {
-      std::stringstream ss{expr};
-      if (fun) ss << "\nFunction: " << fun;
-      if (msg) ss << "\nMessage: " << msg;
-      ss << "\n";
-      PrintStacktrace(ss, boost::stacktrace::stacktrace{}, false);
-      _assert(ss.str().c_str(), file ? file : "", line);
-    }
-    else
-    {
-      auto color = Libshit::Logger::HasAnsiColor();
-      auto& log = Logger::Log("assert", Logger::ERROR, file, line, fun);
-      if (color) log << "\033[1m";
-      log << "Assertion failed";
-      if (!Logger::show_fun && fun)
-      {
-        if (color) log << "\033[22m";
-        log << " in function ";
-        if (color) log << "\033[33m";
-        log << fun;
-      }
-      if (color) log << "\033[0m";
-      log << '\n';
-      if (color) log << "\033[1m";
-      log << "Expression";
-      if (color) log << "\033[22m";
-      log << ": ";
-      if (color) log << "\033[35m";
-      log << expr;
-      if (color) log << "\033[0m";
-      log << '\n';
-      if (msg)
-      {
-        if (color) log << "\033[1m";
-        log << "Message";
-        if (color) log << "\033[22m";
-        log << ": " << msg;
-        if (color) log << "\033[0m";
-        log << '\n';
-      }
-      PrintStacktrace(log, boost::stacktrace::stacktrace{}, color);
-      log.flush();
+    auto& log = Logger::Log("assert", Logger::ERROR, file, line, fun);
+    log << "\033[1mAssertion failed";
+    if (!Logger::show_fun && fun)
+      log << "\033[22m in function \033[33m" << fun;
+    log << "\033[0m\n";
 
-      std::abort();
-    }
+    log << "\033[1mExpression\033[22m: \033[35m" << expr << "\033[0m\n";
+    if (msg)
+      log << "\033[1mMessage\033[22m: " << msg << "\033[0m\n";
+
+    PrintStacktrace(log, boost::stacktrace::stacktrace{}, true);
+    log.flush();
+
+    std::abort();
   }
 
 #if LIBSHIT_OS_IS_WINDOWS || LIBSHIT_OS_IS_VITA
