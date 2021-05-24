@@ -166,6 +166,7 @@ namespace Libshit
 
       SUBCASE("find")
       {
+        CHECK(t.find("") == 0);
         CHECK(t.find(T{"foo"}) == 0);
         CHECK(t.find(T{"foo"}, 1) == T::npos);
         CHECK(t.find("foo") == 0);
@@ -180,18 +181,56 @@ namespace Libshit
         CHECK(t.find('o', 1) == 1);
         CHECK(t.find('o', 2) == 2);
         CHECK(t.find('o', 3) == T::npos);
+        CHECK(t.find('r') == 5);
         CHECK(t.find("obx", 0, 2) == 2);
+        CHECK(t.find("foobar") == 0);
+        CHECK(t.find("bar") == 3);
+        CHECK(t.substr(0, 3).find("foob") == T::npos);
 
         CHECK(t.rfind("o") == 2);
         CHECK(t.rfind("o", 2) == 2);
         CHECK(t.rfind("o", 1) == 1);
         CHECK(t.rfind("o", 0) == T::npos);
+        CHECK(t.rfind('o') == 2);
+        CHECK(t.rfind('o', 2) == 2);
+        CHECK(t.rfind('o', 1) == 1);
+        CHECK(t.rfind('o', 0) == T::npos);
+        CHECK(t.rfind("foobar") == 0);
+        CHECK(t.rfind("bar") == 3);
+        CHECK(t.substr(0, 3).rfind("foob") == T::npos);
 
+        CHECK(t.find_first_of("") == T::npos);
         CHECK(t.find_first_of("af") == 0);
         CHECK(t.find_first_of("af", 1) == 4);
         CHECK(t.find_first_of("af", 5) == T::npos);
+        CHECK(t.find_first_of("r") == 5);
+        CHECK(t.find_first_of('r') == 5);
+        CHECK(t.find_first_of("xyzr") == 5);
+        CHECK(t.substr(0, 3).find_first_of("b") == T::npos);
+        CHECK(t.find_last_of("") == T::npos);
+        CHECK(t.find_last_of('r') == 5);
+        CHECK(t.find_last_of("r") == 5);
+        CHECK(t.find_last_of('f') == 0);
+        CHECK(t.find_last_of("f") == 0);
         CHECK(t.find_last_of("af") == 4);
         CHECK(t.find_last_of("af", 3) == 0);
+
+        CHECK(t.find_first_not_of('f') == 1);
+        CHECK(t.find_first_not_of("f") == 1);
+        CHECK(t.find_first_not_of("of") == 3);
+        CHECK(t.find_first_not_of("aofrb") == T::npos);
+        CHECK(t.find_first_not_of("x", 5) == 5);
+        CHECK(t.find_first_not_of("r", 5) == T::npos);
+        CHECK(t.find_first_not_of("fbar") == 1);
+        CHECK(t.find_last_not_of('f') == 5);
+        CHECK(t.find_last_not_of("f") == 5);
+        CHECK(t.find_last_not_of('r') == 4);
+        CHECK(t.find_last_not_of("r") == 4);
+        CHECK(t.find_last_not_of("ar") == 3);
+        CHECK(t.find_last_not_of("aofrb") == T::npos);
+        CHECK(t.find_last_not_of("x", 0) == 0);
+        CHECK(t.find_last_not_of("f", 0) == T::npos);
+        CHECK(t.find_last_not_of("fbar") == 2);
       }
 
       SUBCASE("compare")

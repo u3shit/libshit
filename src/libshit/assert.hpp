@@ -8,6 +8,10 @@
 
 #define LIBSHIT_HAS_ASSERT LIBSHIT_IS_DEBUG
 
+#if LIBSHIT_HAS_ASSERT
+#  include <cstdlib> // IWYU pragma: keep
+#endif
+
 #ifndef __has_builtin
 #  define __has_builtin(x) 0
 #endif

@@ -14,7 +14,7 @@
 namespace std
 {
 
-  template <typename Char, typename Traits = char_traits<Char>>
+  template <typename Char, typename Traits>
   class basic_string_view
   {
   public:
@@ -130,6 +130,155 @@ namespace std
       LIBSHIT_ASSERT(pos <= len);
       return {str+pos, min(n, len-pos)};
     }
+
+    // search functions
+    constexpr size_type find(
+      basic_string_view o, size_type pos = 0) const noexcept
+    {
+      if (pos >= len || pos + o.size() > len) return npos;
+      for (; pos <= len - o.len; ++pos)
+        if (!Traits::compare(str + pos, o.str, o.len))
+          return pos;
+      return npos;
+    }
+    constexpr size_type find(Char ch, size_type pos = 0) const noexcept
+    {
+      for (; pos < len; ++pos)
+        if (Traits::eq(str[pos], ch)) return pos;
+      return npos;
+    }
+    constexpr size_type find(const Char* s, size_type pos, size_type count) const
+    { return find(basic_string_view(s, count), pos); }
+    constexpr size_type find(const Char* s, size_type pos = 0) const
+    { return find(basic_string_view(s), pos); }
+
+
+    constexpr size_type rfind(
+      basic_string_view o, size_type pos = npos) const noexcept
+    {
+      if (o.size() > len) return npos;
+      if (pos > len - o.len) pos = len - o.len;
+      while (true)
+      {
+        if (!Traits::compare(str + pos, o.str, o.len))
+          return pos;
+        if (pos == 0) return npos;
+        --pos;
+      }
+    }
+    constexpr size_type rfind(Char ch, size_type pos = npos) const noexcept
+    {
+      if (pos > len-1) pos = len-1;
+      while (true)
+      {
+        if (Traits::eq(str[pos], ch)) return pos;
+        if (pos == 0) return npos;
+        --pos;
+      }
+    }
+    constexpr size_type rfind(const Char* s, size_type pos, size_type count) const
+    { return rfind(basic_string_view(s, count), pos); }
+    constexpr size_type rfind(const Char* s, size_type pos = npos) const
+    { return rfind(basic_string_view(s), pos); }
+
+
+    constexpr size_type find_first_of(
+      basic_string_view o, size_type pos = 0) const noexcept
+    {
+      if (pos >= len || o.len == 0) return npos;
+      for (; pos < len; ++pos)
+        for (size_t i = 0; i < o.len; ++i)
+          if (Traits::eq(str[pos], o.str[i]))
+            return pos;
+      return npos;
+    }
+    constexpr size_type find_first_of(Char ch, size_type pos = 0) const noexcept
+    { return find(ch, pos); }
+    constexpr size_type find_first_of(const Char* s, size_type pos, size_type count) const
+    { return find_first_of(basic_string_view(s, count), pos); }
+    constexpr size_type find_first_of(const Char* s, size_type pos = 0) const
+    { return find_first_of(basic_string_view(s), pos); }
+
+
+    constexpr size_type find_last_of(
+      basic_string_view o, size_type pos = npos) const noexcept
+    {
+      if (o.len == 0) return npos;
+      if (pos > len-1) pos = len-1;
+      while (true)
+      {
+        for (size_t i = 0; i < o.len; ++i)
+          if (Traits::eq(str[pos], o.str[i]))
+            return pos;
+        if (pos == 0) return npos;
+        --pos;
+      }
+    }
+    constexpr size_type find_last_of(Char ch, size_type pos = npos) const noexcept
+    { return rfind(ch, pos); }
+    constexpr size_type find_last_of(const Char* s, size_type pos, size_type count) const
+    { return find_last_of(basic_string_view(s, count), pos); }
+    constexpr size_type find_last_of(const Char* s, size_type pos = npos) const
+    { return find_last_of(basic_string_view(s), pos); }
+
+
+    constexpr size_type find_first_not_of(
+      basic_string_view o, size_type pos = 0) const noexcept
+    {
+      if (pos >= len || o.len == 0) return npos;
+      for (; pos < len; ++pos)
+      {
+        bool found = false;
+        for (size_t i = 0; i < o.len; ++i)
+          if (Traits::eq(str[pos], o.str[i]))
+          { found = true; break; } // can't goto in constexpr :'(
+        if (!found) return pos;
+      }
+      return npos;
+    }
+    constexpr size_type find_first_not_of(Char ch, size_type pos = 0) const noexcept
+    {
+      for (; pos < len; ++pos)
+        if (!Traits::eq(str[pos], ch)) return pos;
+      return npos;
+    }
+    constexpr size_type find_first_not_of(const Char* s, size_type pos, size_type count) const
+    { return find_first_not_of(basic_string_view(s, count), pos); }
+    constexpr size_type find_first_not_of(const Char* s, size_type pos = 0) const
+    { return find_first_not_of(basic_string_view(s), pos); }
+
+
+    constexpr size_type find_last_not_of(
+      basic_string_view o, size_type pos = npos) const noexcept
+    {
+      if (o.len == 0) return npos;
+      if (pos > len-1) pos = len-1;
+      while (true)
+      {
+        bool found = false;
+        for (size_t i = 0; i < o.len; ++i)
+          if (Traits::eq(str[pos], o.str[i]))
+          { found = true; break; } // can't goto in constexpr :'(
+        if (!found) return pos;
+        if (pos == 0) return npos;
+        --pos;
+      }
+    }
+    constexpr size_type find_last_not_of(Char ch, size_type pos = npos) const noexcept
+    {
+      if (pos > len-1) pos = len-1;
+      while (true)
+      {
+        if (!Traits::eq(str[pos], ch)) return pos;
+        if (pos == 0) return npos;
+        --pos;
+      }
+    }
+    constexpr size_type find_last_not_of(const Char* s, size_type pos, size_type count) const
+    { return find_last_not_of(basic_string_view(s, count), pos); }
+    constexpr size_type find_last_not_of(const Char* s, size_type pos = npos) const
+    { return find_last_not_of(basic_string_view(s), pos); }
+
 
     constexpr int compare(basic_string_view o) const noexcept
     {

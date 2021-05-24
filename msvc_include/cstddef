@@ -1,0 +1,11 @@
+// -*- c++ -*-
+#pragma once
+
+#include_next <cstddef>
+
+namespace std
+{
+
+  enum class byte : unsigned char {};
+
+}

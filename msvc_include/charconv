@@ -1,0 +1,84 @@
+// -*- c++ -*-
+#pragma once
+
+#include <type_traits>
+#include <system_error>
+
+namespace std
+{
+
+  // TODO: non base-10
+
+  struct from_chars_result
+  {
+    const char* ptr;
+    std::errc ec;
+  };
+
+  inline constexpr bool _IsSpace(char c) noexcept
+  { return (c >= 9 && c <= 13) || c == ' '; }
+
+  template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+  std::from_chars_result from_chars(const char* begin, const char* end,
+                                    T& value)
+  {
+    bool minus = false;
+    while (begin < end && _IsSpace(*begin)) ++begin;
+    if (begin >= end) return { end, errc::invalid_argument };
+    if constexpr (std::is_signed_v<T>)
+      if (*begin == '-')
+      {
+        minus = true;
+        ++begin;
+      }
+
+    bool was = false, err = false;;
+    T out{};
+    for (; begin < end && (*begin >= '0' && *begin <= '9'); ++begin)
+    {
+      was = true;
+      T tmp;
+      if (__builtin_mul_overflow(out, 10, &tmp) ||
+          __builtin_add_overflow(tmp, (*begin - '0'), &out))
+        err = true;
+    }
+    if (!was) return { begin, errc::invalid_argument };
+    if (minus && __builtin_sub_overflow(0, out, &out)) err = true;
+
+    if (!err) value = out;
+    return { begin, err ? errc::result_out_of_range : errc() };
+  }
+
+
+  struct to_chars_result
+  {
+    char* ptr;
+    std::errc ec;
+  };
+
+  to_chars_result to_chars(char*, char*, bool) = delete;
+  template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+  to_chars_result to_chars(char* begin, char* end, T value)
+  {
+    if (end - begin <= 1) return { end, errc::value_too_large };
+    std::make_unsigned_t<T> uval;
+    if (value < 0) { *begin++ = '-'; uval = -value; }
+    else uval = value;
+
+    // On error, returns a value of type to_chars_result holding
+    // std::errc::value_too_large in ec, a copy of the value last in ptr, and
+    // leaves the contents of the range [first, last) in unspecified state.
+    // => so we can construct it in a temporary buffer and only copy back if
+    // everything is alright
+    char buf[std::numeric_limits<T>::digits10+1];
+    auto p = buf + std::numeric_limits<T>::digits10;
+    *p = '0';
+    if (uval) { ++p; for (; uval; uval /= 10) *--p = '0' + uval % 10; }
+
+    const auto len = buf + std::numeric_limits<T>::digits10+1 - p;
+    if (len > end-begin) return { end, errc::value_too_large };
+    ::memcpy(begin, p, len);
+    return { begin + len, errc() };
+  }
+
+}

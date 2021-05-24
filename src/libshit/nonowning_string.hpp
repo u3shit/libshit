@@ -250,7 +250,7 @@ namespace Libshit
     { return StdSV{str, len}.name(c, pos); }
     LIBSHIT_GEN(find, 0) LIBSHIT_GEN(rfind, npos)
     LIBSHIT_GEN(find_first_of, 0) LIBSHIT_GEN(find_last_of, npos)
-    LIBSHIT_GEN(find_first_not_of, 0) LIBSHIT_GEN(findt_last_not_of, npos)
+    LIBSHIT_GEN(find_first_not_of, 0) LIBSHIT_GEN(find_last_not_of, npos)
 #undef LIBSHIT_GEN
 
 

@@ -32,6 +32,8 @@ GEN_CONVERT(, ret);
 GEN_CONVERT(0, 0);
 #undef GEN_CONVERT
 
+char* getenv(const char* name) { return NULL; }
+
 // random io functions
 // fcntl.h patched so O_* equals to SCE_O_* defines
 int open(const char* fname, int flags, mode_t mode)

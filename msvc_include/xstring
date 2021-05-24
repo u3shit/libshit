@@ -1,9 +1,35 @@
 // -*- c++ -*-
 #pragma once
 
+#include <type_traits>
 #include <xmemory0>
 
+namespace std
+{
+  template <typename Char, typename Traits = char_traits<Char>>
+  class basic_string_view;
+}
+
 #define traits_type traits_type; \
-  constexpr _Elem* data() noexcept { return _Myptr(); }
+  constexpr _Elem* data() noexcept { return _Myptr(); }                        \
+                                                                               \
+  template <typename T, typename = std::enable_if_t<                           \
+    std::is_convertible_v<const T&, std::basic_string_view<_Elem, _Traits>> && \
+    !std::is_convertible_v<const T&, const _Elem*>>>                           \
+  basic_string& append(const T& t)                                             \
+  {                                                                            \
+    std::basic_string_view<_Elem, _Traits> sv = t;                             \
+    return append(sv.data(), sv.size());                                       \
+  }                                                                            \
+                                                                               \
+  template <typename T, typename = std::enable_if_t<                           \
+    std::is_convertible_v<const T&, std::basic_string_view<_Elem, _Traits>> && \
+    !std::is_convertible_v<const T&, const _Elem*>>>                           \
+  basic_string& operator+=(const T& t)                                         \
+  {                                                                            \
+    std::basic_string_view<_Elem, _Traits> sv = t;                             \
+    return append(sv.data(), sv.size());                                       \
+  }                                                                            \
+
 #include_next <xstring>
 #undef traits_type
