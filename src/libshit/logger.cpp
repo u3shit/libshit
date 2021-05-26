@@ -475,7 +475,10 @@ namespace Libshit::Logger
         case ERROR:   buf.append("ERROR"); break;
         case WARNING: buf.append("WARN "); break;
         case INFO:    buf.append("info "); break;
-        default:      buf.append("dbg"); IntToStrPadded(buf, level, 1); break;
+        default:
+          buf.append("dbg");
+          IntToStrPadded(buf, level, 2, ' ');
+          break;
         }
 
         buf += '[';
