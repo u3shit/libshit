@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <initializer_list>
-#include <iterator>
+#include <iterator> // IWYU pragma: export
 #include <memory> // IWYU pragma: export
 #include <stdexcept>
 #include <type_traits>
@@ -56,6 +56,8 @@ namespace Libshit
 
     using iterator = pointer;
     using const_iterator = const_pointer;
+    using reverse_iterator = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     // construct, destruct
     constexpr SimpleVector() noexcept(noexcept(Allocator())) = default;
@@ -247,7 +249,17 @@ namespace Libshit
     iterator end() noexcept { return end_ptr; }
     const_iterator end() const noexcept { return end_ptr; }
     const_iterator cend() const noexcept { return end_ptr; }
-    // todo reverse iterators
+
+    reverse_iterator rbegin() noexcept { return reverse_iterator{end_ptr}; }
+    const_reverse_iterator rbegin() const noexcept
+    { return const_reverse_iterator{end_ptr}; }
+    const_reverse_iterator crbegin() const noexcept
+    { return const_reverse_iterator{end_ptr}; }
+    reverse_iterator rend() noexcept { return reverse_iterator{begin_ptr}; }
+    const_reverse_iterator rend() const noexcept
+    { return const_reverse_iterator{begin_ptr}; }
+    const_reverse_iterator crend() const noexcept
+    { return const_reverse_iterator{begin_ptr}; }
 
     // raw (pointer) iterators
     T* wbegin()

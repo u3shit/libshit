@@ -1,6 +1,7 @@
 #include <libshit/container/simple_vector.hpp>
 
 #include <libshit/doctest.hpp>
+#include <libshit/doctest_std.hpp> // IWYU pragma: keep
 
 #include <cstring>
 #include <ostream>
@@ -178,6 +179,12 @@ namespace Libshit::Test
         CHECK(std::as_const(v).end() == v.data() + 4);
         CHECK(std::as_const(v).cbegin() == v.data());
         CHECK(std::as_const(v).cend() == v.data() + 4);
+        CHECK(std::vector<NoConst>{v.begin(), v.end()} ==
+              std::vector<NoConst>{0,1,2,3});
+
+        CHECK(v.rbegin() != v.rend());
+        CHECK(std::vector<NoConst>{v.rbegin(), v.rend()} ==
+              std::vector<NoConst>{3,2,1,0});
 
         CHECK(v.wbegin() == v.data());
         CHECK(v.wend() == v.data() + 4);
